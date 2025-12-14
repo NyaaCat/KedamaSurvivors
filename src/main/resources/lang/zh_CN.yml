@@ -1,0 +1,311 @@
+# KedamaSurvivors 简体中文语言文件
+# 版本: 1.0.0
+#
+# 颜色风格说明:
+# - 正文: §7 (灰色) 或 §f (白色) - 低对比度，舒适阅读
+# - 标签: §6 (金色), §b (青色), §a (绿色) - 分类颜色
+# - 可点击/选择: §e§n (黄色下划线) - 高亮显示
+# - 错误: §c (红色) - 警示但不刺眼
+# - 成功: §a (绿色) - 正向反馈
+# - 数值: §f (白色) - 突出数据
+#
+# 占位符使用 {key} 格式
+
+# ============================================================
+# 通用
+# ============================================================
+
+prefix: "§8[§6武§e生§8] §7"
+
+# ============================================================
+# 信息提示 (低对比度灰色正文)
+# ============================================================
+
+info:
+  # 经验与奖励
+  xp_gained: "§7获得 §a{amount} §7经验"
+  xp_shared: "§7从队友处获得 §a{amount} §7经验"
+  coin_gained: "§7获得 §e{amount} §7金币"
+  perma_score_gained: "§d+{amount} §7永久积分"
+  reward_overflow: "§7背包已满，{count} 件物品待领取"
+  rewards_delivered: "§7已领取 §f{count} §7件待领物品"
+
+  # 状态变化
+  ready: "§a你已准备就绪"
+  unready: "§7你已取消准备"
+  team_waiting: "§7队伍准备中 §f{ready}/{total}"
+  countdown_start: "§7传送倒计时开始"
+  countdown_tick: "§e{seconds}"
+  run_started: "§a进入战斗！§7世界: §f{world}"
+  run_ended: "§7本轮结束"
+
+  # 死亡与重生
+  died: "§7你已阵亡"
+  died_cooldown: "§7你已阵亡，冷却 §f{seconds} §7秒后可重新开始"
+  respawned_to_team: "§a重生至队友 §f{player} §a身边"
+  invulnerable: "§7无敌保护中 §f{seconds}s"
+  cooldown_remaining: "§7冷却中，剩余 §f{seconds} §7秒"
+  cooldown_expired: "§a冷却结束，可以重新开始了"
+
+  # 断线重连
+  reconnected: "§a重连成功，继续战斗"
+  disconnect_grace: "§7你的队友 §f{player} §7已断线"
+  disconnect_expired: "§7队友 §f{player} §7断线超时，视为阵亡"
+
+  # 维护
+  grace_eject: "§e服务器维护中，§f{seconds} §e秒后将传送回准备区"
+  ejected_maintenance: "§7已返回准备区（服务器维护）"
+  join_disabled: "§e当前不可进入战斗"
+
+  # 升级
+  upgrade_available: "§6§l升级可用！§7选择升级方向"
+  upgrade_weapon: "§7武器升级至 §f{group} Lv.{level}"
+  upgrade_helmet: "§7护甲升级至 §f{group} Lv.{level}"
+  max_level_reward: "§7已达最高等级，获得 §d{amount} §7永久积分"
+  overflow_convert: "§7溢出经验转化为 §d{amount} §7永久积分"
+
+  # 装备
+  starter_selected: "§7已选择: §f{name}"
+  starter_cleared: "§7已清除装备选择"
+  weapon_equipped: "§7已装备武器: §f{name}"
+  helmet_equipped: "§7已装备护甲: §f{name}"
+
+# ============================================================
+# 成功提示 (绿色)
+# ============================================================
+
+success:
+  ready: "§a准备就绪！"
+  team_created: "§a队伍 §f{name} §a创建成功"
+  team_joined: "§a已加入队伍 §f{name}"
+  team_left: "§a已离开队伍"
+  team_disbanded: "§a队伍已解散"
+  player_invited: "§a已邀请 §f{player}"
+  player_kicked: "§a已将 §f{player} §a移出队伍"
+  config_reloaded: "§a配置已重载"
+  world_enabled: "§a世界 §f{world} §a已启用"
+  world_disabled: "§a世界 §f{world} §a已禁用"
+  item_captured: "§a已捕获物品模板: §f{id}"
+  trade_captured: "§a已捕获交易模板: §f{id}"
+  spawner_paused: "§a刷怪已暂停"
+  spawner_resumed: "§a刷怪已恢复"
+  merchant_spawned: "§a商人已生成"
+  merchants_cleared: "§a已清除 §f{count} §a个商人"
+
+# ============================================================
+# 错误提示 (红色但不刺眼)
+# ============================================================
+
+error:
+  # 通用
+  no_permission: "§c你没有权限执行此操作"
+  player_not_found: "§c找不到玩家 §f{player}"
+  invalid_argument: "§c参数无效: §f{arg}"
+  command_failed: "§c命令执行失败"
+
+  # 状态检查
+  not_in_lobby: "§c你必须在准备区才能执行此操作"
+  not_in_run: "§c你当前不在战斗中"
+  already_in_run: "§c你已经在战斗中了"
+  already_ready: "§c你已经准备好了"
+  not_ready: "§c你还没有准备好"
+  on_cooldown: "§c冷却中，剩余 §f{seconds} §c秒"
+  join_disabled_error: "§c当前不允许进入战斗"
+
+  # 装备选择
+  no_weapon_selected: "§c请先选择武器"
+  no_helmet_selected: "§c请先选择护甲"
+  select_weapon_first: "§c请先选择武器"
+  invalid_selection: "§c无效的选择"
+
+  # 队伍
+  already_in_team: "§c你已经在一个队伍中了"
+  not_in_team: "§c你不在任何队伍中"
+  not_team_owner: "§c只有队长才能执行此操作"
+  team_full: "§c队伍已满 §f({current}/{max})"
+  team_not_found: "§c找不到队伍 §f{name}"
+  no_valid_invite: "§c你没有该队伍的有效邀请"
+  invite_expired: "§c邀请已过期"
+  player_already_in_team: "§c该玩家已在其他队伍中"
+  cannot_kick_self: "§c不能踢出自己"
+  cannot_kick_owner: "§c不能踢出队长"
+
+  # 世界
+  no_combat_worlds: "§c没有可用的战斗世界"
+  world_not_found: "§c找不到世界 §f{world}"
+  world_not_loaded: "§c世界 §f{world} §c未加载"
+
+  # 管理
+  capture_no_item: "§c请手持要捕获的物品"
+  template_exists: "§c模板 §f{id} §c已存在"
+  run_not_found: "§c找不到运行实例 §f{id}"
+
+# ============================================================
+# 队伍消息
+# ============================================================
+
+team:
+  # 通知
+  invite_received: "§7你收到了来自 §f{team} §7的队伍邀请 (邀请人: §f{inviter}§7)"
+  click_to_join: "§e§n[点击加入]"
+  player_joined: "§f{player} §7加入了队伍"
+  player_left: "§f{player} §7离开了队伍"
+  player_kicked: "§f{player} §7被移出了队伍"
+  ownership_transferred: "§7队长已转移给 §f{player}"
+  team_disbanded_notify: "§7队伍已被解散"
+
+  # 准备状态
+  player_ready: "§f{player} §a准备就绪"
+  player_unready: "§f{player} §7取消准备"
+  all_ready: "§a全员准备就绪！"
+
+  # 断线
+  player_disconnected: "§f{player} §7已断线"
+  player_reconnected: "§f{player} §a已重连"
+
+  # 列表显示
+  list_header: "§7========== §6队伍: {name} §7=========="
+  list_owner: "§7队长: §f{player}"
+  list_member: "§7- §f{player} {status}"
+  list_status_online: "§a在线"
+  list_status_ready: "§a已准备"
+  list_status_offline: "§7离线"
+  list_status_in_run: "§e战斗中"
+
+# ============================================================
+# GUI 界面
+# ============================================================
+
+gui:
+  # 标题
+  select_weapon: "§6选择初始武器"
+  select_helmet: "§b选择初始护甲"
+  upgrade_title: "§6§l选择升级"
+
+  # 升级选项
+  upgrade_weapon_item:
+    name: "§6§l⚔ 升级武器"
+    lore:
+      - "§7当前: §f{group} Lv.{level}"
+      - ""
+      - "§7升级后随机获得"
+      - "§7下一等级的武器"
+      - ""
+      - "§e点击选择"
+
+  upgrade_helmet_item:
+    name: "§b§l⛑ 升级护甲"
+    lore:
+      - "§7当前: §f{group} Lv.{level}"
+      - ""
+      - "§7升级后随机获得"
+      - "§7下一等级的护甲"
+      - ""
+      - "§e点击选择"
+
+  # 通用按钮
+  back: "§7返回"
+  confirm: "§a确认"
+  cancel: "§c取消"
+
+# ============================================================
+# 记分板侧边栏
+# ============================================================
+
+sidebar:
+  title: "§6§l武 生"
+  weapon_level: "§6武器 §fLv.{level}"
+  helmet_level: "§b护甲 §fLv.{level}"
+  xp: "§a经验 §f{bar} {percent}%"
+  xp_held: "§a待结算 §f{amount}"
+  coins: "§e金币 §f{amount}"
+  perma_score: "§d积分 §f{amount}"
+  team: "§7队伍 §f{name}"
+  team_members: "§7成员 §f{online}/{total}"
+  time: "§7时间 §f{time}"
+  blank: ""
+
+# ============================================================
+# 状态命令输出
+# ============================================================
+
+status:
+  header: "§7========== §6武生状态 §7=========="
+  mode: "§7模式: {mode}"
+  world: "§7世界: §f{world}"
+  team: "§7队伍: §f{name} §7({online}/{total} 在线)"
+  no_team: "§7队伍: §f无"
+  weapon: "§6武器: §f{group} Lv.{level}"
+  helmet: "§b护甲: §f{group} Lv.{level}"
+  xp: "§a经验: §f{progress}/{required} ({percent}%)"
+  xp_held: "§a待结算经验: §f{amount}"
+  coins: "§e金币: §f{amount}"
+  perma_score: "§d永久积分: §f{amount}"
+  cooldown: "§c冷却: §f{seconds} 秒"
+  run_time: "§7运行时间: §f{time}"
+
+  # 模式显示名
+  mode_lobby: "§f准备区"
+  mode_ready: "§a已准备"
+  mode_countdown: "§e倒计时"
+  mode_in_run: "§c战斗中"
+  mode_cooldown: "§7冷却中"
+  mode_grace_eject: "§e维护传送中"
+  mode_disconnected: "§7断线中"
+
+# ============================================================
+# 管理员消息
+# ============================================================
+
+admin:
+  join_enabled: "§a已开启游戏入口"
+  join_disabled: "§e已关闭游戏入口，{count} 名玩家将在 {seconds} 秒后被传送"
+  force_started: "§a已强制启动 §f{target} §a的游戏"
+  force_stopped: "§a已强制停止 §f{target} §a的游戏"
+  world_list_header: "§7========== §6战斗世界列表 §7=========="
+  world_list_item: "§7- §f{name} §7[{status}] 权重: §f{weight}"
+  world_status_enabled: "§a启用"
+  world_status_disabled: "§c禁用"
+
+# ============================================================
+# 调试信息
+# ============================================================
+
+debug:
+  player_header: "§7========== §6玩家调试: {player} §7=========="
+  perf_header: "§7========== §6性能统计 §7=========="
+  command_queue: "§7命令队列: §f{size}"
+  spawn_queue: "§7刷怪队列: §f{size}"
+  active_mobs: "§7活动VRS怪物: §f{count}"
+  tick_budget: "§7本tick预算: §f{used}/{max}"
+
+# ============================================================
+# 倒计时与标题
+# ============================================================
+
+countdown:
+  title: "§e{seconds}"
+  subtitle: "§7准备进入战斗"
+  final_title: "§a开始!"
+  final_subtitle: "§7祝你好运"
+
+# ============================================================
+# 动作栏消息
+# ============================================================
+
+actionbar:
+  cooldown: "§c冷却中 §f{seconds}s"
+  invulnerable: "§b无敌保护 §f{seconds}s"
+  xp_progress: "§a经验 §f{progress}/{required}"
+  grace_eject: "§e传送倒计时 §f{seconds}s"
+
+# ============================================================
+# 声音
+# ============================================================
+# 这些是配置项，不是翻译
+# sounds:
+#   level_up: ENTITY_PLAYER_LEVELUP
+#   countdown_tick: BLOCK_NOTE_BLOCK_PLING
+#   teleport: ENTITY_ENDERMAN_TELEPORT
+#   death: ENTITY_WITHER_DEATH
+#   coin: ENTITY_EXPERIENCE_ORB_PICKUP

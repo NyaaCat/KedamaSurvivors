@@ -1,0 +1,79 @@
+name: ${name}
+version: ${version}
+main: cat.nyaa.survivors.KedamaSurvivorsPlugin
+api-version: "1.21"
+description: Vampire Survivors roguelite minigame plugin
+authors:
+  - NyaaCat
+  - Claude Code
+
+commands:
+  vrs:
+    description: Main command for KedamaSurvivors
+    usage: /vrs <subcommand>
+    permission: vrs.player
+
+permissions:
+  vrs.player:
+    description: Basic player permissions
+    default: true
+  vrs.team:
+    description: Team management permissions
+    default: true
+  vrs.team.create:
+    description: Create teams
+    default: true
+  vrs.team.invite:
+    description: Invite players to team
+    default: true
+  vrs.team.join:
+    description: Join teams
+    default: true
+  vrs.team.leave:
+    description: Leave teams
+    default: true
+  vrs.team.kick:
+    description: Kick team members
+    default: true
+  vrs.team.disband:
+    description: Disband teams
+    default: true
+  vrs.admin:
+    description: All admin permissions
+    default: op
+    children:
+      vrs.admin.reload: true
+      vrs.admin.world: true
+      vrs.admin.join: true
+      vrs.admin.force: true
+      vrs.admin.capture: true
+      vrs.admin.debug: true
+      vrs.admin.merchant: true
+      vrs.admin.spawner: true
+  vrs.admin.reload:
+    description: Reload plugin configuration
+    default: op
+  vrs.admin.world:
+    description: Manage combat worlds
+    default: op
+  vrs.admin.join:
+    description: Toggle global join switch
+    default: op
+  vrs.admin.force:
+    description: Force start/stop runs
+    default: op
+  vrs.admin.capture:
+    description: Capture items and trades
+    default: op
+  vrs.admin.debug:
+    description: Debug commands
+    default: op
+  vrs.admin.merchant:
+    description: Merchant management
+    default: op
+  vrs.admin.spawner:
+    description: Spawner control
+    default: op
+  vrs.cooldown.bypass:
+    description: Bypass death cooldown
+    default: op

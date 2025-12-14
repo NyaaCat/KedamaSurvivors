@@ -1,0 +1,327 @@
+# KedamaSurvivors Configuration
+# Version: 1.0.0
+# Documentation: https://github.com/NyaaCat/KedamaSurvivors/wiki
+
+# ============================================================
+# Plugin Settings
+# ============================================================
+plugin:
+  language: zh_CN
+  prefix: "§8[§6武§e生§8] §7"
+  verbose: false
+
+# ============================================================
+# Join Switch (Global game entry control)
+# ============================================================
+joinSwitch:
+  enabled: true
+  graceEjectSeconds: 60
+  graceWarningInterval: 15
+
+# ============================================================
+# Ready & Countdown
+# ============================================================
+ready:
+  countdownSeconds: 5
+  showActionBar: true
+  showTitle: true
+  countdownSound: BLOCK_NOTE_BLOCK_PLING
+  countdownSoundPitch: 1.0
+  teleportSound: ENTITY_ENDERMAN_TELEPORT
+
+# ============================================================
+# Cooldown
+# ============================================================
+cooldown:
+  deathCooldownSeconds: 60
+  quitCooldownSeconds: 30
+  showCooldownBar: true
+  displayUpdateTicks: 20
+
+# ============================================================
+# Disconnect Handling
+# ============================================================
+disconnect:
+  graceSeconds: 300
+  checkIntervalTicks: 200
+  notifyTeam: true
+  notifyGraceExpired: true
+
+# ============================================================
+# Team Settings
+# ============================================================
+teams:
+  maxSize: 5
+  inviteExpirySeconds: 60
+
+# ============================================================
+# Respawn Settings
+# ============================================================
+respawn:
+  invulnerabilitySeconds: 3
+  canDealDamageDuringInvul: false
+  invulEffect: GLOWING
+
+# ============================================================
+# Combat Worlds
+# ============================================================
+worlds:
+  list:
+    - name: "arena_forest"
+      displayName: "§2森林竞技场"
+      enabled: true
+      weight: 1.0
+      spawnBounds:
+        minX: -500
+        maxX: 500
+        minZ: -500
+        maxZ: 500
+
+  spawnSampling:
+    maxAttempts: 50
+    unsafeBlocks:
+      - LAVA
+      - WATER
+      - CACTUS
+      - MAGMA_BLOCK
+      - FIRE
+      - SOUL_FIRE
+    requiredHeadroom: 2
+
+# ============================================================
+# Teleport Commands
+# ============================================================
+teleport:
+  prepCommand: "tp ${player} world 0 64 0"
+  enterCommand: "tp ${player} ${world} ${x} ${y} ${z} ${yaw} ${pitch}"
+  respawnCommand: "tp ${player} ${world} ${x} ${y} ${z}"
+
+# ============================================================
+# Starter Selection
+# ============================================================
+starterSelection:
+  requireWeaponFirst: true
+  autoOpenHelmetGui: true
+
+  weapons:
+    - optionId: "starter_sword"
+      displayName: "§f铁剑"
+      displayItem:
+        material: IRON_SWORD
+        name: "§f铁剑"
+        lore:
+          - "§7基础近战武器"
+      templateId: "sword_iron_1"
+      group: "sword"
+      level: 1
+
+  helmets:
+    - optionId: "starter_leather"
+      displayName: "§f皮革帽"
+      displayItem:
+        material: LEATHER_HELMET
+        name: "§f皮革帽"
+        lore:
+          - "§7基础防护"
+      templateId: "helmet_leather_1"
+      group: "light"
+      level: 1
+
+# ============================================================
+# Equipment Pools
+# ============================================================
+equipmentPools:
+  weapons:
+    sword:
+      displayName: "剑系"
+      levels:
+        1:
+          - "sword_iron_1"
+
+  helmets:
+    light:
+      displayName: "轻甲系"
+      levels:
+        1:
+          - "helmet_leather_1"
+
+# ============================================================
+# Inventory Rules
+# ============================================================
+inventoryRules:
+  preventDropModes:
+    - READY
+    - COUNTDOWN
+    - IN_RUN
+  preventPickupModes:
+    - READY
+    - COUNTDOWN
+    - IN_RUN
+  lockEquipmentSlots: true
+  weaponSlotIndex: 0
+  rewards:
+    overflowMode: PENDING_QUEUE
+    pendingFlushInterval: 100
+    maxPendingItems: 100
+
+# ============================================================
+# Progression
+# ============================================================
+progression:
+  baseXpRequired: 100
+  xpPerLevelIncrease: 50
+  xpMultiplierPerLevel: 1.1
+  weaponLevelWeight: 1
+  helmetLevelWeight: 1
+
+  overflow:
+    enabled: true
+    xpPerPermaScore: 1000
+    notifyPlayer: true
+
+  maxLevelBehavior:
+    mode: GRANT_PERMA_SCORE
+    permaScoreReward: 10
+
+# ============================================================
+# Enemy Spawning
+# ============================================================
+spawning:
+  loop:
+    tickInterval: 20
+    enabled: true
+
+  limits:
+    targetMobsPerPlayer: 10
+    maxSpawnsPerPlayerPerTick: 3
+    maxSpawnsPerTick: 20
+    maxCommandsPerTick: 50
+    mobCountRadius: 30.0
+
+  positioning:
+    minSpawnDistance: 8.0
+    maxSpawnDistance: 25.0
+    maxSampleAttempts: 10
+
+  levelCalculation:
+    levelSamplingRadius: 50.0
+    avgLevelMultiplier: 1.0
+    playerCountMultiplier: 0.2
+    levelOffset: 0
+    minLevel: 1
+    maxLevel: 100
+    timeScaling:
+      enabled: true
+      timeStepSeconds: 60
+      levelPerStep: 1
+
+  archetypes:
+    zombie:
+      enemyType: "minecraft:zombie"
+      weight: 3.0
+      spawnCommands:
+        - "summon zombie ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+      rewards:
+        xpBase: 10
+        xpPerLevel: 5
+        coinBase: 1
+        coinPerLevel: 1
+        permaScoreChance: 0.01
+
+  mobIdentification:
+    mobTag: "vrs_mob"
+    levelTagPattern: "vrs_lvl_(\\d+)"
+    defaultLevel: 1
+
+# ============================================================
+# Rewards
+# ============================================================
+rewards:
+  xpShare:
+    enabled: true
+    radius: 20.0
+    sharePercent: 0.25
+
+  coin:
+    material: EMERALD
+    customModelData: 0
+    displayName: "§e金币"
+
+# ============================================================
+# Merchants
+# ============================================================
+merchants:
+  enabled: true
+
+  spawn:
+    intervalSeconds: 120
+    lifetimeSeconds: 60
+    minDistanceFromPlayers: 20.0
+    maxDistanceFromPlayers: 50.0
+
+  entity:
+    type: VILLAGER
+    name: "§6流浪商人"
+    invulnerable: true
+    noAi: true
+    glowing: false
+
+  templates:
+    basic:
+      displayName: "§e基础商人"
+      trades: []
+
+# ============================================================
+# Economy
+# ============================================================
+economy:
+  permaScore:
+    objectiveName: "vrs_perma"
+    displayName: "永久积分"
+
+# ============================================================
+# Scoreboard
+# ============================================================
+scoreboard:
+  enabled: true
+  title: "§6§l武 生"
+  updateInterval: 10
+
+# ============================================================
+# Persistence
+# ============================================================
+persistence:
+  saveIntervalSeconds: 300
+  saveOnQuit: true
+  saveOnRunEnd: true
+
+  paths:
+    items: "data/items"
+    runtime: "data/runtime"
+
+  backup:
+    enabled: true
+    intervalHours: 6
+    maxBackups: 10
+
+# ============================================================
+# Templates
+# ============================================================
+templates:
+  escaping:
+    enabled: true
+    escapeChars: ";&|`$\\"
+  missingPlaceholder:
+    mode: ERROR
+
+# ============================================================
+# Debug
+# ============================================================
+debug:
+  enabled: false
+  logLevel: INFO
+  separateLogFile: true
+  performance:
+    enabled: true
+    slowOperationThreshold: 50
+    showInDebugCommand: true
