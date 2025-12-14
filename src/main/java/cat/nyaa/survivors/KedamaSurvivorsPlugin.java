@@ -3,13 +3,16 @@ package cat.nyaa.survivors;
 import cat.nyaa.survivors.command.VrsCommand;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
+import cat.nyaa.survivors.listener.CombatListener;
 import cat.nyaa.survivors.listener.InventoryListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
 import cat.nyaa.survivors.service.ReadyService;
+import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.RunService;
 import cat.nyaa.survivors.service.StarterService;
 import cat.nyaa.survivors.service.StateService;
+import cat.nyaa.survivors.service.UpgradeService;
 import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.command.PluginCommand;
@@ -34,6 +37,8 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private StarterService starterService;
     private ReadyService readyService;
     private RunService runService;
+    private RewardService rewardService;
+    private UpgradeService upgradeService;
 
     @Override
     public void onEnable() {
@@ -90,6 +95,12 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Run service for run lifecycle management
         runService = new RunService(this);
+
+        // Reward service for XP, coins, perma-score
+        rewardService = new RewardService(this);
+
+        // Upgrade service for equipment upgrades
+        upgradeService = new UpgradeService(this);
     }
 
     private void registerCommands() {
@@ -106,6 +117,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
+        getServer().getPluginManager().registerEvents(new CombatListener(this), this);
     }
 
     private void startTasks() {
@@ -186,5 +198,13 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public StarterService getStarterService() {
         return starterService;
+    }
+
+    public RewardService getRewardService() {
+        return rewardService;
+    }
+
+    public UpgradeService getUpgradeService() {
+        return upgradeService;
     }
 }

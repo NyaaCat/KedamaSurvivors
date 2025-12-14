@@ -64,9 +64,23 @@ info:
   max_level_reward: "§7已达最高等级，获得 §d{amount} §7永久积分"
   overflow_convert: "§7溢出经验转化为 §d{amount} §7永久积分"
 
-  # 装备
-  starter_selected: "§7已选择: §f{name}"
-  starter_cleared: "§7已清除装备选择"
+# ============================================================
+# 升级消息
+# ============================================================
+
+upgrade:
+  weapon_upgraded: "§6武器 §7升级至 §fLv.{level}"
+  helmet_upgraded: "§3护甲 §7升级至 §fLv.{level}"
+  max_level_reward: "§7已达最高等级，获得 §d{amount} §7永久积分 §8({slot})"
+  already_max_level: "§8{slot} 已达最高等级"
+  max_level: "§8最高等级"
+
+# ============================================================
+# 物品提示
+# ============================================================
+
+item:
+  level_indicator: "§7Lv.{level}"
   weapon_equipped: "§7已装备武器: §f{name}"
   helmet_equipped: "§7已装备护甲: §f{name}"
 
@@ -138,6 +152,8 @@ error:
   weapon_first: "§c请先选择武器"
   invalid_selection: "§c无效的选择"
   invalid_option: "§c无效选项: §f{option}"
+  invalid_group: "§c无效的装备组"
+  no_items_at_level: "§c该等级没有可用物品"
 
   # 队伍
   already_in_team: "§c你已经在一个队伍中了"
@@ -242,6 +258,12 @@ gui:
   back: "§7返回"
   confirm: "§a确认"
   cancel: "§c取消"
+
+  # 升级 GUI
+  upgrade_current: "§7当前: §f{group} Lv.{level}"
+  upgrade_next: "§7下一级: §f{info}"
+  click_to_upgrade: "§e点击升级"
+  already_max: "§8已达到最高等级"
 
 # ============================================================
 # 记分板侧边栏

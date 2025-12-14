@@ -181,24 +181,24 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [ ] Pause/resume per world
 
 ### 5.2 Reward Service
-- [ ] `RewardService` class
-- [ ] XP award calculation
-- [ ] XP application with hold logic
-- [ ] XP sharing to nearby players
-- [ ] Overflow XP → perma-score conversion
-- [ ] Coin award (vanilla item to inventory)
-- [ ] Perma-score award (scoreboard update)
-- [ ] Pending reward queue for overflow
+- [x] `RewardService` class
+- [x] XP award calculation
+- [x] XP application with hold logic
+- [x] XP sharing to nearby players
+- [x] Overflow XP → perma-score conversion
+- [x] Coin award (vanilla item to inventory)
+- [x] Perma-score award (scoreboard update)
+- [x] Pending reward queue for overflow
 
 ### 5.3 Upgrade Service
-- [ ] `UpgradeService` class
-- [ ] Upgrade prompt GUI
-- [ ] Weapon upgrade option
-- [ ] Helmet upgrade option
-- [ ] Equipment replacement with PDC
-- [ ] Max level handling (grant perma-score)
-- [ ] Held XP resolution (may chain upgrades)
-- [ ] XP required recalculation
+- [x] `UpgradeService` class
+- [x] Upgrade prompt GUI
+- [x] Weapon upgrade option
+- [x] Helmet upgrade option
+- [x] Equipment replacement with PDC
+- [x] Max level handling (grant perma-score)
+- [x] Held XP resolution (may chain upgrades)
+- [x] XP required recalculation
 
 ### 5.4 Death & Respawn Service
 - [ ] Death event handler
@@ -264,15 +264,15 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Damage event - invulnerability check
 
 ### 7.3 Combat Listener
-- [ ] `CombatListener` class
-- [ ] Invulnerability damage cancellation
-- [ ] Optional: prevent damage dealing during invul
-- [ ] VRS mob death handling - reward distribution
+- [x] `CombatListener` class
+- [x] Invulnerability damage cancellation
+- [x] Optional: prevent damage dealing during invul
+- [x] VRS mob death handling - reward distribution
 
 ### 7.4 Entity Listener
-- [ ] VRS mob identification (`vrs_mob` tag)
-- [ ] Enemy level parsing (`vrs_lvl_N` tag)
-- [ ] Mob death reward processing
+- [x] VRS mob identification (`vrs_mob` tag)
+- [x] Enemy level parsing (`vrs_lvl_N` tag)
+- [x] Mob death reward processing (integrated into CombatListener)
 
 ---
 

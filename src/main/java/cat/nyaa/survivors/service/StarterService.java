@@ -280,6 +280,89 @@ public class StarterService {
                 .get(keyEquipmentType, PersistentDataType.STRING);
     }
 
+    /**
+     * Grants an upgraded equipment item to a player.
+     * Used by UpgradeService when player levels up.
+     *
+     * @param player     The player to grant to
+     * @param templateId The template ID (currently unused, using material lookup)
+     * @param type       "weapon" or "helmet"
+     * @param group      Equipment group
+     * @param level      New equipment level
+     * @return The granted item, or null if failed
+     */
+    public ItemStack grantUpgradeItem(Player player, String templateId, String type, String group, int level) {
+        // Determine material based on level (simple tier system)
+        Material material = getMaterialForLevel(type, level);
+
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta != null) {
+            // Set display name based on group and level
+            String displayName = getDisplayName(type, group, level);
+            meta.displayName(net.kyori.adventure.text.Component.text(displayName));
+
+            // Add lore with level info
+            java.util.List<net.kyori.adventure.text.Component> lore = new java.util.ArrayList<>();
+            lore.add(net.kyori.adventure.text.Component.text(
+                    i18n.get("item.level_indicator", "level", level)));
+            meta.lore(lore);
+
+            // Add PDC markers
+            PersistentDataContainer pdc = meta.getPersistentDataContainer();
+            pdc.set(keyVrsItem, PersistentDataType.BYTE, (byte) 1);
+            pdc.set(keyEquipmentType, PersistentDataType.STRING, type);
+            pdc.set(keyEquipmentGroup, PersistentDataType.STRING, group);
+            pdc.set(keyEquipmentLevel, PersistentDataType.INTEGER, level);
+
+            item.setItemMeta(meta);
+        }
+
+        // Grant to appropriate slot
+        if ("weapon".equals(type)) {
+            grantWeapon(player, item);
+        } else if ("helmet".equals(type)) {
+            grantHelmet(player, item);
+        }
+
+        return item;
+    }
+
+    /**
+     * Gets the material for an equipment type at a given level.
+     */
+    private Material getMaterialForLevel(String type, int level) {
+        if ("weapon".equals(type)) {
+            if (level >= 5) return Material.NETHERITE_SWORD;
+            if (level >= 4) return Material.DIAMOND_SWORD;
+            if (level >= 3) return Material.GOLDEN_SWORD;
+            if (level >= 2) return Material.IRON_SWORD;
+            return Material.STONE_SWORD;
+        } else {
+            if (level >= 5) return Material.NETHERITE_HELMET;
+            if (level >= 4) return Material.DIAMOND_HELMET;
+            if (level >= 3) return Material.GOLDEN_HELMET;
+            if (level >= 2) return Material.IRON_HELMET;
+            return Material.LEATHER_HELMET;
+        }
+    }
+
+    /**
+     * Gets the display name for equipment.
+     */
+    private String getDisplayName(String type, String group, int level) {
+        ConfigService.EquipmentGroupConfig groupConfig;
+        if ("weapon".equals(type)) {
+            groupConfig = config.getWeaponGroups().get(group);
+        } else {
+            groupConfig = config.getHelmetGroups().get(group);
+        }
+
+        String groupName = groupConfig != null ? groupConfig.displayName : group;
+        return "§6" + groupName + " §7Lv." + level;
+    }
+
     // PDC key getters for external use
     public NamespacedKey getKeyVrsItem() { return keyVrsItem; }
     public NamespacedKey getKeyEquipmentType() { return keyEquipmentType; }

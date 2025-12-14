@@ -194,6 +194,14 @@ public class RunState {
         totalXpCollected += amount;
     }
 
+    public void addXpEarned(int amount) {
+        totalXpCollected += amount;
+    }
+
+    public void addCoinEarned(int amount) {
+        totalCoinsCollected += amount;
+    }
+
     public void incrementWave() {
         waveNumber++;
     }
