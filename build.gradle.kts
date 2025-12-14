@@ -1,10 +1,9 @@
 plugins {
     java
-    id("io.papermc.paperweight.userdev") version "1.7.7"
-    id("com.gradleup.shadow") version "8.3.5"
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.14"
 }
 
-group = "com.kedama"
+group = "cat.nyaa"
 version = "1.0.0-SNAPSHOT"
 
 java {
@@ -20,6 +19,10 @@ repositories {
 
 dependencies {
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+
+    // Testing
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks {
@@ -39,20 +42,15 @@ tasks {
         }
     }
 
-    shadowJar {
-        archiveClassifier.set("")
-        minimize()
-    }
-
-    build {
-        dependsOn(shadowJar)
-    }
-
-    reobfJar {
-        outputJar.set(layout.buildDirectory.file("libs/${project.name}-${project.version}.jar"))
+    jar {
+        archiveClassifier.set("dev")
     }
 
     assemble {
         dependsOn(reobfJar)
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }

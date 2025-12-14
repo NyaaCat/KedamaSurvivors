@@ -1,0 +1,147 @@
+package cat.nyaa.survivors;
+
+import cat.nyaa.survivors.command.VrsCommand;
+import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.i18n.I18nService;
+import cat.nyaa.survivors.listener.PlayerListener;
+import cat.nyaa.survivors.scoreboard.ScoreboardService;
+import cat.nyaa.survivors.service.StateService;
+import cat.nyaa.survivors.util.TemplateEngine;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.logging.Level;
+
+/**
+ * Main plugin class for KedamaSurvivors.
+ * Handles plugin lifecycle and service initialization.
+ */
+public final class KedamaSurvivorsPlugin extends JavaPlugin {
+
+    private static KedamaSurvivorsPlugin instance;
+
+    private ConfigService configService;
+    private I18nService i18nService;
+    private StateService stateService;
+    private TemplateEngine templateEngine;
+    private ScoreboardService scoreboardService;
+
+    @Override
+    public void onEnable() {
+        instance = this;
+
+        try {
+            initializeServices();
+            registerCommands();
+            registerListeners();
+            startTasks();
+
+            getLogger().info("KedamaSurvivors enabled successfully!");
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "Failed to enable KedamaSurvivors", e);
+            getServer().getPluginManager().disablePlugin(this);
+        }
+    }
+
+    @Override
+    public void onDisable() {
+        stopTasks();
+        saveData();
+
+        instance = null;
+        getLogger().info("KedamaSurvivors disabled.");
+    }
+
+    private void initializeServices() {
+        // Config must be first
+        configService = new ConfigService(this);
+        configService.loadConfig();
+
+        // I18n depends on config for language selection
+        i18nService = new I18nService(this, configService);
+        i18nService.loadLanguage();
+
+        // Template engine for command placeholders
+        templateEngine = new TemplateEngine();
+
+        // State service manages all game state
+        stateService = new StateService();
+
+        // Scoreboard service for sidebar display
+        scoreboardService = new ScoreboardService(this);
+    }
+
+    private void registerCommands() {
+        VrsCommand vrsCommand = new VrsCommand(this);
+        PluginCommand command = getCommand("vrs");
+        if (command != null) {
+            command.setExecutor(vrsCommand);
+            command.setTabCompleter(vrsCommand);
+        } else {
+            getLogger().warning("Failed to register /vrs command - is it defined in plugin.yml?");
+        }
+    }
+
+    private void registerListeners() {
+        getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+    }
+
+    private void startTasks() {
+        // Start scoreboard updates
+        if (scoreboardService != null) {
+            scoreboardService.start();
+        }
+    }
+
+    private void stopTasks() {
+        // Stop scoreboard service
+        if (scoreboardService != null) {
+            scoreboardService.stop();
+        }
+
+        // Cancel all scheduled tasks
+        getServer().getScheduler().cancelTasks(this);
+    }
+
+    private void saveData() {
+        // TODO: Implement persistence when needed
+        if (stateService != null) {
+            stateService.clearAll();
+        }
+    }
+
+    /**
+     * Reloads all plugin configuration.
+     */
+    public void reload() {
+        configService.loadConfig();
+        i18nService.loadLanguage();
+        getLogger().info("Configuration reloaded.");
+    }
+
+    // ==================== Getters ====================
+
+    public static KedamaSurvivorsPlugin getInstance() {
+        return instance;
+    }
+
+    public ConfigService getConfigService() {
+        return configService;
+    }
+
+    public I18nService getI18nService() {
+        return i18nService;
+    }
+
+    public StateService getStateService() {
+        return stateService;
+    }
+
+    public TemplateEngine getTemplateEngine() {
+        return templateEngine;
+    }
+
+    public ScoreboardService getScoreboardService() {
+        return scoreboardService;
+    }
+}
