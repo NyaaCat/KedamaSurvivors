@@ -226,7 +226,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `MerchantService` class
 - [x] Merchant spawn location sampling
 - [x] Villager entity creation and configuration
-- [ ] Trade recipe building from templates
+- [x] Trade recipe building from templates
 - [x] Merchant rotation/despawn scheduling
 - [x] Merchant clearing
 
@@ -390,7 +390,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 2. Core Data Models | Complete | 100% |
 | 3. Commands | Complete | 100% |
 | 4. Game Services | Complete | 100% |
-| 5. Gameplay Systems | In Progress | 95% |
+| 5. Gameplay Systems | Complete | 100% |
 | 6. UI & Display | Complete | 100% |
 | 7. Event Listeners | Complete | 100% |
 | 8. Persistence | Complete | 100% |
@@ -398,7 +398,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 10. Testing | In Progress | 75% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~96%**
+**Overall: ~97%**
 
 ---
 

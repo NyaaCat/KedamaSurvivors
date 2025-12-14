@@ -6,6 +6,8 @@ import cat.nyaa.survivors.config.ConfigService.EquipmentGroupConfig;
 import cat.nyaa.survivors.config.ConfigService.EnemyArchetypeConfig;
 import cat.nyaa.survivors.config.ConfigService.StarterOptionConfig;
 import cat.nyaa.survivors.config.ConfigService.CombatWorldConfig;
+import cat.nyaa.survivors.config.ConfigService.MerchantTemplateConfig;
+import cat.nyaa.survivors.config.ConfigService.MerchantTradeConfig;
 import cat.nyaa.survivors.config.ItemTemplateConfig;
 import cat.nyaa.survivors.model.EquipmentType;
 import org.bukkit.configuration.ConfigurationSection;
@@ -42,6 +44,7 @@ public class AdminConfigService {
     private final List<StarterOptionConfig> starterWeapons = new ArrayList<>();
     private final List<StarterOptionConfig> starterHelmets = new ArrayList<>();
     private final List<CombatWorldConfig> combatWorlds = new ArrayList<>();
+    private final Map<String, MerchantTemplateConfig> merchantTemplates = new LinkedHashMap<>();
 
     public AdminConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -87,11 +90,13 @@ public class AdminConfigService {
         }
 
         loadItemTemplates();
+        loadMerchants();
 
         plugin.getLogger().info("Loaded " + weaponGroups.size() + " weapon groups, " +
                 helmetGroups.size() + " helmet groups, " +
                 itemTemplates.size() + " item templates, " +
-                archetypes.size() + " archetypes");
+                archetypes.size() + " archetypes, " +
+                merchantTemplates.size() + " merchant templates");
     }
 
     /**
@@ -789,5 +794,72 @@ public class AdminConfigService {
 
     public List<CombatWorldConfig> getCombatWorlds() {
         return Collections.unmodifiableList(combatWorlds);
+    }
+
+    // ==================== Merchant Operations ====================
+
+    /**
+     * Gets all merchant templates.
+     */
+    public Collection<MerchantTemplateConfig> getMerchantTemplates() {
+        return Collections.unmodifiableCollection(merchantTemplates.values());
+    }
+
+    /**
+     * Gets a merchant template by ID.
+     */
+    public Optional<MerchantTemplateConfig> getMerchantTemplate(String templateId) {
+        return Optional.ofNullable(merchantTemplates.get(templateId));
+    }
+
+    /**
+     * Gets a random merchant template.
+     */
+    public Optional<MerchantTemplateConfig> getRandomMerchantTemplate() {
+        if (merchantTemplates.isEmpty()) {
+            return Optional.empty();
+        }
+        List<MerchantTemplateConfig> templates = new ArrayList<>(merchantTemplates.values());
+        return Optional.of(templates.get(new Random().nextInt(templates.size())));
+    }
+
+    private void loadMerchants() {
+        merchantTemplates.clear();
+
+        File file = dataPath.resolve("merchants.yml").toFile();
+        if (!file.exists()) {
+            return;
+        }
+
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection templatesSection = yaml.getConfigurationSection("templates");
+        if (templatesSection == null) {
+            return;
+        }
+
+        for (String templateId : templatesSection.getKeys(false)) {
+            ConfigurationSection section = templatesSection.getConfigurationSection(templateId);
+            if (section == null) continue;
+
+            MerchantTemplateConfig config = new MerchantTemplateConfig();
+            config.templateId = templateId;
+            config.displayName = section.getString("displayName", templateId);
+
+            List<Map<?, ?>> tradesList = section.getMapList("trades");
+            for (Map<?, ?> tradeMap : tradesList) {
+                MerchantTradeConfig trade = new MerchantTradeConfig();
+                trade.resultItem = (String) tradeMap.get("resultItem");
+                Object resultAmount = tradeMap.get("resultAmount");
+                trade.resultAmount = resultAmount instanceof Number ? ((Number) resultAmount).intValue() : 1;
+                trade.costItem = (String) tradeMap.get("costItem");
+                Object costAmount = tradeMap.get("costAmount");
+                trade.costAmount = costAmount instanceof Number ? ((Number) costAmount).intValue() : 1;
+                Object maxUses = tradeMap.get("maxUses");
+                trade.maxUses = maxUses instanceof Number ? ((Number) maxUses).intValue() : 10;
+                config.trades.add(trade);
+            }
+
+            merchantTemplates.put(templateId, config);
+        }
     }
 }

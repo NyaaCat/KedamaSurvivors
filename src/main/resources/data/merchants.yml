@@ -6,16 +6,47 @@
 #   <templateId>:
 #     displayName: "Display Name"
 #     trades:
-#       - item: "template_id"
-#         price: 10
-#         maxUses: 3
-#
-# Example:
-#   basic:
-#     displayName: "§e基础商人"
-#     trades:
-#       - item: "potion_health"
-#         price: 5
-#         maxUses: 3
+#       - resultItem: "MATERIAL_NAME" or "template_id"
+#         resultAmount: 1
+#         costItem: "coin" or "MATERIAL_NAME"
+#         costAmount: 10
+#         maxUses: 5
 
-templates: {}
+templates:
+  basic_supplies:
+    displayName: "§e流浪商人"
+    trades:
+      - resultItem: "GOLDEN_APPLE"
+        resultAmount: 1
+        costItem: "coin"
+        costAmount: 15
+        maxUses: 3
+      - resultItem: "ARROW"
+        resultAmount: 16
+        costItem: "coin"
+        costAmount: 5
+        maxUses: 10
+      - resultItem: "BREAD"
+        resultAmount: 3
+        costItem: "coin"
+        costAmount: 3
+        maxUses: 8
+
+  rare_goods:
+    displayName: "§d稀有商人"
+    trades:
+      - resultItem: "ENCHANTED_GOLDEN_APPLE"
+        resultAmount: 1
+        costItem: "coin"
+        costAmount: 50
+        maxUses: 1
+      - resultItem: "TOTEM_OF_UNDYING"
+        resultAmount: 1
+        costItem: "coin"
+        costAmount: 100
+        maxUses: 1
+      - resultItem: "ENDER_PEARL"
+        resultAmount: 4
+        costItem: "coin"
+        costAmount: 20
+        maxUses: 3

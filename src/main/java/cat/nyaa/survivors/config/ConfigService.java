@@ -673,4 +673,29 @@ public class ConfigService {
         public int coinPerLevel;
         public double permaScoreChance;
     }
+
+    /**
+     * Configuration for a merchant template.
+     */
+    public static class MerchantTemplateConfig {
+        public String templateId;
+        public String displayName;
+        public List<MerchantTradeConfig> trades = new ArrayList<>();
+    }
+
+    /**
+     * Configuration for a single merchant trade.
+     */
+    public static class MerchantTradeConfig {
+        /** Result item - Material name (e.g., GOLDEN_APPLE) or item template ID */
+        public String resultItem;
+        /** Amount of result item */
+        public int resultAmount = 1;
+        /** Cost item - Material name (e.g., GOLD_NUGGET) */
+        public String costItem;
+        /** Amount of cost item required */
+        public int costAmount = 1;
+        /** Maximum uses before trade locks */
+        public int maxUses = 10;
+    }
 }

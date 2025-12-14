@@ -2,14 +2,20 @@ package cat.nyaa.survivors.service;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.config.ConfigService.MerchantTemplateConfig;
+import cat.nyaa.survivors.config.ConfigService.MerchantTradeConfig;
+import cat.nyaa.survivors.config.ItemTemplateConfig;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.RunState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.MerchantRecipe;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -155,19 +161,105 @@ public class MerchantService {
      * Spawns a merchant villager at the given location.
      */
     private Villager spawnMerchant(Location location) {
+        return spawnMerchant(location, null);
+    }
+
+    /**
+     * Spawns a merchant villager at the given location with optional template.
+     */
+    private Villager spawnMerchant(Location location, MerchantTemplateConfig template) {
         World world = location.getWorld();
         if (world == null) return null;
 
+        // Try to get a template if not provided
+        if (template == null) {
+            AdminConfigService adminConfig = plugin.getAdminConfigService();
+            if (adminConfig != null) {
+                template = adminConfig.getRandomMerchantTemplate().orElse(null);
+            }
+        }
+
+        // Capture template for lambda
+        final MerchantTemplateConfig finalTemplate = template;
+
         Villager villager = world.spawn(location, Villager.class, v -> {
-            v.setCustomName(config.getCoinDisplayName()); // Use coin name as merchant name for now
+            // Set display name from template or default
+            String displayName = finalTemplate != null ? finalTemplate.displayName : config.getCoinDisplayName();
+            v.setCustomName(displayName);
             v.setCustomNameVisible(true);
             v.setInvulnerable(true);
             v.setAI(false);
-            v.setProfession(Villager.Profession.NONE);
+            v.setProfession(Villager.Profession.NITWIT);
             v.addScoreboardTag(MERCHANT_TAG);
         });
 
+        // Apply trades from template
+        if (template != null && !template.trades.isEmpty()) {
+            List<MerchantRecipe> recipes = buildRecipes(template);
+            if (!recipes.isEmpty()) {
+                villager.setRecipes(recipes);
+            }
+        }
+
         return villager;
+    }
+
+    /**
+     * Builds merchant recipes from a template configuration.
+     */
+    private List<MerchantRecipe> buildRecipes(MerchantTemplateConfig template) {
+        List<MerchantRecipe> recipes = new ArrayList<>();
+        AdminConfigService adminConfig = plugin.getAdminConfigService();
+
+        for (MerchantTradeConfig trade : template.trades) {
+            ItemStack result = resolveItem(trade.resultItem, adminConfig);
+            if (result == null) continue;
+            result.setAmount(trade.resultAmount);
+
+            ItemStack cost = resolveItem(trade.costItem, adminConfig);
+            if (cost == null) continue;
+            cost.setAmount(trade.costAmount);
+
+            MerchantRecipe recipe = new MerchantRecipe(result, trade.maxUses);
+            recipe.addIngredient(cost);
+            recipes.add(recipe);
+        }
+
+        return recipes;
+    }
+
+    /**
+     * Resolves an item specification to an ItemStack.
+     * Supports Material names (e.g., "GOLDEN_APPLE") and item template IDs.
+     */
+    private ItemStack resolveItem(String itemSpec, AdminConfigService adminConfig) {
+        if (itemSpec == null || itemSpec.isEmpty()) {
+            return null;
+        }
+
+        // Check for special "coin" keyword
+        if ("coin".equalsIgnoreCase(itemSpec)) {
+            return new ItemStack(config.getCoinMaterial());
+        }
+
+        // Try as Material first
+        try {
+            Material material = Material.valueOf(itemSpec.toUpperCase());
+            return new ItemStack(material);
+        } catch (IllegalArgumentException ignored) {
+            // Not a material, try as template ID
+        }
+
+        // Try as item template ID
+        if (adminConfig != null) {
+            Optional<ItemTemplateConfig> templateOpt = adminConfig.getItemTemplate(itemSpec);
+            if (templateOpt.isPresent()) {
+                return templateOpt.get().toItemStack();
+            }
+        }
+
+        plugin.getLogger().warning("Could not resolve item: " + itemSpec);
+        return null;
     }
 
     /**
@@ -338,7 +430,21 @@ public class MerchantService {
      * Spawns a merchant manually (admin command).
      */
     public Villager spawnMerchantAt(Location location) {
-        return spawnMerchant(location);
+        return spawnMerchant(location, null);
+    }
+
+    /**
+     * Spawns a merchant manually with a specific template (admin command).
+     */
+    public Villager spawnMerchantAt(Location location, String templateId) {
+        MerchantTemplateConfig template = null;
+        if (templateId != null) {
+            AdminConfigService adminConfig = plugin.getAdminConfigService();
+            if (adminConfig != null) {
+                template = adminConfig.getMerchantTemplate(templateId).orElse(null);
+            }
+        }
+        return spawnMerchant(location, template);
     }
 
     /**
