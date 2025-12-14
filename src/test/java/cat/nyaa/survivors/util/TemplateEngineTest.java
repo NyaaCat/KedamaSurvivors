@@ -186,6 +186,8 @@ class TemplateEngineTest {
         @Test
         @DisplayName("should handle special regex characters in replacement")
         void shouldHandleSpecialRegexCharactersInReplacement() {
+            // Note: $ is escaped by default to prevent command injection
+            engine.setEscapingEnabled(false);
             String template = "Command: {cmd}";
             Map<String, Object> context = Map.of("cmd", "give $player item");
             assertEquals("Command: give $player item", engine.expand(template, context));
@@ -197,6 +199,131 @@ class TemplateEngineTest {
             String template = "{first}{second}";
             Map<String, Object> context = Map.of("first", "A", "second", "B");
             assertEquals("AB", engine.expand(template, context));
+        }
+    }
+
+    @Nested
+    @DisplayName("Variable Escaping")
+    class VariableEscaping {
+
+        @Test
+        @DisplayName("should escape semicolon by default")
+        void shouldEscapeSemicolonByDefault() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "value;malicious");
+            assertEquals("cmd value\\;malicious", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should escape ampersand by default")
+        void shouldEscapeAmpersandByDefault() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "value&other");
+            assertEquals("cmd value\\&other", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should escape pipe by default")
+        void shouldEscapePipeByDefault() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "value|other");
+            assertEquals("cmd value\\|other", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should escape backtick by default")
+        void shouldEscapeBacktickByDefault() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "value`cmd`");
+            assertEquals("cmd value\\`cmd\\`", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should escape dollar sign by default")
+        void shouldEscapeDollarSignByDefault() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "value$var");
+            assertEquals("cmd value\\$var", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should escape backslash by default")
+        void shouldEscapeBackslashByDefault() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "path\\to\\file");
+            assertEquals("cmd path\\\\to\\\\file", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should not escape when disabled")
+        void shouldNotEscapeWhenDisabled() {
+            engine.setEscapingEnabled(false);
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "value;malicious");
+            assertEquals("cmd value;malicious", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should use custom escape chars")
+        void shouldUseCustomEscapeChars() {
+            engine.setEscapeChars(";");
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", "a;b$c");
+            assertEquals("cmd a\\;b$c", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should handle multiple dangerous chars in value")
+        void shouldHandleMultipleDangerousCharsInValue() {
+            String template = "cmd {arg}";
+            Map<String, Object> context = Map.of("arg", ";|&`$\\");
+            assertEquals("cmd \\;\\|\\&\\`\\$\\\\", engine.expand(template, context));
+        }
+    }
+
+    @Nested
+    @DisplayName("Missing Placeholder Handling")
+    class MissingPlaceholderHandling {
+
+        @Test
+        @DisplayName("should keep placeholder in KEEP mode (default)")
+        void shouldKeepPlaceholderInKeepMode() {
+            engine.setMissingPlaceholderMode(TemplateEngine.MissingPlaceholderMode.KEEP);
+            String template = "Hello {missing}!";
+            assertEquals("Hello {missing}!", engine.expand(template, Map.of()));
+        }
+
+        @Test
+        @DisplayName("should replace with empty string in EMPTY mode")
+        void shouldReplaceWithEmptyInEmptyMode() {
+            engine.setMissingPlaceholderMode(TemplateEngine.MissingPlaceholderMode.EMPTY);
+            String template = "Hello {missing}!";
+            assertEquals("Hello !", engine.expand(template, Map.of()));
+        }
+
+        @Test
+        @DisplayName("should keep placeholder in ERROR mode")
+        void shouldKeepPlaceholderInErrorMode() {
+            engine.setMissingPlaceholderMode(TemplateEngine.MissingPlaceholderMode.ERROR);
+            String template = "Hello {missing}!";
+            assertEquals("Hello {missing}!", engine.expand(template, Map.of()));
+        }
+
+        @Test
+        @DisplayName("should handle mixed present and missing placeholders in EMPTY mode")
+        void shouldHandleMixedPlaceholdersInEmptyMode() {
+            engine.setMissingPlaceholderMode(TemplateEngine.MissingPlaceholderMode.EMPTY);
+            String template = "{player} has {coins} coins";
+            Map<String, Object> context = Map.of("player", "TestPlayer");
+            assertEquals("TestPlayer has  coins", engine.expand(template, context));
+        }
+
+        @Test
+        @DisplayName("should handle null mode by defaulting to KEEP")
+        void shouldHandleNullMode() {
+            engine.setMissingPlaceholderMode(null);
+            String template = "Hello {missing}!";
+            assertEquals("Hello {missing}!", engine.expand(template, Map.of()));
         }
     }
 }

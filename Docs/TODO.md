@@ -23,14 +23,14 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Placeholder support in messages (`{key}`)
 - [x] Color code parsing (`§` and `&`)
 - [x] Clickable message components
-- [ ] `MessageKey` enum for type-safe message keys
+- [x] `MessageKey` enum for type-safe message keys
 
 ### 1.4 Template Engine
 - [x] `TemplateEngine` - Placeholder expansion (`{key}`)
 - [x] Context builder with helper methods
-- [ ] Variable escaping for command injection prevention
-- [ ] Missing placeholder handling (ERROR/EMPTY/LITERAL)
-- [ ] Command queue with tick budgets
+- [x] Variable escaping for command injection prevention
+- [x] Missing placeholder handling (ERROR/EMPTY/KEEP modes)
+- [x] Command queue with tick budgets
 
 ---
 
@@ -166,7 +166,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Run creation and initialization
 - [x] Player teleportation to arena
 - [x] Run ending (normal, wipe, force)
-- [ ] Grace eject handling
+- [x] Grace eject handling (implemented in JoinSwitchService)
 
 ---
 
@@ -301,7 +301,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Team state JSON serialization
 - [x] Periodic auto-save task
 - [x] Save on player quit
-- [ ] Save on run end
+- [x] Save on run end
 - [x] Load on startup
 
 ### 8.3 Backup System
@@ -386,19 +386,19 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| 1. Foundation | In Progress | 85% |
+| 1. Foundation | Complete | 100% |
 | 2. Core Data Models | Complete | 100% |
 | 3. Commands | Complete | 100% |
-| 4. Game Services | In Progress | 95% |
-| 5. Gameplay Systems | Complete | 100% |
+| 4. Game Services | Complete | 100% |
+| 5. Gameplay Systems | In Progress | 95% |
 | 6. UI & Display | Complete | 100% |
 | 7. Event Listeners | Complete | 100% |
-| 8. Persistence | In Progress | 90% |
+| 8. Persistence | Complete | 100% |
 | 9. Global Systems | Complete | 100% |
 | 10. Testing | In Progress | 75% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~92%**
+**Overall: ~96%**
 
 ---
 

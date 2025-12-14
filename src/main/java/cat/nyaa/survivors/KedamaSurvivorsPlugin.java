@@ -23,6 +23,7 @@ import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.task.CooldownDisplay;
 import cat.nyaa.survivors.task.DisconnectChecker;
 import cat.nyaa.survivors.task.UpgradeReminderTask;
+import cat.nyaa.survivors.util.CommandQueue;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -57,6 +58,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private UpgradeReminderTask upgradeReminderTask;
     private MerchantService merchantService;
     private PersistenceService persistenceService;
+    private CommandQueue commandQueue;
 
     @Override
     public void onEnable() {
@@ -97,8 +99,13 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         i18nService = new I18nService(this, configService);
         i18nService.loadLanguage();
 
+        // Command queue for rate-limited command execution
+        commandQueue = new CommandQueue(this, configService::getMaxCommandsPerTick);
+
         // Template engine for command placeholders
         templateEngine = new TemplateEngine();
+        templateEngine.setLogger(getLogger());
+        templateEngine.setCommandQueue(commandQueue);
 
         // State service manages all game state
         stateService = new StateService();
@@ -202,6 +209,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         if (merchantService != null) {
             merchantService.start();
         }
+
+        // Start command queue
+        if (commandQueue != null) {
+            commandQueue.start();
+        }
     }
 
     private void stopTasks() {
@@ -248,6 +260,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Stop merchant service
         if (merchantService != null) {
             merchantService.stop();
+        }
+
+        // Stop command queue (executes remaining commands)
+        if (commandQueue != null) {
+            commandQueue.stop();
         }
 
         // Cancel all scheduled tasks
@@ -348,5 +365,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public UpgradeReminderTask getUpgradeReminderTask() {
         return upgradeReminderTask;
+    }
+
+    public CommandQueue getCommandQueue() {
+        return commandQueue;
     }
 }

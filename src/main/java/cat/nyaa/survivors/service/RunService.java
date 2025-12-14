@@ -196,6 +196,14 @@ public class RunService {
         // Reset team
         teamOpt.ifPresent(TeamState::resetForNewRun);
 
+        // Save player states after run end
+        PersistenceService persistence = plugin.getPersistenceService();
+        if (persistence != null) {
+            for (UUID memberId : run.getParticipants()) {
+                persistence.savePlayerAsync(memberId);
+            }
+        }
+
         plugin.getLogger().info("Ended run " + run.getRunId() + " - Reason: " + reason +
                 ", Kills: " + totalKills + ", Duration: " + duration + "s");
     }

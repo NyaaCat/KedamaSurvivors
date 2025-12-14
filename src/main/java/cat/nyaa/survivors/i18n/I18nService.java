@@ -256,4 +256,112 @@ public class I18nService {
     public boolean hasKey(String key) {
         return messages.containsKey(key);
     }
+
+    // ==================== MessageKey Overloads ====================
+
+    /**
+     * Gets a raw message by MessageKey.
+     */
+    public String getRaw(MessageKey key) {
+        return getRaw(key.getKey());
+    }
+
+    /**
+     * Gets a message with color codes parsed.
+     */
+    public String get(MessageKey key) {
+        return get(key.getKey());
+    }
+
+    /**
+     * Gets a message with placeholders replaced and color codes parsed.
+     */
+    public String get(MessageKey key, Object... args) {
+        return get(key.getKey(), args);
+    }
+
+    /**
+     * Gets a message as a Component.
+     */
+    public Component getComponent(MessageKey key) {
+        return getComponent(key.getKey());
+    }
+
+    /**
+     * Gets a message as a Component with placeholders.
+     */
+    public Component getComponent(MessageKey key, Object... args) {
+        return getComponent(key.getKey(), args);
+    }
+
+    /**
+     * Sends a prefixed message to a command sender.
+     */
+    public void send(CommandSender sender, MessageKey key) {
+        send(sender, key.getKey());
+    }
+
+    /**
+     * Sends a prefixed message with placeholders.
+     */
+    public void send(CommandSender sender, MessageKey key, Object... args) {
+        send(sender, key.getKey(), args);
+    }
+
+    /**
+     * Sends a clickable message.
+     */
+    public void sendClickable(CommandSender sender, MessageKey key, String command) {
+        sendClickable(sender, key.getKey(), command);
+    }
+
+    /**
+     * Sends a clickable message with placeholders.
+     */
+    public void sendClickable(CommandSender sender, MessageKey key, String command, Object... args) {
+        sendClickable(sender, key.getKey(), command, args);
+    }
+
+    /**
+     * Sends an actionbar message.
+     */
+    public void sendActionBar(Player player, MessageKey key) {
+        sendActionBar(player, key.getKey());
+    }
+
+    /**
+     * Sends an actionbar message with placeholders.
+     */
+    public void sendActionBar(Player player, MessageKey key, Object... args) {
+        sendActionBar(player, key.getKey(), args);
+    }
+
+    /**
+     * Sends a title message.
+     */
+    public void sendTitle(Player player, MessageKey titleKey, MessageKey subtitleKey,
+                          int fadeIn, int stay, int fadeOut) {
+        sendTitle(player,
+                titleKey != null ? titleKey.getKey() : null,
+                subtitleKey != null ? subtitleKey.getKey() : null,
+                fadeIn, stay, fadeOut);
+    }
+
+    /**
+     * Sends a title message with placeholders.
+     */
+    public void sendTitle(Player player, MessageKey titleKey, MessageKey subtitleKey,
+                          int fadeIn, int stay, int fadeOut, Object... args) {
+        sendTitle(player,
+                titleKey != null ? titleKey.getKey() : null,
+                subtitleKey != null ? subtitleKey.getKey() : null,
+                fadeIn, stay, fadeOut, args);
+    }
+
+    /**
+     * Checks if a MessageKey exists.
+     */
+    public boolean hasKey(MessageKey key) {
+        return hasKey(key.getKey());
+    }
 }
