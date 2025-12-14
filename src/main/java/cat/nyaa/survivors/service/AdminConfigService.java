@@ -80,10 +80,14 @@ public class AdminConfigService {
     public void loadAll() {
         boolean needsMigration = !Files.exists(equipmentPath.resolve("weapons.yml"));
 
+        plugin.getLogger().info("[AdminConfigService] loadAll() - needsMigration=" + needsMigration +
+            ", weaponsYmlPath=" + equipmentPath.resolve("weapons.yml"));
+
         if (needsMigration) {
             plugin.getLogger().info("Data files not found, migrating from config.yml...");
             migrateFromConfig();
         } else {
+            plugin.getLogger().info("[AdminConfigService] Loading from data files (not migrating)");
             loadEquipmentGroups();
             loadArchetypes();
             loadStarters();
@@ -110,28 +114,77 @@ public class AdminConfigService {
      * Migrates existing config.yml data to dedicated data files.
      */
     private void migrateFromConfig() {
+        plugin.getLogger().info("[AdminConfigService] Starting migration from config.yml...");
+
         // Migrate weapon groups
         weaponGroups.clear();
         weaponGroups.putAll(configService.getWeaponGroups());
+        plugin.getLogger().info("[AdminConfigService] Migrated " + weaponGroups.size() + " weapon groups");
 
         // Migrate helmet groups
         helmetGroups.clear();
         helmetGroups.putAll(configService.getHelmetGroups());
+        plugin.getLogger().info("[AdminConfigService] Migrated " + helmetGroups.size() + " helmet groups");
 
         // Migrate archetypes
         archetypes.clear();
         archetypes.putAll(configService.getEnemyArchetypes());
+        plugin.getLogger().info("[AdminConfigService] Migrated " + archetypes.size() + " archetypes");
 
-        // Migrate starters
-        starterWeapons.clear();
-        starterWeapons.addAll(configService.getStarterWeapons());
+        // For starters: check if starters.yml already exists with content
+        // This allows users to pre-configure starters.yml before first run
+        File existingStartersFile = dataPath.resolve("starters.yml").toFile();
+        File rootStartersFile = new File(plugin.getDataFolder(), "starters.yml");
 
-        starterHelmets.clear();
-        starterHelmets.addAll(configService.getStarterHelmets());
+        boolean loadedFromExisting = false;
+        if (existingStartersFile.exists()) {
+            YamlConfiguration existingYaml = YamlConfiguration.loadConfiguration(existingStartersFile);
+            List<Map<?, ?>> existingWeapons = existingYaml.getMapList("weapons");
+            List<Map<?, ?>> existingHelmets = existingYaml.getMapList("helmets");
+            if (!existingWeapons.isEmpty() || !existingHelmets.isEmpty()) {
+                plugin.getLogger().info("[AdminConfigService] Found existing starters.yml with content, loading from there");
+                loadStarterList(existingWeapons, starterWeapons, "weapon");
+                loadStarterList(existingHelmets, starterHelmets, "helmet");
+                loadedFromExisting = true;
+            }
+        } else if (rootStartersFile.exists()) {
+            // Check root folder as fallback
+            YamlConfiguration existingYaml = YamlConfiguration.loadConfiguration(rootStartersFile);
+            List<Map<?, ?>> existingWeapons = existingYaml.getMapList("weapons");
+            List<Map<?, ?>> existingHelmets = existingYaml.getMapList("helmets");
+            if (!existingWeapons.isEmpty() || !existingHelmets.isEmpty()) {
+                plugin.getLogger().info("[AdminConfigService] Found starters.yml in root folder with content, loading from there");
+                loadStarterList(existingWeapons, starterWeapons, "weapon");
+                loadStarterList(existingHelmets, starterHelmets, "helmet");
+                loadedFromExisting = true;
+            }
+        }
+
+        if (!loadedFromExisting) {
+            // Migrate starters from config.yml (likely empty)
+            starterWeapons.clear();
+            List<StarterOptionConfig> configWeapons = configService.getStarterWeapons();
+            starterWeapons.addAll(configWeapons);
+            plugin.getLogger().info("[AdminConfigService] Migrated " + starterWeapons.size() + " starter weapons from config.yml");
+            for (StarterOptionConfig w : starterWeapons) {
+                plugin.getLogger().info("[AdminConfigService] Migrated weapon: optionId=" + w.optionId +
+                    ", group=" + w.group + ", level=" + w.level);
+            }
+
+            starterHelmets.clear();
+            List<StarterOptionConfig> configHelmets = configService.getStarterHelmets();
+            starterHelmets.addAll(configHelmets);
+            plugin.getLogger().info("[AdminConfigService] Migrated " + starterHelmets.size() + " starter helmets from config.yml");
+            for (StarterOptionConfig h : starterHelmets) {
+                plugin.getLogger().info("[AdminConfigService] Migrated helmet: optionId=" + h.optionId +
+                    ", group=" + h.group + ", level=" + h.level);
+            }
+        }
 
         // Migrate combat worlds
         combatWorlds.clear();
         combatWorlds.addAll(configService.getCombatWorlds());
+        plugin.getLogger().info("[AdminConfigService] Migrated " + combatWorlds.size() + " combat worlds");
 
         // Save all migrated data
         saveAll();
@@ -700,18 +753,40 @@ public class AdminConfigService {
         starterWeapons.clear();
         starterHelmets.clear();
 
+        // Primary location: data/starters.yml
         File file = dataPath.resolve("starters.yml").toFile();
+        plugin.getLogger().info("[AdminConfigService] loadStarters() - checking " + file.getAbsolutePath() +
+            ", exists=" + file.exists());
+
+        // Fallback: check root plugin folder for starters.yml
         if (!file.exists()) {
+            File rootFile = new File(plugin.getDataFolder(), "starters.yml");
+            if (rootFile.exists()) {
+                plugin.getLogger().info("[AdminConfigService] Found starters.yml in root folder, using that");
+                file = rootFile;
+            }
+        }
+
+        if (!file.exists()) {
+            plugin.getLogger().warning("[AdminConfigService] starters.yml not found! Expected at: " +
+                dataPath.resolve("starters.yml"));
+            plugin.getLogger().warning("[AdminConfigService] Use '/vrs admin starter create' to add starters, " +
+                "or create data/starters.yml manually");
             return;
         }
 
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
-        loadStarterList(yaml.getMapList("weapons"), starterWeapons);
-        loadStarterList(yaml.getMapList("helmets"), starterHelmets);
+        List<Map<?, ?>> weaponsList = yaml.getMapList("weapons");
+        List<Map<?, ?>> helmetsList = yaml.getMapList("helmets");
+        plugin.getLogger().info("[AdminConfigService] Found " + weaponsList.size() + " weapons and " +
+            helmetsList.size() + " helmets in " + file.getName());
+
+        loadStarterList(weaponsList, starterWeapons, "weapon");
+        loadStarterList(helmetsList, starterHelmets, "helmet");
     }
 
     @SuppressWarnings("unchecked")
-    private void loadStarterList(List<Map<?, ?>> list, List<StarterOptionConfig> target) {
+    private void loadStarterList(List<Map<?, ?>> list, List<StarterOptionConfig> target, String typeName) {
         for (Map<?, ?> map : list) {
             StarterOptionConfig opt = new StarterOptionConfig();
             opt.optionId = (String) map.get("optionId");
@@ -720,6 +795,17 @@ public class AdminConfigService {
             opt.group = (String) map.get("group");
             Object levelVal = map.get("level");
             opt.level = levelVal instanceof Number ? ((Number) levelVal).intValue() : 1;
+
+            // Log loaded starter for debugging
+            plugin.getLogger().info("Loaded starter " + typeName + ": optionId=" + opt.optionId +
+                ", group=" + opt.group + ", level=" + opt.level);
+
+            // Warn if group is missing - upgrades will fail
+            if (opt.group == null || opt.group.isEmpty()) {
+                plugin.getLogger().warning("Starter " + typeName + " '" + opt.optionId +
+                    "' has no 'group' configured! Player upgrades will fail. " +
+                    "Use '/vrs admin starter set group' to fix.");
+            }
 
             Map<String, Object> displayItem = (Map<String, Object>) map.get("displayItem");
             if (displayItem != null) {
@@ -883,6 +969,17 @@ public class AdminConfigService {
      * Updates ConfigService with current data for runtime use.
      */
     private void updateConfigService() {
+        plugin.getLogger().info("[AdminConfigService] updateConfigService() - syncing " +
+            starterWeapons.size() + " weapons, " + starterHelmets.size() + " helmets to ConfigService");
+        for (StarterOptionConfig w : starterWeapons) {
+            plugin.getLogger().info("[AdminConfigService] Syncing weapon: optionId=" + w.optionId +
+                ", group=" + w.group + ", level=" + w.level);
+        }
+        for (StarterOptionConfig h : starterHelmets) {
+            plugin.getLogger().info("[AdminConfigService] Syncing helmet: optionId=" + h.optionId +
+                ", group=" + h.group + ", level=" + h.level);
+        }
+
         configService.updateWeaponGroups(weaponGroups);
         configService.updateHelmetGroups(helmetGroups);
         configService.updateEnemyArchetypes(archetypes);

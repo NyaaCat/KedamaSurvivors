@@ -62,10 +62,89 @@ public class PlayerListener implements Listener {
             handleReconnect(player, playerState);
         }
 
+        // Validate player state - fix inconsistencies
+        validateAndFixPlayerState(player, playerState);
+
         // Setup scoreboard for all players (always visible)
         if (config.isScoreboardEnabled()) {
             plugin.getScoreboardService().setupSidebar(player);
         }
+    }
+
+    /**
+     * Validates player state on join and fixes inconsistencies.
+     * Handles cases like:
+     * - Player in combat world but not IN_RUN mode
+     * - Player in COUNTDOWN/READY mode but no active countdown
+     * - Player in IN_RUN mode but run ended
+     */
+    private void validateAndFixPlayerState(Player player, PlayerState playerState) {
+        UUID playerId = player.getUniqueId();
+        PlayerMode mode = playerState.getMode();
+        String worldName = player.getWorld().getName();
+
+        // Check if player is in a combat world
+        boolean inCombatWorld = plugin.getWorldService().getWorldConfig(worldName).isPresent();
+
+        // Case 1: Player in combat world but not IN_RUN
+        if (inCombatWorld && mode != PlayerMode.IN_RUN && mode != PlayerMode.DISCONNECTED) {
+            plugin.getLogger().info("Player " + player.getName() + " in combat world '" + worldName +
+                "' with mode " + mode + " - teleporting to lobby");
+            teleportToLobbyDelayed(player, playerState);
+            return;
+        }
+
+        // Case 2: Player claims to be IN_RUN but has no active run
+        if (mode == PlayerMode.IN_RUN) {
+            Optional<RunState> runOpt = state.getPlayerRun(playerId);
+            if (runOpt.isEmpty() || !runOpt.get().isActive()) {
+                plugin.getLogger().info("Player " + player.getName() + " in IN_RUN mode but no active run - resetting to LOBBY");
+                playerState.setMode(PlayerMode.LOBBY);
+                playerState.resetRunState();
+                if (inCombatWorld) {
+                    teleportToLobbyDelayed(player, playerState);
+                }
+                return;
+            }
+        }
+
+        // Case 3: Player in COUNTDOWN or READY mode - reset to LOBBY
+        if (mode == PlayerMode.COUNTDOWN || mode == PlayerMode.READY) {
+            plugin.getLogger().info("Player " + player.getName() + " in " + mode + " mode on join - resetting to LOBBY");
+            playerState.setMode(PlayerMode.LOBBY);
+            playerState.setReady(false);
+
+            // Also update team ready state
+            Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
+            teamOpt.ifPresent(team -> team.setReady(playerId, false));
+
+            if (inCombatWorld) {
+                teleportToLobbyDelayed(player, playerState);
+            }
+        }
+    }
+
+    /**
+     * Teleports player to lobby after a short delay (allows chunks to load).
+     */
+    private void teleportToLobbyDelayed(Player player, PlayerState playerState) {
+        // Reset state
+        playerState.setMode(PlayerMode.LOBBY);
+        playerState.resetRunState();
+        playerState.setReady(false);
+
+        // Teleport after short delay to allow world to load
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) return;
+
+            Location lobby = config.getLobbyLocation();
+            player.teleportAsync(lobby).thenAccept(success -> {
+                if (!success) {
+                    Bukkit.getScheduler().runTask(plugin, () -> player.teleport(lobby));
+                }
+            });
+            i18n.send(player, "info.returned_to_lobby");
+        }, 20L); // 1 second delay
     }
 
     @EventHandler(priority = EventPriority.NORMAL)

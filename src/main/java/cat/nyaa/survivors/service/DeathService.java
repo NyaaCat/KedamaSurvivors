@@ -201,19 +201,23 @@ public class DeathService {
     }
 
     /**
-     * Clears VRS equipment from a player's inventory.
+     * Clears all VRS equipment from a player's inventory.
      */
     private void clearVrsEquipment(Player player) {
         StarterService starter = plugin.getStarterService();
+        var inventory = player.getInventory();
 
-        // Clear main hand if VRS weapon
-        if (starter.isVrsEquipment(player.getInventory().getItemInMainHand(), "weapon")) {
-            player.getInventory().setItemInMainHand(null);
+        // Clear helmet slot if VRS helmet
+        if (starter.isVrsEquipment(inventory.getHelmet(), "helmet")) {
+            inventory.setHelmet(null);
         }
 
-        // Clear helmet if VRS helmet
-        if (starter.isVrsEquipment(player.getInventory().getHelmet(), "helmet")) {
-            player.getInventory().setHelmet(null);
+        // Scan entire inventory for VRS weapons (player may have moved it)
+        for (int i = 0; i < inventory.getSize(); i++) {
+            var item = inventory.getItem(i);
+            if (starter.isVrsEquipment(item, "weapon")) {
+                inventory.setItem(i, null);
+            }
         }
     }
 

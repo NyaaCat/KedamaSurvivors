@@ -39,11 +39,14 @@ info:
   run_starting: "§7正在进入战斗..."
   run_started: "§a进入战斗！§7世界: §f{world}"
   run_ended: "§7本轮结束"
+  returned_to_lobby: "§7已返回准备区"
 
   # 死亡与重生
   died: "§7你已阵亡"
   died_cooldown: "§7你已阵亡，冷却 §f{seconds} §7秒后可重新开始"
   respawned_to_team: "§a重生至队友 §f{player} §a身边"
+  rejoined_run: "§a已重新加入战斗！§7传送至 §f{player} §7身边"
+  teammate_rejoined: "§a队友 §f{player} §a重新加入战斗！"
   invulnerable: "§7无敌保护中 §f{seconds}s"
   cooldown_remaining: "§7冷却中，剩余 §f{seconds} §7秒"
   cooldown_expired: "§a冷却结束，可以重新开始了"
@@ -186,6 +189,9 @@ error:
   no_helmet_selected: "§c请先选择护甲"
   select_weapon_first: "§c请先选择武器"
   select_starters_first: "§c请先选择装备"
+
+  # 重新加入
+  no_teammates_alive: "§c没有存活的队友可以重生"
   weapon_first: "§c请先选择武器"
   invalid_selection: "§c无效的选择"
   invalid_option: "§c无效选项: §f{option}"
@@ -200,6 +206,7 @@ error:
   team_full: "§c队伍已满 §f({current}/{max})"
   team_not_found: "§c找不到队伍 §f{name}"
   team_name_taken: "§c队伍名称 §f{name} §c已被使用"
+  invalid_team_name: "§c队伍名称只能包含字母、数字、下划线和连字符"
   no_valid_invite: "§c你没有该队伍的有效邀请"
   no_invite: "§c你没有该队伍的有效邀请"
   invite_expired: "§c邀请已过期"

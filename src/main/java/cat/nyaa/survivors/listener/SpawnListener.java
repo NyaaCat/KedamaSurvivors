@@ -69,9 +69,11 @@ public class SpawnListener implements Listener {
         // Cancel the spawn
         event.setCancelled(true);
 
-        if (config.isVerbose()) {
-            plugin.getLogger().fine("Blocked " + entity.getType() + " spawn in combat world " +
-                    worldName + " (reason: " + reason + ")");
-        }
+        // Log blocked spawns (only when verbose is enabled to avoid spam)
+        //if (config.isVerbose()) {
+        //    plugin.getLogger().info("[SpawnListener] Blocked " + entity.getType() + " in " +
+        //            worldName + " (reason: " + reason + ", hasTag: " +
+        //            entity.getScoreboardTags().contains(VRS_MOB_TAG) + ")");
+        //}
     }
 }

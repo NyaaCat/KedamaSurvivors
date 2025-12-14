@@ -77,11 +77,15 @@ public class StarterSubCommand implements SubCommand {
         }
 
         playerState.setStarterWeaponOptionId(optionId);
+
+        // Grant the weapon immediately
+        plugin.getStarterService().grantSingleStarterItem(player, selected, "weapon");
+
         i18n.send(player, "starter.weapon_selected", "weapon", selected.displayName);
 
         // Auto-open helmet GUI if configured
         if (config.isAutoOpenHelmetGui() && playerState.getStarterHelmetOptionId() == null) {
-            showAvailableHelmets(player);
+            plugin.getStarterService().openHelmetGui(player);
         }
     }
 
@@ -111,6 +115,10 @@ public class StarterSubCommand implements SubCommand {
         }
 
         playerState.setStarterHelmetOptionId(optionId);
+
+        // Grant the helmet immediately
+        plugin.getStarterService().grantSingleStarterItem(player, selected, "helmet");
+
         i18n.send(player, "starter.helmet_selected", "helmet", selected.displayName);
     }
 

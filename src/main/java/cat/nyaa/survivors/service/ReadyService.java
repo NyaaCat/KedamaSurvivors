@@ -5,6 +5,7 @@ import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
+import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -72,16 +73,29 @@ public class ReadyService {
      * Checks if a player can become ready.
      */
     public boolean canReady(Player player, PlayerState playerState) {
-        // Must be in lobby mode
-        if (playerState.getMode() != PlayerMode.LOBBY) {
+        // Must be in lobby or cooldown mode (cooldown = after death, can rejoin)
+        if (playerState.getMode() != PlayerMode.LOBBY && playerState.getMode() != PlayerMode.COOLDOWN) {
             i18n.send(player, "error.not_in_lobby");
             return false;
         }
 
-        // Must not be on cooldown
+        // Must not be on cooldown (unless team has active run - can rejoin)
         if (playerState.isOnCooldown()) {
-            i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
-            return false;
+            // Check if player's team has an active run they can rejoin
+            Optional<TeamState> teamOpt = state.getPlayerTeam(player.getUniqueId());
+            if (teamOpt.isPresent()) {
+                Optional<RunState> runOpt = state.getTeamRun(teamOpt.get().getTeamId());
+                if (runOpt.isPresent() && runOpt.get().isActive()) {
+                    // Can rejoin - allow ready even on cooldown
+                    // But still check other requirements below
+                } else {
+                    i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
+                    return false;
+                }
+            } else {
+                i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
+                return false;
+            }
         }
 
         // Must be in a team
@@ -324,6 +338,14 @@ public class ReadyService {
         private void onComplete() {
             activeCountdowns.remove(team.getTeamId());
 
+            // Check if team already has an active run (players rejoining)
+            Optional<RunState> existingRunOpt = state.getTeamRun(team.getTeamId());
+            if (existingRunOpt.isPresent() && existingRunOpt.get().isActive()) {
+                // Rejoin players to existing run
+                handleRejoinToRun(existingRunOpt.get());
+                return;
+            }
+
             // Notify completion
             for (UUID memberId : team.getMembers()) {
                 Player member = Bukkit.getPlayer(memberId);
@@ -340,6 +362,24 @@ public class ReadyService {
 
             // Start the run asynchronously (async chunk loading)
             plugin.getRunService().startRunAsync(team);
+        }
+
+        private void handleRejoinToRun(RunState run) {
+            // Find ready players who need to rejoin (not already IN_RUN)
+            for (UUID memberId : team.getMembers()) {
+                Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
+                if (playerStateOpt.isEmpty()) continue;
+
+                PlayerState playerState = playerStateOpt.get();
+
+                // Only rejoin players who are ready but not already in run
+                if (playerState.isReady() && playerState.getMode() != PlayerMode.IN_RUN) {
+                    Player player = Bukkit.getPlayer(memberId);
+                    if (player != null && player.isOnline()) {
+                        plugin.getRunService().rejoinPlayerToRun(player, playerState, run);
+                    }
+                }
+            }
         }
     }
 }

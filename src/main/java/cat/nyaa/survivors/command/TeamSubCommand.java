@@ -56,6 +56,10 @@ public class TeamSubCommand implements SubCommand {
         }
     }
 
+    // Team names can only contain alphanumeric characters, dashes, and underscores
+    private static final java.util.regex.Pattern VALID_TEAM_NAME = java.util.regex.Pattern.compile("^[a-zA-Z0-9_-]+$");
+    private static final java.util.concurrent.ThreadLocalRandom RANDOM = java.util.concurrent.ThreadLocalRandom.current();
+
     private void handleCreate(Player player, PlayerState playerState, String[] args) {
         // Check if already in a team
         if (state.isInTeam(player.getUniqueId())) {
@@ -69,7 +73,20 @@ public class TeamSubCommand implements SubCommand {
             return;
         }
 
-        String teamName = args.length > 1 ? args[1] : player.getName() + "'s Team";
+        String teamName;
+        if (args.length > 1) {
+            teamName = args[1];
+        } else {
+            // Generate default team name: playername-XXXX (4 random digits)
+            String baseName = player.getName().replaceAll("[^a-zA-Z0-9_-]", "_");
+            teamName = baseName + "-" + String.format("%04d", RANDOM.nextInt(10000));
+        }
+
+        // Validate team name format
+        if (!VALID_TEAM_NAME.matcher(teamName).matches()) {
+            i18n.send(player, "error.invalid_team_name");
+            return;
+        }
 
         // Check for duplicate names
         if (state.findTeamByName(teamName).isPresent()) {
@@ -148,7 +165,8 @@ public class TeamSubCommand implements SubCommand {
             return;
         }
 
-        String teamName = args[1];
+        // Join remaining args to support team names with spaces
+        String teamName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
         Optional<TeamState> teamOpt = state.findTeamByName(teamName);
 
         if (teamOpt.isEmpty()) {
@@ -191,7 +209,8 @@ public class TeamSubCommand implements SubCommand {
             return;
         }
 
-        String teamName = args[1];
+        // Join remaining args to support team names with spaces
+        String teamName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
         Optional<TeamState> teamOpt = state.findTeamByName(teamName);
 
         if (teamOpt.isEmpty()) {
