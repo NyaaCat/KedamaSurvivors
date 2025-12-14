@@ -54,7 +54,8 @@ public class StarterService {
     public void openWeaponGui(Player player) {
         PlayerState playerState = state.getOrCreatePlayer(player.getUniqueId(), player.getName());
 
-        if (playerState.getMode() != PlayerMode.LOBBY) {
+        // Allow selection in lobby or cooldown (after death)
+        if (playerState.getMode() != PlayerMode.LOBBY && playerState.getMode() != PlayerMode.COOLDOWN) {
             i18n.send(player, "error.not_in_lobby");
             return;
         }
@@ -69,7 +70,8 @@ public class StarterService {
     public void openHelmetGui(Player player) {
         PlayerState playerState = state.getOrCreatePlayer(player.getUniqueId(), player.getName());
 
-        if (playerState.getMode() != PlayerMode.LOBBY) {
+        // Allow selection in lobby or cooldown (after death)
+        if (playerState.getMode() != PlayerMode.LOBBY && playerState.getMode() != PlayerMode.COOLDOWN) {
             i18n.send(player, "error.not_in_lobby");
             return;
         }

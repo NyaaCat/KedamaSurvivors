@@ -452,13 +452,36 @@ public class ConfigService {
             arch.weight = archSection.getDouble("weight", 1.0);
             arch.spawnCommands = archSection.getStringList("spawnCommands");
 
+            // Load minSpawnLevel (level gating)
+            arch.minSpawnLevel = archSection.getInt("minSpawnLevel", 1);
+
             ConfigurationSection rewards = archSection.getConfigurationSection("rewards");
             if (rewards != null) {
-                arch.xpBase = rewards.getInt("xpBase", 10);
-                arch.xpPerLevel = rewards.getInt("xpPerLevel", 5);
-                arch.coinBase = rewards.getInt("coinBase", 1);
-                arch.coinPerLevel = rewards.getInt("coinPerLevel", 1);
-                arch.permaScoreChance = rewards.getDouble("permaScoreChance", 0.01);
+                // Check for new format (xpAmount) vs legacy format (xpBase)
+                if (rewards.contains("xpAmount")) {
+                    // New chance-based format
+                    arch.xpAmount = rewards.getInt("xpAmount", 10);
+                    arch.xpChance = rewards.getDouble("xpChance", 1.0);
+                    arch.coinAmount = rewards.getInt("coinAmount", 1);
+                    arch.coinChance = rewards.getDouble("coinChance", 1.0);
+                    arch.permaScoreAmount = rewards.getInt("permaScoreAmount", 1);
+                    arch.permaScoreChance = rewards.getDouble("permaScoreChance", 0.01);
+                } else if (rewards.contains("xpBase")) {
+                    // Legacy format - migrate to new format
+                    int xpBase = rewards.getInt("xpBase", 10);
+                    int coinBase = rewards.getInt("coinBase", 1);
+                    double permaChance = rewards.getDouble("permaScoreChance", 0.01);
+
+                    // Migrate: use base values as fixed amounts with 100% chance
+                    arch.xpAmount = xpBase;
+                    arch.xpChance = 1.0;
+                    arch.coinAmount = coinBase;
+                    arch.coinChance = 1.0;
+                    arch.permaScoreAmount = 1;
+                    arch.permaScoreChance = permaChance;
+
+                    plugin.getLogger().info("Migrated archetype '" + archetypeId + "' to new reward format");
+                }
             }
 
             enemyArchetypes.put(archetypeId, arch);
@@ -901,11 +924,17 @@ public class ConfigService {
         public String enemyType;
         public double weight;
         public List<String> spawnCommands;
-        public int xpBase;
-        public int xpPerLevel;
-        public int coinBase;
-        public int coinPerLevel;
-        public double permaScoreChance;
+
+        // Level gating - archetype only spawns when enemy level >= minSpawnLevel
+        public int minSpawnLevel = 1;
+
+        // Chance-based fixed rewards (no level scaling)
+        public int xpAmount = 10;
+        public double xpChance = 1.0;        // 0-1, probability to award XP
+        public int coinAmount = 1;
+        public double coinChance = 1.0;      // 0-1, probability to award coins
+        public int permaScoreAmount = 1;
+        public double permaScoreChance = 0.01; // 0-1, probability to award perma score
     }
 
     /**

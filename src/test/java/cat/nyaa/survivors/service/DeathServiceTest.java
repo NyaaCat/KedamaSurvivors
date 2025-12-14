@@ -196,16 +196,17 @@ class DeathServiceTest {
         }
 
         @Test
-        @DisplayName("should preserve starter selections on reset")
-        void shouldPreserveStarterSelectionsOnReset() {
+        @DisplayName("should reset starter selections on reset for re-selection after death")
+        void shouldResetStarterSelectionsOnReset() {
             PlayerState state = new PlayerState(UUID.randomUUID(), "TestPlayer");
             state.setStarterWeaponOptionId("iron_sword");
             state.setStarterHelmetOptionId("iron_helmet");
 
             state.resetRunState();
 
-            assertEquals("iron_sword", state.getStarterWeaponOptionId());
-            assertEquals("iron_helmet", state.getStarterHelmetOptionId());
+            // Starter selections should be reset so player can re-select after death
+            assertNull(state.getStarterWeaponOptionId());
+            assertNull(state.getStarterHelmetOptionId());
         }
     }
 

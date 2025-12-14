@@ -151,6 +151,7 @@ spawning:
   loop:
     tickInterval: 20
     enabled: true
+    blockNaturalSpawns: true  # Block natural mob spawns in combat worlds
 
   limits:
     targetMobsPerPlayer: 10

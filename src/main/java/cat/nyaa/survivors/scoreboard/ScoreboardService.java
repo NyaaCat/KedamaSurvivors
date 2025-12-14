@@ -194,6 +194,10 @@ public class ScoreboardService {
         if (inRun) {
             // =============== IN-RUN SCOREBOARD ===============
 
+            // Player level (run progression level)
+            String levelLine = i18n.get("scoreboard.player_level", "level", playerState.getRunLevel());
+            sidebar.getScore(levelLine).setScore(score--);
+
             // Weapon level
             String weaponLine = i18n.get("scoreboard.weapon_level", "level", playerState.getWeaponLevel());
             sidebar.getScore(weaponLine).setScore(score--);
@@ -220,8 +224,9 @@ public class ScoreboardService {
                 }
             }
 
-            // Coins (held XP as coins during upgrade pending)
-            String coinsLine = i18n.get("scoreboard.coins", "amount", playerState.getXpHeld());
+            // Coins earned this run
+            RunState run = runOpt.get();
+            String coinsLine = i18n.get("scoreboard.coins", "amount", run.getTotalCoinsCollected());
             sidebar.getScore(coinsLine).setScore(score--);
 
             // Empty line
@@ -242,7 +247,6 @@ public class ScoreboardService {
             }
 
             // Run time
-            RunState run = runOpt.get();
             String timeLine = i18n.get("scoreboard.time", "time", run.getElapsedFormatted());
             sidebar.getScore(timeLine).setScore(score--);
 

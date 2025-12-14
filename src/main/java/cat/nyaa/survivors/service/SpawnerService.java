@@ -218,7 +218,7 @@ public class SpawnerService {
                         run.getRunId(),
                         worldName,
                         player.getLocation(),
-                        playerState.getPlayerLevel(),
+                        playerState.getRunLevel(),  // Use runLevel instead of equipment-based level
                         avgLevel,
                         nearbyPlayers,
                         nearbyMobs,
@@ -248,13 +248,16 @@ public class SpawnerService {
 
             if (toSpawn <= 0) continue;
 
-            // Calculate enemy level
+            // Calculate enemy level FIRST (needed for archetype selection)
             int enemyLevel = calculateEnemyLevel(ctx);
 
             for (int i = 0; i < toSpawn; i++) {
-                // Select archetype
-                EnemyArchetypeConfig archetype = selectArchetype();
-                if (archetype == null) continue;
+                // Select archetype based on current level (level-gated selection)
+                EnemyArchetypeConfig archetype = selectArchetype(enemyLevel);
+                if (archetype == null) {
+                    // No archetypes available at this level - stop trying
+                    break;
+                }
 
                 // Sample spawn location
                 Location spawnLoc = sampleSpawnLocation(ctx.playerLocation());
@@ -300,6 +303,7 @@ public class SpawnerService {
                 context.put("runWorld", plan.worldName());
                 context.put("enemyLevel", plan.enemyLevel());
                 context.put("enemyType", plan.archetype().enemyType);
+                context.put("archetypeId", plan.archetype().archetypeId);
 
                 String cmd = templateEngine.expand(cmdTemplate, context);
 
@@ -346,31 +350,47 @@ public class SpawnerService {
 
     /**
      * Selects a random archetype using weighted selection.
+     * Only includes archetypes where minSpawnLevel <= currentLevel.
+     *
+     * @param currentLevel The calculated enemy level for this spawn
+     * @return Selected archetype, or null if no archetypes available at this level
      */
-    private EnemyArchetypeConfig selectArchetype() {
-        Map<String, EnemyArchetypeConfig> archetypes = config.getEnemyArchetypes();
-        if (archetypes.isEmpty()) return null;
+    private EnemyArchetypeConfig selectArchetype(int currentLevel) {
+        Map<String, EnemyArchetypeConfig> allArchetypes = config.getEnemyArchetypes();
+        if (allArchetypes.isEmpty()) return null;
 
-        // Calculate total weight
-        double totalWeight = archetypes.values().stream()
+        // Filter archetypes by minSpawnLevel
+        List<EnemyArchetypeConfig> eligible = allArchetypes.values().stream()
+                .filter(a -> a.minSpawnLevel <= currentLevel)
+                .toList();
+
+        if (eligible.isEmpty()) {
+            if (config.isVerbose()) {
+                plugin.getLogger().fine("No archetypes available at level " + currentLevel);
+            }
+            return null;
+        }
+
+        // Calculate total weight from eligible archetypes only
+        double totalWeight = eligible.stream()
                 .mapToDouble(a -> a.weight)
                 .sum();
 
         if (totalWeight <= 0) return null;
 
-        // Weighted random selection
+        // Weighted random selection from filtered pool
         double random = ThreadLocalRandom.current().nextDouble() * totalWeight;
         double cumulative = 0;
 
-        for (EnemyArchetypeConfig archetype : archetypes.values()) {
+        for (EnemyArchetypeConfig archetype : eligible) {
             cumulative += archetype.weight;
             if (random < cumulative) {
                 return archetype;
             }
         }
 
-        // Fallback to first archetype
-        return archetypes.values().iterator().next();
+        // Fallback to first eligible archetype
+        return eligible.get(0);
     }
 
     /**
@@ -421,7 +441,7 @@ public class SpawnerService {
     }
 
     /**
-     * Calculates average player level in the run near a location.
+     * Calculates average player run level in the run near a location.
      */
     private double calculateAverageLevel(RunState run, Location center) {
         double radius = config.getLevelSamplingRadius();
@@ -435,13 +455,14 @@ public class SpawnerService {
             if (player.getLocation().distanceSquared(center) <= radius * radius) {
                 Optional<PlayerState> playerStateOpt = state.getPlayer(playerId);
                 if (playerStateOpt.isPresent()) {
-                    totalLevel += playerStateOpt.get().getPlayerLevel();
+                    totalLevel += playerStateOpt.get().getRunLevel();  // Use runLevel
                     count++;
                 }
             }
         }
 
-        return count > 0 ? (double) totalLevel / count : 0;
+        // Default to 1.0 if no players found (runLevel starts at 1)
+        return count > 0 ? (double) totalLevel / count : 1.0;
     }
 
     /**

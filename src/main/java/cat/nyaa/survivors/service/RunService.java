@@ -144,8 +144,11 @@ public class RunService {
 
         PlayerState playerState = playerStateOpt.get();
 
-        // Reset run-related state
+        // Reset run-related state (sets runLevel to 1)
         playerState.resetRunState();
+
+        // Explicitly set run level to 1 for clarity
+        playerState.setRunLevel(1);
 
         // Set initial XP required
         playerState.setXpRequired(config.getBaseXpRequired());

@@ -34,8 +34,8 @@ public class StarterSubCommand implements SubCommand {
         Player player = (Player) sender;
         PlayerState playerState = state.getOrCreatePlayer(player.getUniqueId(), player.getName());
 
-        // Must be in lobby to select starters
-        if (playerState.getMode() != PlayerMode.LOBBY) {
+        // Must be in lobby or cooldown to select starters
+        if (playerState.getMode() != PlayerMode.LOBBY && playerState.getMode() != PlayerMode.COOLDOWN) {
             i18n.send(sender, "error.not_in_lobby");
             return;
         }

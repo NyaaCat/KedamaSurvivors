@@ -57,6 +57,7 @@ public class PlayerState {
 
     // Economy
     private volatile int permaScore;
+    private volatile int coinsEarned;  // Track coins earned this run for scoreboard
 
     // Pending Rewards (thread-safe list)
     private final List<ItemStack> pendingRewards = new ArrayList<>();
@@ -64,6 +65,9 @@ public class PlayerState {
     // Max level tracking
     private volatile boolean weaponAtMax;
     private volatile boolean helmetAtMax;
+
+    // Player progression level (increments each upgrade, reset per run)
+    private volatile int runLevel = 1;
 
     public PlayerState(UUID uuid, String name) {
         this.uuid = uuid;
@@ -151,7 +155,13 @@ public class PlayerState {
         helmetLevel = 0;
         weaponAtMax = false;
         helmetAtMax = false;
+        runLevel = 1;  // Reset to 1 at start of each run
+        coinsEarned = 0;  // Reset coins earned
         runId = null;
+        // Reset starter selections so player can re-select after death
+        starterWeaponOptionId = null;
+        starterHelmetOptionId = null;
+        ready = false;
     }
 
     /**
@@ -281,4 +291,7 @@ public class PlayerState {
 
     public boolean isHelmetAtMax() { return helmetAtMax; }
     public void setHelmetAtMax(boolean helmetAtMax) { this.helmetAtMax = helmetAtMax; }
+
+    public int getRunLevel() { return runLevel; }
+    public void setRunLevel(int runLevel) { this.runLevel = runLevel; }
 }

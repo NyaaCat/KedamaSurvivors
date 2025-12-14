@@ -304,7 +304,7 @@ public class AdminConfigService {
     // ==================== Archetype Operations ====================
 
     /**
-     * Creates a new enemy archetype.
+     * Creates a new enemy archetype with new chance-based reward format.
      */
     public boolean createArchetype(String id, String entityType, double weight) {
         if (archetypes.containsKey(id)) {
@@ -316,10 +316,14 @@ public class AdminConfigService {
         config.enemyType = entityType;
         config.weight = weight;
         config.spawnCommands = new ArrayList<>();
-        config.xpBase = 10;
-        config.xpPerLevel = 5;
-        config.coinBase = 1;
-        config.coinPerLevel = 1;
+
+        // New format defaults
+        config.minSpawnLevel = 1;
+        config.xpAmount = 10;
+        config.xpChance = 1.0;
+        config.coinAmount = 1;
+        config.coinChance = 1.0;
+        config.permaScoreAmount = 1;
         config.permaScoreChance = 0.01;
 
         archetypes.put(id, config);
@@ -394,20 +398,38 @@ public class AdminConfigService {
     }
 
     /**
-     * Sets rewards for an archetype.
+     * Sets rewards for an archetype using new chance-based format.
      */
-    public boolean setArchetypeRewards(String id, int xpBase, int xpPerLevel, int coinBase, int coinPerLevel, double permaChance) {
+    public boolean setArchetypeRewards(String id, int xpAmount, double xpChance,
+                                       int coinAmount, double coinChance,
+                                       int permaScoreAmount, double permaScoreChance) {
         EnemyArchetypeConfig config = archetypes.get(id);
         if (config == null) {
             return false;
         }
 
-        config.xpBase = xpBase;
-        config.xpPerLevel = xpPerLevel;
-        config.coinBase = coinBase;
-        config.coinPerLevel = coinPerLevel;
-        config.permaScoreChance = permaChance;
+        config.xpAmount = xpAmount;
+        config.xpChance = Math.max(0.0, Math.min(1.0, xpChance));
+        config.coinAmount = coinAmount;
+        config.coinChance = Math.max(0.0, Math.min(1.0, coinChance));
+        config.permaScoreAmount = permaScoreAmount;
+        config.permaScoreChance = Math.max(0.0, Math.min(1.0, permaScoreChance));
 
+        saveArchetypes();
+        updateConfigService();
+        return true;
+    }
+
+    /**
+     * Sets the minimum spawn level for an archetype.
+     */
+    public boolean setArchetypeMinSpawnLevel(String id, int minSpawnLevel) {
+        EnemyArchetypeConfig config = archetypes.get(id);
+        if (config == null) {
+            return false;
+        }
+
+        config.minSpawnLevel = Math.max(1, minSpawnLevel);
         saveArchetypes();
         updateConfigService();
         return true;
@@ -586,6 +608,7 @@ public class AdminConfigService {
             return;
         }
 
+        boolean needsResave = false;
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         for (String id : yaml.getKeys(false)) {
             ConfigurationSection section = yaml.getConfigurationSection(id);
@@ -597,16 +620,45 @@ public class AdminConfigService {
             config.weight = section.getDouble("weight", 1.0);
             config.spawnCommands = new ArrayList<>(section.getStringList("spawnCommands"));
 
+            // Load minSpawnLevel (level gating)
+            config.minSpawnLevel = section.getInt("minSpawnLevel", 1);
+
             ConfigurationSection rewards = section.getConfigurationSection("rewards");
             if (rewards != null) {
-                config.xpBase = rewards.getInt("xpBase", 10);
-                config.xpPerLevel = rewards.getInt("xpPerLevel", 5);
-                config.coinBase = rewards.getInt("coinBase", 1);
-                config.coinPerLevel = rewards.getInt("coinPerLevel", 1);
-                config.permaScoreChance = rewards.getDouble("permaScoreChance", 0.01);
+                // Check for new format (xpAmount) vs legacy format (xpBase)
+                if (rewards.contains("xpAmount")) {
+                    // New chance-based format
+                    config.xpAmount = rewards.getInt("xpAmount", 10);
+                    config.xpChance = rewards.getDouble("xpChance", 1.0);
+                    config.coinAmount = rewards.getInt("coinAmount", 1);
+                    config.coinChance = rewards.getDouble("coinChance", 1.0);
+                    config.permaScoreAmount = rewards.getInt("permaScoreAmount", 1);
+                    config.permaScoreChance = rewards.getDouble("permaScoreChance", 0.01);
+                } else if (rewards.contains("xpBase")) {
+                    // Legacy format - migrate to new format
+                    int xpBase = rewards.getInt("xpBase", 10);
+                    int coinBase = rewards.getInt("coinBase", 1);
+                    double permaChance = rewards.getDouble("permaScoreChance", 0.01);
+
+                    // Migrate: use base values as fixed amounts with 100% chance
+                    config.xpAmount = xpBase;
+                    config.xpChance = 1.0;
+                    config.coinAmount = coinBase;
+                    config.coinChance = 1.0;
+                    config.permaScoreAmount = 1;
+                    config.permaScoreChance = permaChance;
+
+                    plugin.getLogger().info("Migrated archetype '" + id + "' to new reward format");
+                    needsResave = true;
+                }
             }
 
             archetypes.put(id, config);
+        }
+
+        // Auto-save migrated data
+        if (needsResave) {
+            saveArchetypes();
         }
     }
 
@@ -614,17 +666,26 @@ public class AdminConfigService {
         File file = dataPath.resolve("archetypes.yml").toFile();
         YamlConfiguration yaml = new YamlConfiguration();
 
-        yaml.options().header("Auto-generated by KedamaSurvivors\nUse in-game commands: /vrs admin spawner ...\n");
+        yaml.options().header("""
+            Auto-generated by KedamaSurvivors
+            Use in-game commands: /vrs admin spawner ...
+
+            minSpawnLevel: Minimum enemy level required to spawn this archetype
+            Rewards use chance-based fixed values (no level scaling):
+              xpAmount + xpChance, coinAmount + coinChance, permaScoreAmount + permaScoreChance
+            """);
 
         for (EnemyArchetypeConfig config : archetypes.values()) {
             String id = config.archetypeId;
             yaml.set(id + ".entityType", config.enemyType);
             yaml.set(id + ".weight", config.weight);
+            yaml.set(id + ".minSpawnLevel", config.minSpawnLevel);
             yaml.set(id + ".spawnCommands", config.spawnCommands);
-            yaml.set(id + ".rewards.xpBase", config.xpBase);
-            yaml.set(id + ".rewards.xpPerLevel", config.xpPerLevel);
-            yaml.set(id + ".rewards.coinBase", config.coinBase);
-            yaml.set(id + ".rewards.coinPerLevel", config.coinPerLevel);
+            yaml.set(id + ".rewards.xpAmount", config.xpAmount);
+            yaml.set(id + ".rewards.xpChance", config.xpChance);
+            yaml.set(id + ".rewards.coinAmount", config.coinAmount);
+            yaml.set(id + ".rewards.coinChance", config.coinChance);
+            yaml.set(id + ".rewards.permaScoreAmount", config.permaScoreAmount);
             yaml.set(id + ".rewards.permaScoreChance", config.permaScoreChance);
         }
 

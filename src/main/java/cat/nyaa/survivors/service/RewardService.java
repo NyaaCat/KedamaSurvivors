@@ -58,26 +58,36 @@ public class RewardService {
             archetype = createDefaultArchetype();
         }
 
-        // Calculate rewards
-        int xpReward = archetype.xpBase + (enemyLevel * archetype.xpPerLevel);
-        int coinReward = archetype.coinBase + (enemyLevel * archetype.coinPerLevel);
-        double permaScoreChance = archetype.permaScoreChance;
+        // Chance-based reward calculation (no level scaling)
+        ThreadLocalRandom random = ThreadLocalRandom.current();
 
-        // Award XP to killer
-        awardXp(killer, killerState, xpReward, false);
+        // Roll for each reward type independently
+        int xpReward = random.nextDouble() < archetype.xpChance ? archetype.xpAmount : 0;
+        int coinReward = random.nextDouble() < archetype.coinChance ? archetype.coinAmount : 0;
+        int permaScoreReward = random.nextDouble() < archetype.permaScoreChance ? archetype.permaScoreAmount : 0;
 
-        // Award coins to killer
+        // Debug logging
+        if (config.isVerbose()) {
+            plugin.getLogger().info("Kill reward: archetype=" + archetypeId + " xp=" + xpReward + " coins=" + coinReward);
+        }
+
+        // Award XP to killer (only if rolled)
+        if (xpReward > 0) {
+            awardXp(killer, killerState, xpReward, false);
+        }
+
+        // Award coins to killer (only if rolled)
         if (coinReward > 0) {
             awardCoin(killer, coinReward);
         }
 
-        // Check for perma-score drop
-        if (ThreadLocalRandom.current().nextDouble() < permaScoreChance) {
-            awardPermaScore(killer, killerState, 1);
+        // Award perma-score (only if rolled)
+        if (permaScoreReward > 0) {
+            awardPermaScore(killer, killerState, permaScoreReward);
         }
 
-        // Share XP with nearby players
-        if (config.isXpShareEnabled()) {
+        // Share XP with nearby players (only if XP was awarded)
+        if (config.isXpShareEnabled() && xpReward > 0) {
             shareXpWithNearby(killer, killerState, xpReward, deathLoc);
         }
 
@@ -293,10 +303,13 @@ public class RewardService {
         arch.archetypeId = "default";
         arch.enemyType = "minecraft:zombie";
         arch.weight = 1.0;
-        arch.xpBase = 10;
-        arch.xpPerLevel = 5;
-        arch.coinBase = 1;
-        arch.coinPerLevel = 1;
+        arch.minSpawnLevel = 1;
+        // New chance-based format
+        arch.xpAmount = 10;
+        arch.xpChance = 1.0;
+        arch.coinAmount = 1;
+        arch.coinChance = 1.0;
+        arch.permaScoreAmount = 1;
         arch.permaScoreChance = 0.01;
         return arch;
     }
@@ -319,8 +332,11 @@ public class RewardService {
         playerState.setUpgradePending(false);
         playerState.setXpProgress(0);
 
-        // Recalculate XP required for next level
-        playerState.setXpRequired(calculateXpRequired(playerState.getPlayerLevel()));
+        // Increment run level (player leveled up by completing XP bar)
+        playerState.setRunLevel(playerState.getRunLevel() + 1);
+
+        // Recalculate XP required based on new run level
+        playerState.setXpRequired(calculateXpRequired(playerState.getRunLevel()));
 
         // Apply held XP
         int held = playerState.getXpHeld();

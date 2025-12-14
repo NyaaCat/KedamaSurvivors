@@ -6,35 +6,78 @@
 #   <archetypeId>:
 #     enemyType: "minecraft:entity_type"
 #     weight: 1.0
+#     minSpawnLevel: 1           # Minimum enemy level required to spawn this archetype
 #     spawnCommands:
 #       - "command with {placeholders}"
 #     rewards:
-#       xpBase: 10
-#       xpPerLevel: 5
-#       coinBase: 1
-#       coinPerLevel: 1
-#       permaScoreChance: 0.01
+#       xpAmount: 10             # Fixed XP reward amount
+#       xpChance: 1.0            # Probability (0-1) to award XP
+#       coinAmount: 1            # Fixed coin reward amount
+#       coinChance: 1.0          # Probability (0-1) to award coins
+#       permaScoreAmount: 1      # Fixed perma-score reward amount
+#       permaScoreChance: 0.01   # Probability (0-1) to award perma-score
 #
 # Available placeholders for spawnCommands:
 #   {sx}, {sy}, {sz} - spawn coordinates
 #   {runWorld} - the world where the run is active (auto-wrapped if not specified)
 #   {enemyLevel} - calculated enemy level
 #   {enemyType} - the entity type from archetype config
+#   {archetypeId} - the archetype ID (IMPORTANT: use in Tags for reward lookup)
 #
 # NOTE: Commands are automatically wrapped with "execute in {runWorld} run ..." if they
 # don't already start with "execute in". This ensures mobs spawn in the correct world.
 #
-# Example:
-#   zombie:
+# Level Gating:
+#   minSpawnLevel controls when an archetype joins the spawn pool.
+#   Only archetypes where minSpawnLevel <= currentEnemyLevel are considered.
+#   The weighted pool is dynamically recalculated from eligible archetypes only.
+#
+# Reward System:
+#   Each reward type (XP, coins, perma-score) is rolled independently:
+#   - Roll random(0,1) < chance => award the fixed amount
+#   - No level scaling - rewards are fixed values with probability
+#
+# Example progression setup:
+#   zombie:                       # Common, available from start
 #     enemyType: "minecraft:zombie"
 #     weight: 3.0
+#     minSpawnLevel: 1
 #     spawnCommands:
-#       - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\"]}"
+#       - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
 #     rewards:
-#       xpBase: 10
-#       xpPerLevel: 5
-#       coinBase: 1
-#       coinPerLevel: 1
+#       xpAmount: 10
+#       xpChance: 1.0
+#       coinAmount: 1
+#       coinChance: 1.0
+#       permaScoreAmount: 1
 #       permaScoreChance: 0.01
+#
+#   skeleton:                     # Appears at level 5+
+#     enemyType: "minecraft:skeleton"
+#     weight: 2.0
+#     minSpawnLevel: 5
+#     spawnCommands:
+#       - "summon skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
+#     rewards:
+#       xpAmount: 15
+#       xpChance: 1.0
+#       coinAmount: 2
+#       coinChance: 0.8
+#       permaScoreAmount: 1
+#       permaScoreChance: 0.02
+#
+#   wither_skeleton:              # Rare, appears at level 15+
+#     enemyType: "minecraft:wither_skeleton"
+#     weight: 1.0
+#     minSpawnLevel: 15
+#     spawnCommands:
+#       - "summon wither_skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
+#     rewards:
+#       xpAmount: 30
+#       xpChance: 1.0
+#       coinAmount: 5
+#       coinChance: 1.0
+#       permaScoreAmount: 2
+#       permaScoreChance: 0.05
 
 archetypes: {}

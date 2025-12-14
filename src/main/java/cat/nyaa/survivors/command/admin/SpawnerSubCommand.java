@@ -52,6 +52,7 @@ public class SpawnerSubCommand implements SubCommand {
         i18n.send(sender, "admin.spawner.help.archetype_reward");
         i18n.send(sender, "admin.spawner.help.archetype_set_weight");
         i18n.send(sender, "admin.spawner.help.archetype_set_entitytype");
+        i18n.send(sender, "admin.spawner.help.archetype_set_minspawnlevel");
     }
 
     // ==================== Archetype Commands ====================
@@ -113,6 +114,18 @@ public class SpawnerSubCommand implements SubCommand {
                 boolean success = adminConfig.setArchetypeEntityType(id, entityType);
                 if (success) {
                     i18n.send(sender, "admin.spawner.entitytype_set", "id", id, "entityType", entityType);
+                }
+            }
+            case "minspawnlevel" -> {
+                try {
+                    int minLevel = Integer.parseInt(args[4]);
+                    if (minLevel < 1) throw new NumberFormatException();
+                    boolean success = adminConfig.setArchetypeMinSpawnLevel(id, minLevel);
+                    if (success) {
+                        i18n.send(sender, "admin.spawner.minspawnlevel_set", "id", id, "level", minLevel);
+                    }
+                } catch (NumberFormatException e) {
+                    i18n.send(sender, "admin.spawner.invalid_level");
                 }
             }
             default -> showHelp(sender);
@@ -195,6 +208,7 @@ public class SpawnerSubCommand implements SubCommand {
                     "id", config.archetypeId,
                     "entityType", config.enemyType,
                     "weight", config.weight,
+                    "minLevel", config.minSpawnLevel,
                     "cmdCount", cmdCount);
         }
     }
@@ -243,8 +257,8 @@ public class SpawnerSubCommand implements SubCommand {
     }
 
     private void handleArchetypeReward(CommandSender sender, String[] args) {
-        // /vrs admin spawner archetype reward <id> <xpBase> <xpPerLevel> <coinBase> <coinPerLevel> <permaChance>
-        if (args.length < 8) {
+        // /vrs admin spawner archetype reward <id> <xpAmount> <xpChance> <coinAmount> <coinChance> <permaAmount> <permaChance>
+        if (args.length < 9) {
             i18n.send(sender, "admin.spawner.help.archetype_reward");
             return;
         }
@@ -252,21 +266,31 @@ public class SpawnerSubCommand implements SubCommand {
         String id = args[2];
 
         try {
-            int xpBase = Integer.parseInt(args[3]);
-            int xpPerLevel = Integer.parseInt(args[4]);
-            int coinBase = Integer.parseInt(args[5]);
-            int coinPerLevel = Integer.parseInt(args[6]);
-            double permaChance = Double.parseDouble(args[7]);
+            int xpAmount = Integer.parseInt(args[3]);
+            double xpChance = Double.parseDouble(args[4]);
+            int coinAmount = Integer.parseInt(args[5]);
+            double coinChance = Double.parseDouble(args[6]);
+            int permaAmount = Integer.parseInt(args[7]);
+            double permaChance = Double.parseDouble(args[8]);
 
-            boolean success = adminConfig.setArchetypeRewards(id, xpBase, xpPerLevel, coinBase, coinPerLevel, permaChance);
+            // Validate chances are 0-1
+            if (xpChance < 0 || xpChance > 1 || coinChance < 0 || coinChance > 1 ||
+                permaChance < 0 || permaChance > 1) {
+                i18n.send(sender, "admin.spawner.invalid_chance");
+                return;
+            }
+
+            boolean success = adminConfig.setArchetypeRewards(id, xpAmount, xpChance,
+                    coinAmount, coinChance, permaAmount, permaChance);
             if (success) {
                 i18n.send(sender, "admin.spawner.rewards_set", "id", id);
-                i18n.send(sender, "admin.spawner.rewards_info",
-                        "xpBase", xpBase,
-                        "xpPerLevel", xpPerLevel,
-                        "coinBase", coinBase,
-                        "coinPerLevel", coinPerLevel,
-                        "permaChance", permaChance);
+                i18n.send(sender, "admin.spawner.rewards_info_new",
+                        "xpAmount", xpAmount,
+                        "xpChance", String.format("%.0f%%", xpChance * 100),
+                        "coinAmount", coinAmount,
+                        "coinChance", String.format("%.0f%%", coinChance * 100),
+                        "permaAmount", permaAmount,
+                        "permaChance", String.format("%.1f%%", permaChance * 100));
             } else {
                 i18n.send(sender, "admin.spawner.archetype_not_found", "id", id);
             }
@@ -299,7 +323,7 @@ public class SpawnerSubCommand implements SubCommand {
 
             if (subAction.equals("set")) {
                 // Property names for set
-                for (String prop : List.of("weight", "entitytype")) {
+                for (String prop : List.of("weight", "entitytype", "minspawnlevel")) {
                     if (prop.startsWith(partial)) {
                         completions.add(prop);
                     }
