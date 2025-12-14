@@ -52,6 +52,13 @@ public class ReadyService {
 
         playerState.setReady(isNowReady);
 
+        // Notify the player themselves
+        if (isNowReady) {
+            i18n.send(player, "ready.now_ready");
+        } else {
+            i18n.send(player, "ready.no_longer_ready");
+        }
+
         Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
         if (teamOpt.isPresent()) {
             TeamState team = teamOpt.get();
