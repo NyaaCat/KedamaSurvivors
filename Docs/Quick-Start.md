@@ -58,6 +58,64 @@ worlds:
 | `weight` | Selection probability (higher = more likely) |
 | `spawnBounds` | Rectangle defining valid spawn area (minX, maxX, minZ, maxZ) |
 
+#### Step 1b: Configure Spawn Points
+
+Each combat world needs **at least one spawn point**. Players spawn at random locations from this list.
+
+**Option A: Use admin commands (Recommended):**
+
+```
+# Stand at the spawn location and run:
+/vrs admin world addspawn combat_arena
+
+# Or specify coordinates with optional rotation:
+/vrs admin world addspawn combat_arena 100 64 200 0 0
+
+# Add multiple spawn points for variety:
+/vrs admin world addspawn combat_arena -100 64 -200 180 0
+
+# List all spawn points:
+/vrs admin world listspawns combat_arena
+
+# Remove a spawn point by index (1-based):
+/vrs admin world removespawn combat_arena 2
+```
+
+**Option B: Edit `data/worlds.yml` directly:**
+
+```yaml
+worlds:
+  - name: "combat_arena"
+    displayName: "§2Forest Arena"
+    enabled: true
+    weight: 1.0
+    spawnBounds:
+      minX: -500
+      maxX: 500
+      minZ: -500
+      maxZ: 500
+    spawnPoints:
+      - x: 100
+        y: 64
+        z: 200
+        yaw: 0
+        pitch: 0
+      - x: -100
+        y: 64
+        z: -200
+        yaw: 180
+        pitch: 0
+```
+
+**Fallback Spawn (optional):**
+
+If random spawn sampling fails, configure a guaranteed safe spawn:
+
+```
+/vrs admin world setfallback combat_arena 0 64 0
+/vrs admin world clearfallback combat_arena  # Remove fallback
+```
+
 ---
 
 ### Step 2: Set Up Enemy Archetypes
@@ -71,37 +129,43 @@ archetypes:
   zombie:
     enemyType: "minecraft:zombie"
     weight: 3.0
+    minSpawnLevel: 1  # Available from start
     spawnCommands:
-      - "summon zombie ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+      - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
     rewards:
-      xpBase: 10
-      xpPerLevel: 5
-      coinBase: 1
-      coinPerLevel: 1
-      permaScoreChance: 0.01
+      xpAmount: 10        # Fixed XP amount
+      xpChance: 1.0       # 100% chance to award XP
+      coinAmount: 1       # Fixed coin amount
+      coinChance: 1.0     # 100% chance to award coins
+      permaScoreAmount: 1
+      permaScoreChance: 0.01  # 1% chance for perma-score
 
   skeleton:
     enemyType: "minecraft:skeleton"
     weight: 2.0
+    minSpawnLevel: 5  # Only spawns at enemy level 5+
     spawnCommands:
-      - "summon skeleton ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+      - "summon skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
     rewards:
-      xpBase: 15
-      xpPerLevel: 7
-      coinBase: 2
-      coinPerLevel: 1
+      xpAmount: 15
+      xpChance: 1.0
+      coinAmount: 2
+      coinChance: 0.8     # 80% chance for coins
+      permaScoreAmount: 1
       permaScoreChance: 0.02
 
   spider:
     enemyType: "minecraft:spider"
     weight: 2.0
+    minSpawnLevel: 1
     spawnCommands:
-      - "summon spider ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+      - "summon spider {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
     rewards:
-      xpBase: 12
-      xpPerLevel: 6
-      coinBase: 1
-      coinPerLevel: 1
+      xpAmount: 12
+      xpChance: 1.0
+      coinAmount: 1
+      coinChance: 1.0
+      permaScoreAmount: 1
       permaScoreChance: 0.01
 ```
 
@@ -109,11 +173,16 @@ archetypes:
 
 | Placeholder | Description |
 |-------------|-------------|
-| `${sx}`, `${sy}`, `${sz}` | Spawn coordinates |
-| `${enemyLevel}` | Calculated enemy level |
-| `${player}` | Target player name |
+| `{sx}`, `{sy}`, `{sz}` | Spawn coordinates |
+| `{enemyLevel}` | Calculated enemy level |
+| `{player}` | Target player name |
+| `{runWorld}` | Combat world name |
+| `{enemyType}` | Entity type from archetype config |
+| `{archetypeId}` | Archetype ID (use in Tags for reward lookup) |
 
-**Important:** Enemies must have the `vrs_mob` tag to be tracked by the plugin.
+**Level Gating:** The `minSpawnLevel` property controls when an archetype becomes available. Only archetypes where `minSpawnLevel <= currentEnemyLevel` are considered for spawning.
+
+**Important:** Enemies must have the `vrs_mob` tag to be tracked by the plugin. Include `vrs_arch_{archetypeId}` tag for proper reward lookup.
 
 ---
 
@@ -382,12 +451,12 @@ templates:
 
 At minimum, you need:
 
-- [ ] **1 combat world** configured in `data/worlds.yml`
+- [ ] **1 combat world** configured in `data/worlds.yml` with **at least 1 spawn point**
 - [ ] **1+ enemy archetype** configured in `data/archetypes.yml`
 - [ ] **1+ starter weapon** in `data/starters.yml` with matching item template
 - [ ] **1+ starter helmet** in `data/starters.yml` with matching item template
 - [ ] **Equipment groups** in `data/equipment/weapons.yml` and `helmets.yml`
-- [ ] **Teleport commands** configured in `config.yml`
+- [ ] **Teleport commands** configured in `config.yml` (optional if using default API teleport)
 
 ---
 
@@ -421,8 +490,10 @@ At minimum, you need:
    - Survive as long as possible!
 
 5. **After death**:
+   - All deaths return player to prep area (regardless of teammate status)
    - 60-second cooldown applies
-   - Return to step 1 for another run
+   - Player must re-select equipment and ready up to rejoin
+   - If teammates are still alive, player can rejoin the same run after cooldown
 
 ---
 
@@ -430,10 +501,12 @@ At minimum, you need:
 
 | Issue | Solution |
 |-------|----------|
-| "No combat worlds available" | Check `data/worlds.yml` has at least one enabled world |
+| "No combat worlds available" | Check `data/worlds.yml` has at least one enabled world with spawn points |
+| "No spawn points configured" | Add spawn points via `/vrs admin world addspawn <name>` |
 | "Cannot ready" | Ensure you have selected starter equipment and are in a team |
 | Enemies not spawning | Verify `data/archetypes.yml` has entries and spawner is not paused |
 | Items not giving | Check item templates exist in `data/items/` directory |
+| Players spawning in wrong location | Configure fallback spawn with `/vrs admin world setfallback` |
 
 For more details, see:
 - [Configuration Reference](Configuration-Reference.md)

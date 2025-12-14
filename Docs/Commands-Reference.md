@@ -162,15 +162,45 @@ Shows your current game status.
 
 ---
 
+### `/vrs upgrade`
+
+Choose power or defense upgrade during gameplay.
+
+**Usage:**
+```
+/vrs upgrade power
+/vrs upgrade defense
+```
+
+**Permission:** `vrs.player` (default: true)
+
+**Arguments:**
+| Argument | Description |
+|----------|-------------|
+| `power` | Choose weapon upgrade |
+| `defense` | Choose helmet upgrade |
+
+**Requirements:**
+- Must be in active run (IN_RUN mode)
+- Must have pending upgrade prompt
+
+**Examples:**
+```
+/vrs upgrade power     # Upgrade weapon
+/vrs upgrade defense   # Upgrade helmet
+```
+
+---
+
 ## 2. Team Commands
 
-### `/vrs team create <name>`
+### `/vrs team create [name]`
 
 Creates a new team.
 
 **Usage:**
 ```
-/vrs team create <name>
+/vrs team create [name]
 ```
 
 **Permission:** `vrs.team.create` (default: true)
@@ -178,7 +208,12 @@ Creates a new team.
 **Arguments:**
 | Argument | Description |
 |----------|-------------|
-| `name` | Team name (alphanumeric, max 16 characters) |
+| `name` | Team name (optional - auto-generates if not provided) |
+
+**Team Name Rules:**
+- If no name provided, auto-generates: `playername-XXXX` (4 random alphanumeric chars)
+- Valid characters: alphanumeric, dash (`-`), underscore (`_`)
+- Spaces not allowed in team names
 
 **Requirements:**
 - Must not be in a team already
@@ -186,8 +221,9 @@ Creates a new team.
 
 **Examples:**
 ```
-/vrs team create Alpha
-/vrs team create 队伍一
+/vrs team create Alpha        # Create team named "Alpha"
+/vrs team create              # Auto-generate name like "Steve-A1B2"
+/vrs team create my_team_1    # Valid with underscores
 ```
 
 ---
@@ -249,6 +285,32 @@ Accepts a team invitation you've received.
 **Examples:**
 ```
 /vrs team accept Alpha
+```
+
+---
+
+### `/vrs team decline <team>`
+
+Declines a team invitation.
+
+**Usage:**
+```
+/vrs team decline <teamName>
+```
+
+**Permission:** `vrs.team` (default: true)
+
+**Arguments:**
+| Argument | Description |
+|----------|-------------|
+| `team` | Team name to decline invitation for |
+
+**Requirements:**
+- Must have valid invite to the team
+
+**Examples:**
+```
+/vrs team decline Alpha
 ```
 
 ---
@@ -577,17 +639,37 @@ Manages combat world configurations.
 
 **Subcommands:**
 ```
+/vrs admin world list
 /vrs admin world create <name> [displayName]
 /vrs admin world delete <name>
-/vrs admin world list
 /vrs admin world enable <name>
 /vrs admin world disable <name>
 /vrs admin world set displayname <name> <displayName>
 /vrs admin world set weight <name> <weight>
 /vrs admin world set bounds <name> <minX> <maxX> <minZ> <maxZ>
+
+# Spawn Point Management
+/vrs admin world addspawn <name> [x y z [yaw pitch]]
+/vrs admin world removespawn <name> <index>
+/vrs admin world listspawns <name>
+/vrs admin world clearspawns <name>
+
+# Fallback Spawn
+/vrs admin world setfallback <name> [x y z [yaw pitch]]
+/vrs admin world clearfallback <name>
 ```
 
 **Permission:** `vrs.admin` (default: op)
+
+**Spawn Point Commands:**
+| Command | Description |
+|---------|-------------|
+| `addspawn <name> [coords]` | Add spawn point (uses player location if no coords) |
+| `removespawn <name> <index>` | Remove spawn point by index (1-based) |
+| `listspawns <name>` | List all spawn points for world |
+| `clearspawns <name>` | Remove all spawn points |
+| `setfallback <name> [coords]` | Set fallback spawn for failed sampling |
+| `clearfallback <name>` | Remove fallback spawn |
 
 **Examples:**
 ```
@@ -595,6 +677,13 @@ Manages combat world configurations.
 /vrs admin world set bounds combat_arena -500 500 -500 500
 /vrs admin world enable combat_arena
 /vrs admin world list
+
+# Spawn point management
+/vrs admin world addspawn arena                    # Add at current location
+/vrs admin world addspawn arena 100 64 200 0 0    # Add with coordinates
+/vrs admin world listspawns arena                  # List all spawns
+/vrs admin world removespawn arena 2               # Remove 2nd spawn point
+/vrs admin world setfallback arena 0 64 0          # Set fallback
 ```
 
 ---
@@ -637,7 +726,7 @@ Manages equipment groups and items.
 /vrs admin equipment item list <weapon|helmet> <groupId> [level]
 ```
 
-**Permission:** `vrs.admin` (default: op)
+**Permission:** `vrs.admin.capture` (default: op)
 
 **Note:** The `item add` command captures the NBT of the item in your main hand and auto-generates a template ID.
 
@@ -661,28 +750,49 @@ Manages enemy archetypes.
 
 **Subcommands:**
 ```
+/vrs admin spawner archetype list
 /vrs admin spawner archetype create <id> <entityType> [weight]
 /vrs admin spawner archetype delete <id>
-/vrs admin spawner archetype list
 /vrs admin spawner archetype addcommand <id> <command...>
 /vrs admin spawner archetype removecommand <id> <index>
-/vrs admin spawner archetype reward <id> <xpBase> <xpPerLevel> <coinBase> <coinPerLevel> <permaChance>
 /vrs admin spawner archetype set weight <id> <weight>
 /vrs admin spawner archetype set entitytype <id> <entityType>
+/vrs admin spawner archetype set minspawnlevel <id> <level>
+/vrs admin spawner archetype reward <id> <xpAmount> <xpChance> <coinAmount> <coinChance> <permaAmount> <permaChance>
 ```
 
-**Permission:** `vrs.admin` (default: op)
+**Permission:** `vrs.admin.spawner` (default: op)
+
+**Set Commands:**
+| Command | Description |
+|---------|-------------|
+| `set weight <id> <weight>` | Set spawn weight (selection probability) |
+| `set entitytype <id> <type>` | Set entity type |
+| `set minspawnlevel <id> <level>` | Set minimum enemy level required to spawn |
+
+**Reward Command Arguments:**
+| Argument | Description |
+|----------|-------------|
+| `xpAmount` | Fixed XP reward amount |
+| `xpChance` | Probability (0.0-1.0) to award XP |
+| `coinAmount` | Fixed coin reward amount |
+| `coinChance` | Probability (0.0-1.0) to award coins |
+| `permaAmount` | Fixed perma-score reward amount |
+| `permaChance` | Probability (0.0-1.0) to award perma-score |
 
 **Examples:**
 ```
 # Create a zombie archetype
 /vrs admin spawner archetype create zombie ZOMBIE 3.0
 
-# Add spawn command
-/vrs admin spawner archetype addcommand zombie summon zombie ${sx} ${sy} ${sz} {Tags:["vrs_mob","vrs_lvl_${enemyLevel}"]}
+# Add spawn command with archetypeId tag for reward lookup
+/vrs admin spawner archetype addcommand zombie summon zombie {sx} {sy} {sz} {Tags:["vrs_mob","vrs_lvl_{enemyLevel}","vrs_arch_{archetypeId}"]}
 
-# Set rewards
-/vrs admin spawner archetype reward zombie 10 5 1 1 0.01
+# Set minimum spawn level (only spawns at enemy level 5+)
+/vrs admin spawner archetype set minspawnlevel skeleton 5
+
+# Set rewards (xpAmount xpChance coinAmount coinChance permaAmount permaChance)
+/vrs admin spawner archetype reward zombie 10 1.0 1 1.0 1 0.01
 ```
 
 ---
@@ -735,9 +845,43 @@ Manages runtime configuration values.
 /vrs admin config list [category]
 ```
 
-**Permission:** `vrs.admin` (default: op)
+**Permission:** `vrs.admin.config` (default: op)
 
-**Available Categories:** teleport, timing, spawning, rewards, progression, teams, merchants, upgrade, scoreboard
+**Available Categories and Properties:**
+
+**Teleport:**
+- `lobbyWorld` (string), `lobbyX`, `lobbyY`, `lobbyZ` (doubles)
+- `prepCommand`, `enterCommand`, `respawnCommand` (strings)
+
+**Timing:**
+- `deathCooldownSeconds`, `respawnInvulnerabilitySeconds`, `disconnectGraceSeconds`, `countdownSeconds` (integers)
+
+**Spawning:**
+- `minSpawnDistance`, `maxSpawnDistance` (doubles)
+- `maxSampleAttempts`, `spawnTickInterval`, `targetMobsPerPlayer`, `maxSpawnsPerTick` (integers)
+
+**Rewards:**
+- `xpShareRadius`, `xpSharePercent` (doubles)
+
+**Progression:**
+- `baseXpRequired`, `xpPerLevelIncrease`, `weaponLevelWeight`, `helmetLevelWeight` (integers)
+- `xpMultiplierPerLevel` (double)
+
+**Teams:**
+- `maxTeamSize`, `inviteExpirySeconds` (integers)
+
+**Merchants:**
+- `merchantsEnabled` (boolean)
+- `merchantSpawnInterval`, `merchantLifetime` (integers)
+- `merchantMinDistance`, `merchantMaxDistance` (doubles)
+
+**Upgrade:**
+- `upgradeTimeoutSeconds`, `upgradeReminderIntervalSeconds` (integers)
+
+**Scoreboard:**
+- `scoreboardEnabled` (boolean)
+- `scoreboardTitle` (string)
+- `scoreboardUpdateInterval` (integer)
 
 **Examples:**
 ```
@@ -841,6 +985,11 @@ Shows detailed run state information.
 | `vrs.team.kick` | Kick from team | true |
 | `vrs.team.disband` | Disband teams | true |
 | `vrs.admin` | All admin commands | op |
+| `vrs.admin.world` | World management | op |
+| `vrs.admin.spawner` | Enemy archetype management | op |
+| `vrs.admin.starter` | Starter option management | op |
+| `vrs.admin.config` | Runtime configuration | op |
+| `vrs.admin.capture` | Equipment capture/management | op |
 | `vrs.cooldown.bypass` | Bypass death cooldown | op |
 
 ---
@@ -864,3 +1013,4 @@ All commands support tab completion:
 | `/vrs r` | `/vrs ready` |
 | `/vrs t` | `/vrs team` |
 | `/vrs st` | `/vrs status` |
+| `/vrs u` | `/vrs upgrade` |

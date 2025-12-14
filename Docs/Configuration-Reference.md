@@ -11,20 +11,21 @@ Complete reference for all configuration options in `config.yml`.
 3. [Ready & Countdown](#3-ready--countdown)
 4. [Cooldown](#4-cooldown)
 5. [Disconnect](#5-disconnect)
-6. [Combat Worlds](#6-combat-worlds)
-7. [Teleport](#7-teleport)
-8. [Starter Selection](#8-starter-selection)
-9. [Equipment Pools](#9-equipment-pools)
-10. [Inventory Rules](#10-inventory-rules)
-11. [Progression](#11-progression)
-12. [Spawning](#12-spawning)
-13. [Rewards](#13-rewards)
-14. [Merchants](#14-merchants)
-15. [Economy](#15-economy)
-16. [Scoreboard](#16-scoreboard)
-17. [Persistence](#17-persistence)
-18. [Templates](#18-templates)
-19. [Debug](#19-debug)
+6. [Respawn & PVP](#6-respawn--pvp)
+7. [Combat Worlds](#7-combat-worlds)
+8. [Teleport](#8-teleport)
+9. [Starter Selection](#9-starter-selection)
+10. [Equipment Pools](#10-equipment-pools)
+11. [Inventory Rules](#11-inventory-rules)
+12. [Progression](#12-progression)
+13. [Spawning](#13-spawning)
+14. [Rewards](#14-rewards)
+15. [Merchants](#15-merchants)
+16. [Economy](#16-economy)
+17. [Scoreboard](#17-scoreboard)
+18. [Persistence](#18-persistence)
+19. [Templates](#19-templates)
+20. [Debug](#20-debug)
 
 ---
 
@@ -137,7 +138,35 @@ disconnect:
 
 ---
 
-## 6. Combat Worlds
+## 6. Respawn & PVP
+
+Respawn mechanics and player damage settings.
+
+```yaml
+respawn:
+  # Invulnerability duration after respawn (seconds)
+  invulnerabilitySeconds: 3
+
+  # Whether invulnerable players can deal damage
+  canDealDamageDuringInvul: false
+
+  # Visual effect during invulnerability
+  invulEffect: GLOWING
+
+  # PVP damage control
+  pvp: false  # Whether players can damage each other (false = PVP disabled)
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `invulnerabilitySeconds` | Integer | `3` | Duration of invulnerability after respawn |
+| `canDealDamageDuringInvul` | Boolean | `false` | Allow invulnerable players to deal damage |
+| `invulEffect` | String | `GLOWING` | Visual effect during invulnerability period |
+| `pvp` | Boolean | `false` | Enable player-vs-player damage. When false, damage between players is set to 0. |
+
+---
+
+## 7. Combat Worlds
 
 Configuration for combat worlds (arenas).
 
@@ -154,13 +183,24 @@ worlds:
         maxX: 500
         minZ: -500
         maxZ: 500
-      # Optional: predefined spawn points (overrides random sampling)
-      # spawnPoints:
-      #   - x: 100
-      #     y: 64
-      #     z: 100
-      #     yaw: 0
-      #     pitch: 0
+      # Spawn points (at least one required)
+      spawnPoints:
+        - x: 100
+          y: 64
+          z: 100
+          yaw: 0
+          pitch: 0
+        - x: -100
+          y: 64
+          z: -100
+          yaw: 180
+          pitch: 0
+      # Fallback spawn (optional) - used when random sampling fails
+      fallbackX: 0
+      fallbackY: 64
+      fallbackZ: 0
+      fallbackYaw: 0
+      fallbackPitch: 0
 
     - name: "arena_desert"
       displayName: "§6沙漠竞技场"
@@ -171,6 +211,10 @@ worlds:
         maxX: 300
         minZ: -300
         maxZ: 300
+      spawnPoints:
+        - x: 0
+          y: 64
+          z: 0
 
     - name: "arena_nether"
       displayName: "§c地狱竞技场"
@@ -181,6 +225,10 @@ worlds:
         maxX: 200
         minZ: -200
         maxZ: 200
+      spawnPoints:
+        - x: 0
+          y: 64
+          z: 0
 
   # Spawn location sampling settings
   spawnSampling:
@@ -202,9 +250,29 @@ worlds:
     requiredHeadroom: 2
 ```
 
+**World Configuration Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | String | Yes | Bukkit world name (must exist) |
+| `displayName` | String | No | Name shown to players (supports color codes) |
+| `enabled` | Boolean | Yes | Whether this world can be selected |
+| `weight` | Double | No | Selection probability (higher = more likely, default 1.0) |
+| `spawnBounds` | Object | Yes | Rectangle defining valid spawn area |
+| `spawnPoints` | List | Yes | List of spawn points (at least one required) |
+| `fallbackX/Y/Z/Yaw/Pitch` | Numbers | No | Fallback spawn when random sampling fails |
+
+**Spawn Point Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `x`, `y`, `z` | Double | Yes | Spawn coordinates |
+| `yaw` | Float | No | Player facing direction (0-360, default 0) |
+| `pitch` | Float | No | Player head pitch (-90 to 90, default 0) |
+
 ---
 
-## 7. Teleport
+## 8. Teleport
 
 Teleport command templates.
 
@@ -225,7 +293,7 @@ teleport:
 
 ---
 
-## 8. Starter Selection
+## 9. Starter Selection
 
 Starter weapon and helmet configuration.
 
@@ -316,7 +384,7 @@ starterSelection:
 
 ---
 
-## 9. Equipment Pools
+## 10. Equipment Pools
 
 Equipment group definitions for progression.
 
@@ -407,7 +475,7 @@ equipmentPools:
 
 ---
 
-## 10. Inventory Rules
+## 11. Inventory Rules
 
 Item handling rules during gameplay.
 
@@ -448,7 +516,7 @@ inventoryRules:
 
 ---
 
-## 11. Progression
+## 12. Progression
 
 XP and leveling configuration.
 
@@ -498,7 +566,7 @@ progression:
 
 ---
 
-## 12. Spawning
+## 13. Spawning
 
 Enemy spawning configuration.
 
@@ -511,6 +579,9 @@ spawning:
 
     # Enable spawning
     enabled: true
+
+    # Block natural mob spawns in combat worlds
+    blockNaturalSpawns: true
 
   # Spawn caps and limits
   limits:
@@ -576,50 +647,58 @@ spawning:
     zombie:
       enemyType: "minecraft:zombie"
       weight: 3.0
+      minSpawnLevel: 1  # Available from start
       spawnCommands:
-        - "summon zombie ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"],Attributes:[{Name:generic.max_health,Base:${enemyLevel}0}]}"
+        - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
       rewards:
-        xpBase: 10
-        xpPerLevel: 5
-        coinBase: 1
-        coinPerLevel: 1
-        permaScoreChance: 0.01
+        xpAmount: 10        # Fixed XP reward
+        xpChance: 1.0       # Probability (0-1) to award XP
+        coinAmount: 1       # Fixed coin reward
+        coinChance: 1.0     # Probability (0-1) to award coins
+        permaScoreAmount: 1 # Fixed perma-score reward
+        permaScoreChance: 0.01  # Probability (0-1) to award perma-score
 
     skeleton:
       enemyType: "minecraft:skeleton"
       weight: 2.0
+      minSpawnLevel: 5  # Only spawns at enemy level 5+
       spawnCommands:
-        - "summon skeleton ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+        - "summon skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
       rewards:
-        xpBase: 15
-        xpPerLevel: 7
-        coinBase: 2
-        coinPerLevel: 1
-        permaScoreChance: 0.015
+        xpAmount: 15
+        xpChance: 1.0
+        coinAmount: 2
+        coinChance: 0.8
+        permaScoreAmount: 1
+        permaScoreChance: 0.02
 
     spider:
       enemyType: "minecraft:spider"
       weight: 1.5
+      minSpawnLevel: 1
       spawnCommands:
-        - "summon spider ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+        - "summon spider {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
       rewards:
-        xpBase: 12
-        xpPerLevel: 6
-        coinBase: 1
-        coinPerLevel: 1
-        permaScoreChance: 0.012
+        xpAmount: 12
+        xpChance: 1.0
+        coinAmount: 1
+        coinChance: 1.0
+        permaScoreAmount: 1
+        permaScoreChance: 0.01
 
     creeper:
       enemyType: "minecraft:creeper"
       weight: 0.5
+      minSpawnLevel: 10  # Boss-tier, appears later
       spawnCommands:
-        - "summon creeper ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"],ExplosionRadius:0}"
+        - "summon creeper {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"],ExplosionRadius:0}"
       rewards:
-        xpBase: 25
-        xpPerLevel: 10
-        coinBase: 5
-        coinPerLevel: 2
-        permaScoreChance: 0.03
+        xpAmount: 25
+        xpChance: 1.0
+        coinAmount: 5
+        coinChance: 1.0
+        permaScoreAmount: 2
+        permaScoreChance: 0.05
 
   # Mob identification
   mobIdentification:
@@ -633,9 +712,25 @@ spawning:
     defaultLevel: 1
 ```
 
+**Level Gating:** The `minSpawnLevel` property controls when an archetype becomes available. Only archetypes where `minSpawnLevel <= currentEnemyLevel` are considered for spawning. The weighted pool is dynamically recalculated from eligible archetypes.
+
+**Reward System:** Each reward type (XP, coins, perma-score) is rolled independently:
+- Roll `random(0,1) < chance` → award the fixed amount
+- No level scaling - rewards are fixed values with probability
+
+**Available Spawn Command Placeholders:**
+
+| Placeholder | Description |
+|-------------|-------------|
+| `{sx}`, `{sy}`, `{sz}` | Spawn coordinates |
+| `{enemyLevel}` | Calculated enemy level |
+| `{runWorld}` | Combat world name |
+| `{enemyType}` | Entity type from archetype config |
+| `{archetypeId}` | Archetype ID (use in Tags for reward lookup) |
+
 ---
 
-## 13. Rewards
+## 14. Rewards
 
 XP and coin reward settings.
 
@@ -666,7 +761,7 @@ rewards:
 
 ---
 
-## 14. Merchants
+## 15. Merchants
 
 Wandering merchant configuration.
 
@@ -735,7 +830,7 @@ merchants:
 
 ---
 
-## 15. Economy
+## 16. Economy
 
 Virtual economy settings.
 
@@ -752,7 +847,7 @@ economy:
 
 ---
 
-## 16. Scoreboard
+## 17. Scoreboard
 
 Sidebar display configuration.
 
@@ -793,7 +888,7 @@ scoreboard:
 
 ---
 
-## 17. Persistence
+## 18. Persistence
 
 Data saving configuration.
 
@@ -827,7 +922,7 @@ persistence:
 
 ---
 
-## 18. Templates
+## 19. Templates
 
 Command template configuration.
 
@@ -860,7 +955,7 @@ templates:
 
 ---
 
-## 19. Debug
+## 20. Debug
 
 Debug and development settings.
 
@@ -933,6 +1028,7 @@ respawn:
   invulnerabilitySeconds: 3
   canDealDamageDuringInvul: false
   invulEffect: GLOWING
+  pvp: false
 
 # ... (rest of configuration)
 ```

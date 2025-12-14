@@ -17,6 +17,7 @@ Players choose their starting weapon and helmet, then enter pre-generated combat
 - **Team System**: Create teams of up to 5 players, explore together, respawn to teammates
 - **Equipment Progression**: Multiple equipment groups with leveled item pools
 - **Scaling Difficulty**: Enemy level based on average player level and player count in radius
+- **PVP Protection**: Player damage disabled by default (configurable)
 - **Perma-Score**: Persistent score stored in vanilla scoreboard for cross-server rewards
 - **Wandering Merchants**: Vanilla villager traders spawn randomly with configurable trades
 - **No Dependencies**: Works standalone, integrates with other plugins via command templates
@@ -39,7 +40,7 @@ Players choose their starting weapon and helmet, then enter pre-generated combat
                           ▼                    │
                     ┌─────────────┐            │
                     │    Death    │ ◀──────────┘
-                    │  Cooldown   │
+                    │  → Prep     │
                     └─────────────┘
 ```
 
@@ -53,12 +54,13 @@ Players choose their starting weapon and helmet, then enter pre-generated combat
 | `/vrs ready` | Toggle ready status to enter combat |
 | `/vrs quit` | Leave current run (no death penalty) |
 | `/vrs status` | Show current game status |
+| `/vrs upgrade power\|defense` | Choose upgrade during gameplay |
 
 ### Team Commands
 
 | Command | Description |
 |---------|-------------|
-| `/vrs team create <name>` | Create a new team |
+| `/vrs team create [name]` | Create a new team (auto-generates name if not provided) |
 | `/vrs team invite <player>` | Invite a player to your team |
 | `/vrs team join <team>` | Join a team you're invited to |
 | `/vrs team leave` | Leave your current team |
