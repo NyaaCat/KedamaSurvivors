@@ -113,6 +113,8 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `/vrs admin equipment item add|remove|list` - Equipment item management (NBT capture)
 - [x] `/vrs admin spawner archetype create|delete|list` - Enemy archetype management
 - [x] `/vrs admin spawner archetype addcommand|removecommand|reward` - Archetype commands and rewards
+- [x] `/vrs admin merchant template create|delete|list` - Merchant template management
+- [x] `/vrs admin merchant trade add|remove|list` - Merchant trade management (NBT capture)
 
 ### 3.5 Debug Commands
 - [x] `/vrs debug player <player>` - Player state dump

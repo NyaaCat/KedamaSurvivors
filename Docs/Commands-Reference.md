@@ -603,34 +603,122 @@ Captures held item as a template.
 
 ---
 
-### `/vrs trade capture <position> <tradeId> <templateId>`
+### `/vrs admin merchant template create <templateId> [displayName]`
 
-Captures held item for trade recipes.
+Creates a new merchant template.
 
 **Usage:**
 ```
-/vrs trade capture buyA <tradeId> <templateId>
-/vrs trade capture buyB <tradeId> <templateId>
-/vrs trade capture sell <tradeId> <templateId>
+/vrs admin merchant template create <templateId> [displayName]
 ```
 
-**Permission:** `vrs.admin.capture` (default: op)
+**Permission:** `vrs.admin` (default: op)
 
 **Arguments:**
 | Argument | Description |
 |----------|-------------|
-| `position` | `buyA`, `buyB`, or `sell` |
-| `tradeId` | Trade recipe ID |
-| `templateId` | Unique template ID |
+| `templateId` | Unique template identifier (alphanumeric + underscore) |
+| `displayName` | Display name for the merchant (optional, supports color codes) |
 
 **Examples:**
 ```
-# Capture 10 emeralds as buy ingredient:
-/vrs trade capture buyA health_potion trade_buy_10_coins
-
-# Capture health potion as sell result:
-/vrs trade capture sell health_potion trade_sell_health_potion
+/vrs admin merchant template create potions "§dPotion Merchant"
+/vrs admin merchant template create basic_supplies "§eBasic Supplies"
 ```
+
+---
+
+### `/vrs admin merchant template delete <templateId>`
+
+Deletes a merchant template.
+
+**Usage:**
+```
+/vrs admin merchant template delete <templateId>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+---
+
+### `/vrs admin merchant template list`
+
+Lists all merchant templates.
+
+**Usage:**
+```
+/vrs admin merchant template list
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+---
+
+### `/vrs admin merchant trade add <templateId> <costAmount> [maxUses]`
+
+Adds a trade to a merchant template using the item in your main hand.
+
+**Usage:**
+```
+/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Arguments:**
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `templateId` | Target merchant template | - |
+| `costAmount` | Number of coins required | - |
+| `maxUses` | Maximum times this trade can be used | 10 |
+
+**Behavior:**
+- Captures the NBT of the item in your main hand
+- Creates an item template in `data/items/`
+- Adds the trade to the merchant template
+- Cost is always in coins (emeralds)
+
+**Examples:**
+```
+# Hold a health potion, then:
+/vrs admin merchant trade add potions 25 5
+# Result: Trade for health potion, costs 25 coins, max 5 uses
+
+# Hold a golden apple:
+/vrs admin merchant trade add basic_supplies 15 3
+```
+
+---
+
+### `/vrs admin merchant trade remove <templateId> <index>`
+
+Removes a trade from a merchant template by index.
+
+**Usage:**
+```
+/vrs admin merchant trade remove <templateId> <index>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Arguments:**
+| Argument | Description |
+|----------|-------------|
+| `templateId` | Target merchant template |
+| `index` | Trade index (0-based, shown in trade list) |
+
+---
+
+### `/vrs admin merchant trade list <templateId>`
+
+Lists all trades in a merchant template.
+
+**Usage:**
+```
+/vrs admin merchant trade list <templateId>
+```
+
+**Permission:** `vrs.admin` (default: op)
 
 ---
 

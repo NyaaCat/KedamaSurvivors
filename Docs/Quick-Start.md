@@ -317,6 +317,28 @@ teleport:
 
 Merchants spawn periodically during runs and offer trades for coins.
 
+#### Using Admin Commands (Recommended)
+
+Create and manage merchants with in-game commands:
+
+```bash
+# 1. Create a merchant template
+/vrs admin merchant template create potions "§dPotion Merchant"
+
+# 2. Hold the item you want to sell in your hand
+# 3. Add it as a trade (captures item NBT automatically)
+/vrs admin merchant trade add potions 25 5
+# Result: Sells held item for 25 coins, max 5 uses per merchant
+
+# 4. Add more trades by holding different items
+/vrs admin merchant trade add potions 15 3
+
+# 5. List trades to verify
+/vrs admin merchant trade list potions
+```
+
+#### Manual Configuration (Alternative)
+
 Default templates are already configured in `data/merchants.yml`:
 
 ```yaml
@@ -345,7 +367,9 @@ templates:
         maxUses: 1
 ```
 
-You can add custom item templates as `resultItem` by using their template IDs.
+**Note:** The `resultItem` field can be:
+- A Bukkit material name (e.g., "GOLDEN_APPLE")
+- An item template ID (e.g., "merchant_potions_potion_1234567890") for custom NBT items
 
 ---
 

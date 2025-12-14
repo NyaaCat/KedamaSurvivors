@@ -401,6 +401,7 @@ admin:
     join: "§f/vrs admin join <enable|disable> §8- §7游戏入口开关"
     world: "§f/vrs admin world <enable|disable|list> [world] §8- §7世界管理"
     debug: "§f/vrs admin debug <player|perf|templates|run> §8- §7调试命令"
+    merchant: "§f/vrs admin merchant §8- §7商人模板管理"
 
   # 状态
   status:
@@ -511,6 +512,32 @@ admin:
     command_invalid_index: "§c无效的命令索引 §f{index}"
     rewards_set: "§a已设置原型 §f{id} §a的奖励"
     rewards_info: "§7  经验: §f{xpBase} + {xpPerLevel}/级 §8| §7金币: §f{coinBase} + {coinPerLevel}/级 §8| §7积分概率: §f{permaChance}"
+
+  # 商人管理
+  merchant:
+    help:
+      header: "§8========== §6商人管理命令 §8=========="
+      template_create: "§f/vrs admin merchant template create <templateId> [displayName] §8- §7创建商人模板"
+      template_delete: "§f/vrs admin merchant template delete <templateId> §8- §7删除商人模板"
+      template_list: "§f/vrs admin merchant template list §8- §7列出所有商人模板"
+      trade_add: "§f/vrs admin merchant trade add <templateId> <cost> [maxUses] §8- §7添加手持物品为交易"
+      trade_remove: "§f/vrs admin merchant trade remove <templateId> <index> §8- §7移除交易"
+      trade_list: "§f/vrs admin merchant trade list <templateId> §8- §7列出交易"
+    template_created: "§a商人模板 §f{templateId} §a创建成功 (显示名: §f{displayName}§a)"
+    template_exists: "§c商人模板 §f{templateId} §c已存在"
+    template_deleted: "§a商人模板 §f{templateId} §a已删除"
+    template_not_found: "§c找不到商人模板 §f{templateId}"
+    template_has_trades: "§e警告: 该模板包含 §f{count} §e个交易"
+    template_list_header: "§8========== §6商人模板列表 §8=========="
+    template_list_empty: "§7无商人模板"
+    template_list_entry: "§7- §f{templateId} §8(§7{displayName}§8) §7交易: §f{tradeCount}"
+    no_item_in_hand: "§c请手持要添加的物品"
+    trade_added: "§a已添加交易到 §f{templateId} §8(物品: §f{item}§8, 价格: §f{cost}§8, 次数: §f{maxUses}§8)"
+    trade_removed: "§a已从 §f{templateId} §a移除交易 §f#{index}"
+    trade_not_found: "§c找不到索引 §f{index} §c的交易"
+    trade_list_header: "§8========== §6{templateId} 交易列表 §8=========="
+    trade_list_empty: "§7无交易"
+    trade_list_entry: "§7[{index}] §f{resultItem} §7x{resultAmount} §8- §7价格: §e{costAmount} §7金币 §8(§7最大 §f{maxUses} §7次§8)"
 
 # ============================================================
 # 调试信息

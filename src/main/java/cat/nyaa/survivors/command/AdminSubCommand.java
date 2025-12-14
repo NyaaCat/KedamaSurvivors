@@ -2,6 +2,7 @@ package cat.nyaa.survivors.command;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.command.admin.EquipmentSubCommand;
+import cat.nyaa.survivors.command.admin.MerchantSubCommand;
 import cat.nyaa.survivors.command.admin.SpawnerSubCommand;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
@@ -41,6 +42,7 @@ public class AdminSubCommand implements SubCommand {
     // Nested subcommand handlers
     private EquipmentSubCommand equipmentSubCommand;
     private SpawnerSubCommand spawnerSubCommand;
+    private MerchantSubCommand merchantSubCommand;
 
     public AdminSubCommand(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -62,6 +64,9 @@ public class AdminSubCommand implements SubCommand {
         }
         if (spawnerSubCommand == null) {
             spawnerSubCommand = new SpawnerSubCommand(plugin);
+        }
+        if (merchantSubCommand == null) {
+            merchantSubCommand = new MerchantSubCommand(plugin);
         }
     }
 
@@ -92,6 +97,10 @@ public class AdminSubCommand implements SubCommand {
                 initSubCommands();
                 spawnerSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
             }
+            case "merchant" -> {
+                initSubCommands();
+                merchantSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
             default -> i18n.send(sender, "error.unknown_command", "command", action);
         }
     }
@@ -109,6 +118,7 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.help.debug");
         i18n.send(sender, "admin.help.equipment");
         i18n.send(sender, "admin.help.spawner");
+        i18n.send(sender, "admin.help.merchant");
     }
 
     private void showStatus(CommandSender sender) {
@@ -504,20 +514,23 @@ public class AdminSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "debug", "equipment", "spawner")) {
+            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "debug", "equipment", "spawner", "merchant")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
             }
         } else if (args.length >= 2) {
             String action = args[0].toLowerCase();
-            // Delegate to nested subcommands for equipment and spawner
+            // Delegate to nested subcommands for equipment, spawner, and merchant
             if (action.equals("equipment")) {
                 initSubCommands();
                 return equipmentSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
             } else if (action.equals("spawner")) {
                 initSubCommands();
                 return spawnerSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("merchant")) {
+                initSubCommands();
+                return merchantSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
             }
         }
 
