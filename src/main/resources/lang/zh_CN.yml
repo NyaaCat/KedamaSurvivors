@@ -124,6 +124,8 @@ starter:
   cleared: "§7已清除装备选择"
   weapon_header: "§8========== §6武器选项 §8=========="
   helmet_header: "§8========== §3护甲选项 §8=========="
+  weapon_option: "§7- §e§n{name}§r §8(ID: {id})"
+  helmet_option: "§7- §e§n{name}§r §8(ID: {id})"
   status: "§7当前选择: §f{weapon} §8/ §f{helmet}"
 
 # ============================================================
@@ -277,6 +279,10 @@ team:
   member_entry: "§7- §f{player} {status}"
   list_teams_header: "§8========== §6队伍列表 §8=========="
   list_entry: "§7- §f{name} §8(§7{count}人§8)"
+  # 状态显示标签
+  leader: "§6队长"
+  ready: "§a已准备"
+  not_ready: "§8未准备"
 
 # ============================================================
 # GUI 界面
@@ -401,6 +407,8 @@ admin:
     join: "§f/vrs admin join <enable|disable> §8- §7游戏入口开关"
     world: "§f/vrs admin world <enable|disable|list> [world] §8- §7世界管理"
     debug: "§f/vrs admin debug <player|perf|templates|run> §8- §7调试命令"
+    equipment: "§f/vrs admin equipment §8- §7装备组管理"
+    spawner: "§f/vrs admin spawner §8- §7刷怪器原型管理"
     merchant: "§f/vrs admin merchant §8- §7商人模板管理"
 
   # 状态
