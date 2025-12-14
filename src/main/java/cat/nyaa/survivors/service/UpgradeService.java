@@ -3,9 +3,11 @@ package cat.nyaa.survivors.service;
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.config.ConfigService.EquipmentGroupConfig;
-import cat.nyaa.survivors.gui.UpgradeGui;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerState;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -13,9 +15,15 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Handles equipment upgrade logic and GUI.
+ * Handles equipment upgrade logic and chat-based selection.
  */
 public class UpgradeService {
+
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER =
+            LegacyComponentSerializer.builder()
+                    .character('§')
+                    .hexColors()
+                    .build();
 
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService config;
@@ -31,19 +39,152 @@ public class UpgradeService {
         this.starter = plugin.getStarterService();
     }
 
+    // ==================== Chat-based Upgrade Selection ====================
+
     /**
-     * Shows the upgrade selection GUI to a player.
+     * Processes an upgrade choice from command or auto-selection.
+     *
+     * @param player The player making the choice
+     * @param choice "power" for weapon upgrade, "defense" for helmet upgrade
      */
-    public void showUpgradeGui(Player player) {
+    public void processUpgradeChoice(Player player, String choice) {
         Optional<PlayerState> stateOpt = state.getPlayer(player.getUniqueId());
         if (stateOpt.isEmpty()) return;
 
         PlayerState playerState = stateOpt.get();
 
-        // Create and open the upgrade GUI
-        UpgradeGui gui = new UpgradeGui(plugin, player, playerState);
-        gui.open();
+        if (!playerState.isUpgradePending()) {
+            i18n.send(player, "upgrade.not_pending");
+            return;
+        }
+
+        // Clear deadline and suggested upgrade
+        playerState.setUpgradeDeadlineMillis(0);
+        playerState.setSuggestedUpgrade(null);
+
+        if ("power".equals(choice)) {
+            processWeaponUpgrade(player, playerState);
+        } else if ("defense".equals(choice)) {
+            processHelmetUpgrade(player, playerState);
+        }
+
+        // Update scoreboard to remove countdown
+        plugin.getScoreboardService().updatePlayerSidebar(player);
     }
+
+    /**
+     * Processes auto-selection when timeout expires.
+     * Uses the pre-selected suggested upgrade.
+     */
+    public void processAutoUpgrade(Player player, PlayerState playerState) {
+        String suggested = playerState.getSuggestedUpgrade();
+        if (suggested == null) {
+            // Fallback: random selection
+            suggested = ThreadLocalRandom.current().nextBoolean() ? "power" : "defense";
+        }
+
+        // Notify player
+        if ("power".equals(suggested)) {
+            if (playerState.isWeaponAtMax()) {
+                i18n.send(player, "upgrade.auto_selected_power_max",
+                        "amount", config.getMaxLevelPermaScoreReward(),
+                        "perma_name", config.getPermaScoreDisplayName());
+            } else {
+                i18n.send(player, "upgrade.auto_selected_power");
+            }
+        } else {
+            if (playerState.isHelmetAtMax()) {
+                i18n.send(player, "upgrade.auto_selected_defense_max",
+                        "amount", config.getMaxLevelPermaScoreReward(),
+                        "perma_name", config.getPermaScoreDisplayName());
+            } else {
+                i18n.send(player, "upgrade.auto_selected_defense");
+            }
+        }
+
+        processUpgradeChoice(player, suggested);
+    }
+
+    /**
+     * Sends the upgrade prompt messages to a player.
+     * Called when upgrade becomes available and on reminders.
+     *
+     * @param player      The player to send prompts to
+     * @param playerState The player's state
+     * @param isReminder  True if this is a reminder, false if initial prompt
+     */
+    public void sendUpgradePrompt(Player player, PlayerState playerState, boolean isReminder) {
+        String suggested = playerState.getSuggestedUpgrade();
+        boolean weaponMax = playerState.isWeaponAtMax();
+        boolean helmetMax = playerState.isHelmetAtMax();
+        int permaReward = config.getMaxLevelPermaScoreReward();
+        String permaName = config.getPermaScoreDisplayName();
+
+        // Send header (only on initial prompt)
+        if (!isReminder) {
+            i18n.send(player, "upgrade.prompt_header");
+        } else {
+            // Send reminder with countdown
+            int seconds = playerState.getUpgradeRemainingSeconds();
+            i18n.send(player, "upgrade.reminder", "seconds", seconds);
+        }
+
+        // Determine message keys based on suggested and max level states
+        String powerKey;
+        String defenseKey;
+
+        if (weaponMax) {
+            powerKey = "power".equals(suggested) ? "upgrade.prompt_power_max_highlight" : "upgrade.prompt_power_max";
+        } else {
+            powerKey = "power".equals(suggested) ? "upgrade.prompt_power_highlight" : "upgrade.prompt_power";
+        }
+
+        if (helmetMax) {
+            defenseKey = "defense".equals(suggested) ? "upgrade.prompt_defense_max_highlight" : "upgrade.prompt_defense_max";
+        } else {
+            defenseKey = "defense".equals(suggested) ? "upgrade.prompt_defense_highlight" : "upgrade.prompt_defense";
+        }
+
+        // Build and send clickable messages
+        String powerText = weaponMax
+                ? i18n.get(powerKey, "amount", permaReward, "perma_name", permaName)
+                : i18n.get(powerKey);
+        String defenseText = helmetMax
+                ? i18n.get(defenseKey, "amount", permaReward, "perma_name", permaName)
+                : i18n.get(defenseKey);
+
+        Component powerComponent = LEGACY_SERIALIZER.deserialize(config.getPrefix() + powerText)
+                .clickEvent(ClickEvent.runCommand("/vrs upgrade power"));
+        Component defenseComponent = LEGACY_SERIALIZER.deserialize(config.getPrefix() + defenseText)
+                .clickEvent(ClickEvent.runCommand("/vrs upgrade defense"));
+
+        player.sendMessage(powerComponent);
+        player.sendMessage(defenseComponent);
+    }
+
+    /**
+     * Determines the suggested upgrade for a player.
+     * Respects max level states: if one is max, suggest the other.
+     * If both available, random selection.
+     *
+     * @param playerState The player's state
+     * @return "power" or "defense"
+     */
+    public String determineSuggestedUpgrade(PlayerState playerState) {
+        boolean weaponMax = playerState.isWeaponAtMax();
+        boolean helmetMax = playerState.isHelmetAtMax();
+
+        if (weaponMax && !helmetMax) {
+            return "defense";
+        } else if (helmetMax && !weaponMax) {
+            return "power";
+        } else {
+            // Both available or both max - random
+            return ThreadLocalRandom.current().nextBoolean() ? "power" : "defense";
+        }
+    }
+
+    // ==================== Core Upgrade Processing ====================
 
     /**
      * Processes a weapon upgrade choice.
@@ -89,9 +230,6 @@ public class UpgradeService {
 
         // Resolve held XP
         plugin.getRewardService().resolveHeldXp(player, playerState);
-
-        // Close the GUI
-        player.closeInventory();
     }
 
     /**
@@ -138,9 +276,6 @@ public class UpgradeService {
 
         // Resolve held XP
         plugin.getRewardService().resolveHeldXp(player, playerState);
-
-        // Close the GUI
-        player.closeInventory();
     }
 
     /**
@@ -160,7 +295,6 @@ public class UpgradeService {
 
         // Still resolve held XP
         plugin.getRewardService().resolveHeldXp(player, playerState);
-        player.closeInventory();
     }
 
     /**

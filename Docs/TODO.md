@@ -86,6 +86,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `/vrs ready` - Toggle ready status
 - [x] `/vrs quit` - Leave current run
 - [x] `/vrs status` - Show player status
+- [x] `/vrs upgrade <power|defense>` - Chat-based upgrade selection
 
 ### 3.3 Team Commands
 - [x] `/vrs team create <name>` - Create team
@@ -196,11 +197,18 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 
 ### 5.3 Upgrade Service
 - [x] `UpgradeService` class
-- [x] Upgrade prompt GUI
-- [x] Weapon upgrade option
-- [x] Helmet upgrade option
+- [x] Chat-based upgrade prompt (non-intrusive, replaces GUI)
+- [x] Clickable power/defense options
+- [x] Randomly highlighted suggested upgrade
+- [x] Weapon upgrade option (power)
+- [x] Helmet upgrade option (defense)
 - [x] Equipment replacement with PDC
 - [x] Max level handling (grant perma-score)
+- [x] Both-max-level instant reward (no prompt)
+- [x] Upgrade countdown on scoreboard
+- [x] Periodic chat reminders (configurable interval)
+- [x] Auto-selection on timeout (configurable)
+- [x] `UpgradeReminderTask` - countdown and auto-selection
 - [x] Held XP resolution (may chain upgrades)
 - [x] XP required recalculation
 

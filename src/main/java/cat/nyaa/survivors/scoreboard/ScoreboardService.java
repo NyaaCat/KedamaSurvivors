@@ -204,6 +204,16 @@ public class ScoreboardService {
         String xpLine = i18n.get("scoreboard.xp", "bar", xpBar, "percent", getXpPercent(playerState));
         sidebar.getScore(xpLine).setScore(score--);
 
+        // Upgrade countdown (only when pending and not both at max)
+        if (playerState.isUpgradePending() &&
+                !(playerState.isWeaponAtMax() && playerState.isHelmetAtMax())) {
+            int remainingSeconds = playerState.getUpgradeRemainingSeconds();
+            if (remainingSeconds > 0) {
+                String upgradeLine = i18n.get("scoreboard.upgrade_countdown", "seconds", remainingSeconds);
+                sidebar.getScore(upgradeLine).setScore(score--);
+            }
+        }
+
         // Coins (held XP as coins during upgrade pending)
         String coinsLine = i18n.get("scoreboard.coins", "amount", playerState.getXpHeld());
         sidebar.getScore(coinsLine).setScore(score--);

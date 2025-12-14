@@ -232,15 +232,41 @@ public class RewardService {
 
     /**
      * Shows the upgrade selection prompt to a player.
+     * Uses chat-based clickable messages instead of GUI.
      */
     private void showUpgradePrompt(Player player, PlayerState playerState) {
-        i18n.send(player, "info.upgrade_available");
-
-        // Open upgrade GUI
         UpgradeService upgradeService = plugin.getUpgradeService();
-        if (upgradeService != null) {
-            upgradeService.showUpgradeGui(player);
+        if (upgradeService == null) return;
+
+        // Check if both weapon AND helmet are at max level
+        if (playerState.isWeaponAtMax() && playerState.isHelmetAtMax()) {
+            // Instant perma-score award, no prompt needed
+            int reward = config.getUpgradeBothMaxPermaReward();
+            String permaName = config.getPermaScoreDisplayName();
+
+            playerState.setPermaScore(playerState.getPermaScore() + reward);
+            plugin.getScoreboardService().updatePermaScore(player, playerState.getPermaScore());
+            i18n.send(player, "upgrade.both_max_instant", "amount", reward, "perma_name", permaName);
+
+            // Resolve held XP immediately (no pending state)
+            playerState.setUpgradePending(false);
+            resolveHeldXp(player, playerState);
+            return;
         }
+
+        // Set upgrade deadline
+        long deadline = System.currentTimeMillis() + config.getUpgradeTimeoutMs();
+        playerState.setUpgradeDeadlineMillis(deadline);
+
+        // Determine suggested upgrade
+        String suggested = upgradeService.determineSuggestedUpgrade(playerState);
+        playerState.setSuggestedUpgrade(suggested);
+
+        // Send initial chat prompt with clickable options
+        upgradeService.sendUpgradePrompt(player, playerState, false);
+
+        // Update scoreboard to show countdown
+        plugin.getScoreboardService().updatePlayerSidebar(player);
     }
 
     /**

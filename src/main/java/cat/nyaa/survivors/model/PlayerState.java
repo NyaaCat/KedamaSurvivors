@@ -48,6 +48,10 @@ public class PlayerState {
     private volatile int xpRequired = 100;
     private volatile boolean upgradePending;
 
+    // Upgrade selection (chat-based)
+    private volatile long upgradeDeadlineMillis;
+    private volatile String suggestedUpgrade;  // "power" or "defense"
+
     // Overflow (when at max level)
     private volatile int overflowXpAccumulated;
 
@@ -105,6 +109,16 @@ public class PlayerState {
     }
 
     /**
+     * Gets remaining seconds until upgrade auto-selection.
+     * Returns 0 if no upgrade is pending or deadline has passed.
+     */
+    public int getUpgradeRemainingSeconds() {
+        if (upgradeDeadlineMillis == 0) return 0;
+        long remaining = upgradeDeadlineMillis - System.currentTimeMillis();
+        return Math.max(0, (int) (remaining / 1000));
+    }
+
+    /**
      * Gets remaining cooldown time in seconds.
      */
     public long getCooldownRemainingSeconds() {
@@ -128,6 +142,8 @@ public class PlayerState {
         xpProgress = 0;
         xpHeld = 0;
         upgradePending = false;
+        upgradeDeadlineMillis = 0;
+        suggestedUpgrade = null;
         overflowXpAccumulated = 0;
         weaponGroup = null;
         weaponLevel = 0;
@@ -247,6 +263,12 @@ public class PlayerState {
 
     public boolean isUpgradePending() { return upgradePending; }
     public void setUpgradePending(boolean upgradePending) { this.upgradePending = upgradePending; }
+
+    public long getUpgradeDeadlineMillis() { return upgradeDeadlineMillis; }
+    public void setUpgradeDeadlineMillis(long upgradeDeadlineMillis) { this.upgradeDeadlineMillis = upgradeDeadlineMillis; }
+
+    public String getSuggestedUpgrade() { return suggestedUpgrade; }
+    public void setSuggestedUpgrade(String suggestedUpgrade) { this.suggestedUpgrade = suggestedUpgrade; }
 
     public int getOverflowXpAccumulated() { return overflowXpAccumulated; }
     public void setOverflowXpAccumulated(int overflowXpAccumulated) { this.overflowXpAccumulated = overflowXpAccumulated; }

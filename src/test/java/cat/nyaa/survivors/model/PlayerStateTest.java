@@ -197,16 +197,54 @@ class PlayerStateTest {
     }
 
     @Nested
+    @DisplayName("Upgrade Selection")
+    class UpgradeSelection {
+
+        @Test
+        @DisplayName("should return 0 remaining seconds when no deadline set")
+        void shouldReturnZeroWhenNoDeadline() {
+            assertEquals(0, playerState.getUpgradeRemainingSeconds());
+        }
+
+        @Test
+        @DisplayName("should calculate remaining upgrade seconds correctly")
+        void shouldCalculateRemainingUpgradeSeconds() {
+            playerState.setUpgradeDeadlineMillis(System.currentTimeMillis() + 25000);
+            int remaining = playerState.getUpgradeRemainingSeconds();
+            assertTrue(remaining >= 24 && remaining <= 26, "Expected ~25 seconds, got " + remaining);
+        }
+
+        @Test
+        @DisplayName("should return 0 when deadline has passed")
+        void shouldReturnZeroWhenDeadlinePassed() {
+            playerState.setUpgradeDeadlineMillis(System.currentTimeMillis() - 1000);
+            assertEquals(0, playerState.getUpgradeRemainingSeconds());
+        }
+
+        @Test
+        @DisplayName("should track suggested upgrade choice")
+        void shouldTrackSuggestedUpgrade() {
+            playerState.setSuggestedUpgrade("power");
+            assertEquals("power", playerState.getSuggestedUpgrade());
+
+            playerState.setSuggestedUpgrade("defense");
+            assertEquals("defense", playerState.getSuggestedUpgrade());
+        }
+    }
+
+    @Nested
     @DisplayName("State Reset")
     class StateReset {
 
         @Test
-        @DisplayName("should reset run state")
+        @DisplayName("should reset run state including upgrade fields")
         void shouldResetRunState() {
             // Set up some state
             playerState.setXpProgress(50);
             playerState.setXpHeld(100);
             playerState.setUpgradePending(true);
+            playerState.setUpgradeDeadlineMillis(System.currentTimeMillis() + 30000);
+            playerState.setSuggestedUpgrade("power");
             playerState.setWeaponLevel(3);
             playerState.setHelmetLevel(2);
             playerState.setWeaponAtMax(true);
@@ -219,6 +257,8 @@ class PlayerStateTest {
             assertEquals(0, playerState.getXpProgress());
             assertEquals(0, playerState.getXpHeld());
             assertFalse(playerState.isUpgradePending());
+            assertEquals(0, playerState.getUpgradeDeadlineMillis());
+            assertNull(playerState.getSuggestedUpgrade());
             assertEquals(0, playerState.getWeaponLevel());
             assertEquals(0, playerState.getHelmetLevel());
             assertFalse(playerState.isWeaponAtMax());

@@ -107,6 +107,11 @@ public class ConfigService {
     private String maxLevelBehaviorMode;
     private int maxLevelPermaScoreReward;
 
+    // Upgrade selection
+    private int upgradeTimeoutSeconds;
+    private int upgradeReminderIntervalSeconds;
+    private int upgradeBothMaxPermaReward;
+
     // Scoreboard
     private boolean scoreboardEnabled;
     private String scoreboardTitle;
@@ -176,6 +181,7 @@ public class ConfigService {
         loadSpawning();
         loadRewards();
         loadProgression();
+        loadUpgrade();
         loadScoreboard();
         loadPersistence();
         loadTeleport();
@@ -280,6 +286,12 @@ public class ConfigService {
 
         maxLevelBehaviorMode = config.getString("progression.maxLevelBehavior.mode", "GRANT_PERMA_SCORE");
         maxLevelPermaScoreReward = config.getInt("progression.maxLevelBehavior.permaScoreReward", 10);
+    }
+
+    private void loadUpgrade() {
+        upgradeTimeoutSeconds = config.getInt("upgrade.timeoutSeconds", 30);
+        upgradeReminderIntervalSeconds = config.getInt("upgrade.reminderIntervalSeconds", 5);
+        upgradeBothMaxPermaReward = config.getInt("upgrade.bothMaxPermaReward", 10);
     }
 
     private void loadScoreboard() {
@@ -544,6 +556,11 @@ public class ConfigService {
     public boolean isOverflowNotifyPlayer() { return overflowNotifyPlayer; }
     public String getMaxLevelBehaviorMode() { return maxLevelBehaviorMode; }
     public int getMaxLevelPermaScoreReward() { return maxLevelPermaScoreReward; }
+
+    public int getUpgradeTimeoutSeconds() { return upgradeTimeoutSeconds; }
+    public long getUpgradeTimeoutMs() { return upgradeTimeoutSeconds * 1000L; }
+    public int getUpgradeReminderIntervalSeconds() { return upgradeReminderIntervalSeconds; }
+    public int getUpgradeBothMaxPermaReward() { return upgradeBothMaxPermaReward; }
 
     public boolean isScoreboardEnabled() { return scoreboardEnabled; }
     public String getScoreboardTitle() { return scoreboardTitle; }

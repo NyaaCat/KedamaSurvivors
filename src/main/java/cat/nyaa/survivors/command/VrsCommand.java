@@ -35,6 +35,7 @@ public class VrsCommand implements CommandExecutor, TabCompleter {
         subCommands.put("ready", new ReadySubCommand(plugin));
         subCommands.put("quit", new QuitSubCommand(plugin));
         subCommands.put("status", new StatusSubCommand(plugin));
+        subCommands.put("upgrade", new UpgradeSubCommand(plugin));
 
         // Admin commands
         subCommands.put("admin", new AdminSubCommand(plugin));

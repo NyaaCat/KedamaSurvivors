@@ -127,6 +127,17 @@ progression:
     permaScoreReward: 10
 
 # ============================================================
+# Upgrade Selection (Chat-based, non-intrusive)
+# ============================================================
+upgrade:
+  # Timeout before auto-selection (seconds)
+  timeoutSeconds: 30
+  # Interval between chat reminders (seconds)
+  reminderIntervalSeconds: 5
+  # Perma-score reward when both weapon and helmet are at max level
+  bothMaxPermaReward: 10
+
+# ============================================================
 # Enemy Spawning
 # ============================================================
 # Note: Archetypes are now stored in data/archetypes.yml

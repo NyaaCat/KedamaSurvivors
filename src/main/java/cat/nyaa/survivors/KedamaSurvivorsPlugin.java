@@ -22,6 +22,7 @@ import cat.nyaa.survivors.service.UpgradeService;
 import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.task.CooldownDisplay;
 import cat.nyaa.survivors.task.DisconnectChecker;
+import cat.nyaa.survivors.task.UpgradeReminderTask;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -53,6 +54,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private JoinSwitchService joinSwitchService;
     private DisconnectChecker disconnectChecker;
     private CooldownDisplay cooldownDisplay;
+    private UpgradeReminderTask upgradeReminderTask;
     private MerchantService merchantService;
     private PersistenceService persistenceService;
 
@@ -141,6 +143,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Cooldown display for actionbar
         cooldownDisplay = new CooldownDisplay(this);
 
+        // Upgrade reminder task for chat-based upgrades
+        upgradeReminderTask = new UpgradeReminderTask(this);
+
         // Merchant service for villager traders
         merchantService = new MerchantService(this);
     }
@@ -188,6 +193,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
             cooldownDisplay.start();
         }
 
+        // Start upgrade reminder task
+        if (upgradeReminderTask != null) {
+            upgradeReminderTask.start();
+        }
+
         // Start merchant service
         if (merchantService != null) {
             merchantService.start();
@@ -223,6 +233,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Stop cooldown display
         if (cooldownDisplay != null) {
             cooldownDisplay.stop();
+        }
+
+        // Stop upgrade reminder task
+        if (upgradeReminderTask != null) {
+            upgradeReminderTask.stop();
         }
 
         // Shutdown join switch service
@@ -329,5 +344,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public PersistenceService getPersistenceService() {
         return persistenceService;
+    }
+
+    public UpgradeReminderTask getUpgradeReminderTask() {
+        return upgradeReminderTask;
     }
 }

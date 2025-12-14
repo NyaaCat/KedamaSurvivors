@@ -15,7 +15,7 @@
 # 通用
 # ============================================================
 
-prefix: "§8[§6武§e生§8] §7"
+prefix: "§8[§6毛玉幸存者§8] §7"
 
 # ============================================================
 # 信息提示 (低对比度灰色正文)
@@ -75,6 +75,32 @@ upgrade:
   max_level_reward: "§7已达最高等级，获得 §d{amount} §7永久积分 §8({slot})"
   already_max_level: "§8{slot} 已达最高等级"
   max_level: "§8最高等级"
+
+  # Chat-based upgrade prompts
+  prompt_header: "§6§l升级可用！§7请选择："
+  # Normal options (not highlighted)
+  prompt_power: "§7[力量] - 升级武器"
+  prompt_defense: "§7[防御] - 升级护甲"
+  # Highlighted options (suggested)
+  prompt_power_highlight: "§e§l§n[力量]§r §e- 升级武器 §7(推荐)"
+  prompt_defense_highlight: "§b§l§n[防御]§r §b- 升级护甲 §7(推荐)"
+  # Max level options (shows perma-score instead)
+  prompt_power_max: "§7[力量] - +{amount} {perma_name} §8(已满级)"
+  prompt_defense_max: "§7[防御] - +{amount} {perma_name} §8(已满级)"
+  prompt_power_max_highlight: "§e§l§n[力量]§r §e- +{amount} {perma_name} §7(推荐)"
+  prompt_defense_max_highlight: "§b§l§n[防御]§r §b- +{amount} {perma_name} §7(推荐)"
+  # Reminder
+  reminder: "§7升级提醒：§f{seconds}§7秒后自动选择"
+  # Auto-selection messages
+  auto_selected_power: "§7时间到！§6自动升级武器"
+  auto_selected_defense: "§7时间到！§3自动升级护甲"
+  auto_selected_power_max: "§7时间到！§d+{amount} {perma_name}"
+  auto_selected_defense_max: "§7时间到！§d+{amount} {perma_name}"
+  # Both max level - instant reward
+  both_max_instant: "§d+{amount} {perma_name} §7(双满级奖励)"
+  # Error messages
+  not_pending: "§c你当前没有可用升级"
+  invalid_choice: "§c无效选择，请使用 power 或 defense"
 
 # ============================================================
 # 物品提示
@@ -306,11 +332,11 @@ gui:
 # ============================================================
 
 sidebar:
-  title: "§6§l武 生"
+  title: "§6§l毛 玉 幸 存 者"
 
 # 记分板使用的键 (与侧边栏共用，低对比度)
 scoreboard:
-  title: "§6§l武 生"
+  title: "§6§l毛 玉 幸 存 者"
   weapon_level: "§6武器 §fLv.{level}"
   helmet_level: "§3护甲 §fLv.{level}"
   xp: "§7经验 §f{bar} {percent}%"
@@ -318,13 +344,14 @@ scoreboard:
   perma_score: "§7积分 §f{amount}"
   team: "§7队伍 §f{name} §8(§f{count}§8/§f{max}§8)"
   time: "§7时间 §f{time}"
+  upgrade_countdown: "§e升级 §f{seconds}s"
 
 # ============================================================
 # 状态命令输出
 # ============================================================
 
 status:
-  header: "§8========== §7武生状态 §8=========="
+  header: "§8========== §7状态 §8=========="
   footer: "§8================================"
   mode: "§7模式: {mode}"
   world: "§7世界: §f{world}"
@@ -502,7 +529,7 @@ debug:
 # ============================================================
 
 help:
-  header: "§8========== §7武生命令 §8=========="
+  header: "§8========== §7命令 §8=========="
   footer: "§8使用 §f/vrs <命令> §8获取帮助"
   command:
     starter: "§f/vrs starter §8- §7选择初始装备"
@@ -510,6 +537,7 @@ help:
     ready: "§f/vrs ready §8- §7切换准备状态"
     quit: "§f/vrs quit §8- §7退出当前战斗"
     status: "§f/vrs status §8- §7查看状态"
+    upgrade: "§f/vrs upgrade <power|defense> §8- §7选择升级"
     admin: "§f/vrs admin §8- §7管理员命令"
     reload: "§f/vrs reload §8- §7重载配置"
 
