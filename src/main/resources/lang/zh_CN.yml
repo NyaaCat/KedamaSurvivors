@@ -36,6 +36,7 @@ info:
   team_waiting: "§7队伍准备中 §f{ready}/{total}"
   countdown_start: "§7传送倒计时开始"
   countdown_tick: "§e{seconds}"
+  run_starting: "§7正在进入战斗..."
   run_started: "§a进入战斗！§7世界: §f{world}"
   run_ended: "§7本轮结束"
 
@@ -95,6 +96,9 @@ starter:
   help: "§7使用 §f/vrs starter weapon §7或 §f/vrs starter helmet §7选择装备"
   none: "§8无"
   cleared: "§7已清除装备选择"
+  weapon_header: "§8========== §6武器选项 §8=========="
+  helmet_header: "§8========== §3护甲选项 §8=========="
+  status: "§7当前选择: §f{weapon} §8/ §f{helmet}"
 
 # ============================================================
 # 成功提示 (绿色)
@@ -130,6 +134,8 @@ error:
   command_failed: "§c命令执行失败"
   unknown_command: "§c未知命令: §f{command}"
   player_only: "§c该命令只能由玩家执行"
+  specify_player: "§c请指定玩家"
+  invalid_number: "§c无效数字: §f{value}"
 
   # 状态检查
   not_in_lobby: "§c你必须在准备区才能执行此操作"
@@ -159,13 +165,22 @@ error:
   already_in_team: "§c你已经在一个队伍中了"
   not_in_team: "§c你不在任何队伍中"
   not_team_owner: "§c只有队长才能执行此操作"
+  not_leader: "§c只有队长才能执行此操作"
   team_full: "§c队伍已满 §f({current}/{max})"
   team_not_found: "§c找不到队伍 §f{name}"
+  team_name_taken: "§c队伍名称 §f{name} §c已被使用"
   no_valid_invite: "§c你没有该队伍的有效邀请"
+  no_invite: "§c你没有该队伍的有效邀请"
   invite_expired: "§c邀请已过期"
   player_already_in_team: "§c该玩家已在其他队伍中"
+  player_in_team: "§c玩家 §f{player} §c已在其他队伍中"
   cannot_kick_self: "§c不能踢出自己"
   cannot_kick_owner: "§c不能踢出队长"
+  cannot_invite_self: "§c不能邀请自己"
+  cannot_leave_in_run: "§c战斗中无法离开队伍"
+  cannot_disband_in_run: "§c战斗中无法解散队伍"
+  player_not_in_team: "§c玩家 §f{player} §c不在你的队伍中"
+  specify_team: "§c请指定队伍名称"
 
   # 世界
   no_combat_worlds: "§c没有可用的战斗世界"
@@ -215,6 +230,27 @@ team:
   list_status_ready: "§a已准备"
   list_status_offline: "§7离线"
   list_status_in_run: "§e战斗中"
+
+  # 命令反馈
+  created: "§a队伍 §f{name} §a创建成功"
+  invite_sent: "§a已向 §f{player} §a发送邀请"
+  joined: "§a已加入队伍 §f{team}"
+  invite_declined: "§7已拒绝队伍 §f{team} §7的邀请"
+  left: "§7已离开队伍 §f{team}"
+  member_left: "§f{player} §7离开了队伍"
+  member_joined: "§f{player} §7加入了队伍"
+  kicked: "§a已将 §f{player} §a移出队伍"
+  was_kicked: "§c你被踢出了队伍 §f{team}"
+  disbanded: "§7队伍 §f{team} §7已解散"
+  leadership_transferred: "§a队长已转移给 §f{player}"
+  became_leader: "§a你现在是队伍 §f{team} §a的队长"
+  no_teams: "§7当前没有队伍"
+  not_in_team: "§7你不在任何队伍中"
+  help: "§7使用 §f/vrs team create <name> §7创建队伍"
+  status_header: "§8========== §6队伍: {name} §8=========="
+  member_entry: "§7- §f{player} {status}"
+  list_teams_header: "§8========== §6队伍列表 §8=========="
+  list_entry: "§7- §f{name} §8(§7{count}人§8)"
 
 # ============================================================
 # GUI 界面
@@ -326,14 +362,76 @@ status:
 # ============================================================
 
 admin:
+  # 帮助
+  help:
+    header: "§8========== §6管理员命令 §8=========="
+    status: "§f/vrs admin status §8- §7服务器状态"
+    endrun: "§f/vrs admin endrun [team] §8- §7结束运行"
+    forcestart: "§f/vrs admin forcestart <team> §8- §7强制启动"
+    kick: "§f/vrs admin kick <player> §8- §7踢出玩家"
+    reset: "§f/vrs admin reset <player> §8- §7重置玩家"
+    setperma: "§f/vrs admin setperma <player> <amount> §8- §7设置积分"
+    join: "§f/vrs admin join <enable|disable> §8- §7游戏入口开关"
+    world: "§f/vrs admin world <enable|disable|list> [world] §8- §7世界管理"
+    debug: "§f/vrs admin debug <player|perf|templates|run> §8- §7调试命令"
+
+  # 状态
+  status:
+    header: "§8========== §6服务器状态 §8=========="
+    players: "§7玩家数: §f{count}"
+    teams: "§7队伍数: §f{count}"
+    runs: "§7运行中: §f{count}"
+    in_run: "§7战斗中玩家: §f{count}"
+
+  # 运行管理
+  no_active_runs: "§7当前没有活动的运行"
+  all_runs_ended: "§a已结束所有运行"
+  run_ended: "§a已结束队伍 §f{team} §a的运行"
+  team_not_in_run: "§c队伍 §f{team} §c当前不在运行中"
+  specify_team: "§c请指定队伍名称"
+  team_already_in_run: "§c队伍 §f{team} §c已在运行中"
+  force_start: "§a已强制启动队伍 §f{team}"
+
+  # 玩家管理
+  player_not_in_game: "§c玩家 §f{player} §c不在游戏中"
+  player_kicked: "§a已将 §f{player} §a踢出游戏"
+  you_were_kicked: "§c你已被管理员踢出游戏"
+  player_reset: "§a已重置玩家 §f{player}"
+  setperma_usage: "§c用法: /vrs admin setperma <player> <amount>"
+  perma_set: "§a已设置 §f{player} §a的永久积分为 §f{amount}"
+
+  # 重载
+  reload_success: "§a配置已重载"
+  reload_failed: "§c配置重载失败: §f{error}"
+
+  # 游戏入口
   join_enabled: "§a已开启游戏入口"
   join_disabled: "§e已关闭游戏入口，{count} 名玩家将在 {seconds} 秒后被传送"
+  join_status: "§7游戏入口: {status}"
+  join_status_enabled: "§a开启"
+  join_status_disabled: "§c关闭"
   force_started: "§a已强制启动 §f{target} §a的游戏"
   force_stopped: "§a已强制停止 §f{target} §a的游戏"
+
+  # 世界管理
+  world_enabled: "§a世界 §f{world} §a已启用"
+  world_disabled: "§a世界 §f{world} §a已禁用"
+  world_not_found: "§c找不到世界: §f{world}"
   world_list_header: "§7========== §6战斗世界列表 §7=========="
   world_list_item: "§7- §f{name} §7[{status}] 权重: §f{weight}"
   world_status_enabled: "§a启用"
   world_status_disabled: "§c禁用"
+
+  # 调试
+  debug:
+    header: "§8========== §6调试信息 §8=========="
+    player_not_found: "§c找不到玩家状态"
+    run_not_found: "§c找不到运行实例"
+    template_result: "§7模板结果: §f{result}"
+    template_usage: "§c用法: /vrs admin debug templates <name> <player>"
+    run_usage: "§c用法: /vrs admin debug run <runId|list>"
+    run_list_header: "§8========== §6运行列表 §8=========="
+    run_list_entry: "§7- §f{id} §8| §7队伍: §f{team} §8| §7世界: §f{world} §8| §7状态: {status}"
 
 # ============================================================
 # 调试信息
@@ -374,6 +472,7 @@ countdown:
   final_subtitle: "§7祝你好运"
   cancelled: "§7倒计时取消: §f{player} §7未准备"
   cancelled_disconnect: "§7倒计时取消: 玩家断线"
+  starting: "§e倒计时开始"
 
 # ============================================================
 # 断线消息
@@ -391,6 +490,8 @@ disconnect:
 
 ready:
   all_ready: "§2全员准备就绪！"
+  now_ready: "§a你已准备就绪"
+  no_longer_ready: "§7你已取消准备"
 
 # ============================================================
 # 重生消息

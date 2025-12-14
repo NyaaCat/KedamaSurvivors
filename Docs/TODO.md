@@ -99,8 +99,8 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `/vrs team transfer <player>` - Transfer ownership
 
 ### 3.4 Admin Commands
-- [ ] `/vrs join enable|disable` - Global join switch
-- [ ] `/vrs world enable|disable|list <world>` - World management
+- [x] `/vrs join enable|disable` - Global join switch
+- [x] `/vrs world enable|disable|list <world>` - World management
 - [x] `/vrs reload` - Reload config
 - [x] `/vrs admin status` - Server status
 - [x] `/vrs admin endrun` - End runs
@@ -110,10 +110,10 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `/vrs admin setperma` - Set perma-score
 
 ### 3.5 Debug Commands
-- [ ] `/vrs debug player <player>` - Player state dump
-- [ ] `/vrs debug perf` - Performance stats
-- [ ] `/vrs debug templates <name> <player>` - Test template expansion
-- [ ] `/vrs debug run <runId|list>` - Run state dump
+- [x] `/vrs debug player <player>` - Player state dump
+- [x] `/vrs debug perf` - Performance stats
+- [x] `/vrs debug templates <name> <player>` - Test template expansion
+- [x] `/vrs debug run <runId|list>` - Run state dump
 
 ---
 
@@ -327,9 +327,10 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `TeamStateTest` - member management, wipe detection
 - [x] `TemplateEngineTest` - placeholder expansion
 - [x] `StateServiceTest` - state management
-- [ ] `EquipmentGroupTest` - level lookup, random selection
-- [ ] `ConfigServiceTest` - config loading, validation
-- [ ] `I18nServiceTest` - message loading, placeholders
+- [x] `EquipmentGroupTest` - level lookup, random selection
+- [x] `RunStateTest` - run state management
+- [ ] `ConfigServiceTest` - config loading, validation (requires Bukkit mocking)
+- [ ] `I18nServiceTest` - message loading, placeholders (requires Bukkit mocking)
 
 ### 10.2 Integration Tests
 - [ ] Command execution tests
@@ -374,17 +375,17 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 |-------|--------|------------|
 | 1. Foundation | In Progress | 85% |
 | 2. Core Data Models | Complete | 100% |
-| 3. Commands | In Progress | 90% |
+| 3. Commands | Complete | 100% |
 | 4. Game Services | In Progress | 95% |
 | 5. Gameplay Systems | In Progress | 75% |
 | 6. UI & Display | Complete | 100% |
 | 7. Event Listeners | Complete | 100% |
 | 8. Persistence | Not Started | 0% |
 | 9. Global Systems | Not Started | 0% |
-| 10. Testing | In Progress | 50% |
+| 10. Testing | In Progress | 70% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~65%**
+**Overall: ~70%**
 
 ---
 
