@@ -7,8 +7,10 @@ import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
+import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.StateService;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -31,12 +33,14 @@ public class PlayerListener implements Listener {
     private final ConfigService config;
     private final I18nService i18n;
     private final StateService state;
+    private final DeathService death;
 
     public PlayerListener(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfigService();
         this.i18n = plugin.getI18nService();
         this.state = plugin.getStateService();
+        this.death = plugin.getDeathService();
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -223,33 +227,10 @@ public class PlayerListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerDeath(PlayerDeathEvent event) {
-        Player player = event.getEntity();
-        UUID playerId = player.getUniqueId();
-
-        Optional<PlayerState> playerStateOpt = state.getPlayer(playerId);
-        if (playerStateOpt.isEmpty()) return;
-
-        PlayerState playerState = playerStateOpt.get();
-
-        if (playerState.getMode() != PlayerMode.IN_RUN) return;
-
-        // Mark as dead in run
-        Optional<RunState> runOpt = state.getPlayerRun(playerId);
-        if (runOpt.isPresent()) {
-            RunState run = runOpt.get();
-            run.markDead(playerId);
-
-            // Check for team wipe
-            Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
-            if (teamOpt.isPresent()) {
-                TeamState team = teamOpt.get();
-                if (team.isWiped(run.getAlivePlayers(), config.getDisconnectGraceMs())) {
-                    handleTeamWipe(team, run);
-                }
-            }
-        }
+        // Delegate to DeathService for full handling
+        death.handleDeath(event);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -262,32 +243,10 @@ public class PlayerListener implements Listener {
 
         PlayerState playerState = playerStateOpt.get();
 
-        if (playerState.getMode() != PlayerMode.IN_RUN) return;
-
-        Optional<RunState> runOpt = state.getPlayerRun(playerId);
-        if (runOpt.isPresent()) {
-            RunState run = runOpt.get();
-
-            // Mark as alive again
-            run.markAlive(playerId);
-
-            // Apply respawn invulnerability
-            long invulEnd = System.currentTimeMillis() + config.getRespawnInvulnerabilityMs();
-            playerState.setInvulnerableUntilMillis(invulEnd);
-
-            // Set respawn location
-            org.bukkit.Location spawnPoint = run.getRandomSpawnPoint();
-            if (spawnPoint != null) {
-                event.setRespawnLocation(spawnPoint);
-            }
-
-            // Schedule invulnerability notification
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline()) {
-                    i18n.send(player, "respawn.invulnerability_start",
-                            "seconds", config.getRespawnInvulnerabilitySeconds());
-                }
-            }, 1L);
+        // Delegate respawn handling to DeathService
+        Location respawnLoc = death.handleRespawn(player, playerState);
+        if (respawnLoc != null) {
+            event.setRespawnLocation(respawnLoc);
         }
     }
 }

@@ -201,14 +201,14 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] XP required recalculation
 
 ### 5.4 Death & Respawn Service
-- [ ] Death event handler
-- [ ] Drop cancellation
-- [ ] Team respawn anchor finding
-- [ ] Respawn to teammate location
-- [ ] Invulnerability application (3s)
-- [ ] Death penalty (clear equipment, reset XP)
-- [ ] Cooldown application
-- [ ] Team wipe check on death
+- [x] Death event handler
+- [x] Drop cancellation
+- [x] Team respawn anchor finding
+- [x] Respawn to teammate location
+- [x] Invulnerability application (3s)
+- [x] Death penalty (clear equipment, reset XP)
+- [x] Cooldown application
+- [x] Team wipe check on death
 
 ### 5.5 Merchant Service
 - [ ] `MerchantService` class
@@ -240,7 +240,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Base GUI holder class
 - [x] Starter weapon GUI
 - [x] Starter helmet GUI
-- [ ] Upgrade selection GUI
+- [x] Upgrade selection GUI
 - [x] Click event handling
 - [x] GUI close handling
 
@@ -376,15 +376,15 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 2. Core Data Models | Complete | 100% |
 | 3. Commands | In Progress | 90% |
 | 4. Game Services | In Progress | 95% |
-| 5. Gameplay Systems | Not Started | 0% |
-| 6. UI & Display | In Progress | 90% |
-| 7. Event Listeners | In Progress | 80% |
+| 5. Gameplay Systems | In Progress | 75% |
+| 6. UI & Display | Complete | 100% |
+| 7. Event Listeners | Complete | 100% |
 | 8. Persistence | Not Started | 0% |
 | 9. Global Systems | Not Started | 0% |
-| 10. Testing | In Progress | 40% |
+| 10. Testing | In Progress | 50% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~57%**
+**Overall: ~65%**
 
 ---
 

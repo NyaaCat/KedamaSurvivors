@@ -7,6 +7,7 @@ import cat.nyaa.survivors.listener.CombatListener;
 import cat.nyaa.survivors.listener.InventoryListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
+import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.RunService;
@@ -39,6 +40,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private RunService runService;
     private RewardService rewardService;
     private UpgradeService upgradeService;
+    private DeathService deathService;
 
     @Override
     public void onEnable() {
@@ -101,6 +103,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Upgrade service for equipment upgrades
         upgradeService = new UpgradeService(this);
+
+        // Death service for death/respawn handling
+        deathService = new DeathService(this);
     }
 
     private void registerCommands() {
@@ -206,5 +211,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public UpgradeService getUpgradeService() {
         return upgradeService;
+    }
+
+    public DeathService getDeathService() {
+        return deathService;
     }
 }
