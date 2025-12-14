@@ -44,6 +44,7 @@ info:
   # 死亡与重生
   died: "§7你已阵亡"
   died_cooldown: "§7你已阵亡，冷却 §f{seconds} §7秒后可重新开始"
+  died_can_rejoin: "§7你已阵亡。冷却 §f{seconds} §7秒后可 §f/vrs starter §7重新选择装备，再 §f/vrs ready §7重新加入队友"
   respawned_to_team: "§a重生至队友 §f{player} §a身边"
   rejoined_run: "§a已重新加入战斗！§7传送至 §f{player} §7身边"
   teammate_rejoined: "§a队友 §f{player} §a重新加入战斗！"

@@ -297,6 +297,84 @@ class DeathServiceTest {
     }
 
     @Nested
+    @DisplayName("Death With Living Teammates")
+    class DeathWithLivingTeammates {
+
+        @Test
+        @DisplayName("should remove player from run but not trigger wipe when teammates alive")
+        void shouldRemoveFromRunButNotWipe() {
+            UUID player1 = UUID.randomUUID();
+            UUID player2 = UUID.randomUUID();
+
+            team.addMember(player1);
+            team.addMember(player2);
+
+            run.addParticipant(player1);
+            run.addParticipant(player2);
+
+            // Player 1 dies - should be marked dead but team not wiped
+            run.markDead(player1);
+            run.removeParticipant(player1);
+
+            assertFalse(run.isAlive(player1));
+            assertTrue(run.isAlive(player2));
+            assertEquals(1, run.getAliveCount());
+            assertFalse(team.isWiped(run.getAlivePlayers(), 300000));
+        }
+
+        @Test
+        @DisplayName("should allow re-selection after run state reset")
+        void shouldAllowReSelectionAfterReset() {
+            PlayerState state = new PlayerState(UUID.randomUUID(), "TestPlayer");
+
+            // Player in run with starters selected
+            state.setMode(PlayerMode.IN_RUN);
+            state.setStarterWeaponOptionId("iron_sword");
+            state.setStarterHelmetOptionId("iron_helmet");
+            state.setWeaponGroup("sword");
+            state.setHelmetGroup("armor");
+            assertTrue(state.hasSelectedStarters());
+
+            // Death penalty resets run state
+            state.resetRunState();
+            state.setMode(PlayerMode.COOLDOWN);
+
+            // Verify starters are cleared for re-selection
+            assertNull(state.getStarterWeaponOptionId());
+            assertNull(state.getStarterHelmetOptionId());
+            assertFalse(state.hasSelectedStarters());
+            assertEquals(PlayerMode.COOLDOWN, state.getMode());
+        }
+
+        @Test
+        @DisplayName("should track alive count correctly after death removal")
+        void shouldTrackAliveCountAfterRemoval() {
+            UUID player1 = UUID.randomUUID();
+            UUID player2 = UUID.randomUUID();
+            UUID player3 = UUID.randomUUID();
+
+            run.addParticipant(player1);
+            run.addParticipant(player2);
+            run.addParticipant(player3);
+
+            assertEquals(3, run.getAliveCount());
+
+            // First death
+            run.markDead(player1);
+            run.removeParticipant(player1);
+            assertEquals(2, run.getAliveCount());
+
+            // Second death
+            run.markDead(player2);
+            run.removeParticipant(player2);
+            assertEquals(1, run.getAliveCount());
+
+            // Last player still alive - not wiped
+            assertTrue(run.isAlive(player3));
+        }
+    }
+
+    @Nested
     @DisplayName("Multi-player Scenarios")
     class MultiPlayerScenarios {
 

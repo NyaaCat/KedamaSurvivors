@@ -79,23 +79,10 @@ public class ReadyService {
             return false;
         }
 
-        // Must not be on cooldown (unless team has active run - can rejoin)
+        // Must not be on cooldown - always enforced, no bypass
         if (playerState.isOnCooldown()) {
-            // Check if player's team has an active run they can rejoin
-            Optional<TeamState> teamOpt = state.getPlayerTeam(player.getUniqueId());
-            if (teamOpt.isPresent()) {
-                Optional<RunState> runOpt = state.getTeamRun(teamOpt.get().getTeamId());
-                if (runOpt.isPresent() && runOpt.get().isActive()) {
-                    // Can rejoin - allow ready even on cooldown
-                    // But still check other requirements below
-                } else {
-                    i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
-                    return false;
-                }
-            } else {
-                i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
-                return false;
-            }
+            i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
+            return false;
         }
 
         // Must be in a team

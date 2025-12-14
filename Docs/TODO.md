@@ -217,12 +217,13 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 ### 5.4 Death & Respawn Service
 - [x] Death event handler
 - [x] Drop cancellation
-- [x] Team respawn anchor finding
-- [x] Respawn to teammate location
-- [x] Invulnerability application (3s)
-- [x] Death penalty (clear equipment, reset XP)
-- [x] Cooldown application
+- [x] Team respawn anchor finding (for rejoin flow)
+- [x] Death sends player to prep location (no immediate teammate respawn)
+- [x] Invulnerability application (3s) on rejoin
+- [x] Death penalty (clear equipment, reset XP, clear starter selections)
+- [x] Cooldown application (always enforced, no bypass)
 - [x] Team wipe check on death
+- [x] Rejoin flow via ready system after cooldown
 
 ### 5.5 Merchant Service
 - [x] `MerchantService` class

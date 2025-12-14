@@ -9,7 +9,6 @@ import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.potion.PotionEffect;
@@ -18,7 +17,6 @@ import org.bukkit.potion.PotionEffectType;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handles player death, respawn logic, and death penalties.
@@ -65,23 +63,11 @@ public class DeathService {
         RunState run = runOpt.get();
         run.markDead(playerId);
 
-        // Check for team respawn anchor
-        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
-        if (teamOpt.isPresent()) {
-            TeamState team = teamOpt.get();
-            Optional<PlayerState> anchorOpt = findRespawnAnchor(team, playerState, run);
-
-            if (anchorOpt.isPresent()) {
-                // Team respawn available
-                scheduleTeamRespawn(player, playerState, anchorOpt.get(), run);
-                return true;
-            }
-        }
-
-        // No respawn available - apply death penalty
+        // Always apply death penalty - player must re-prepare to rejoin
         applyDeathPenalty(player, playerState, run);
 
         // Check for team wipe
+        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
         if (teamOpt.isPresent()) {
             checkTeamWipe(teamOpt.get(), run);
         }
@@ -105,42 +91,6 @@ public class DeathService {
                 .filter(ps -> Bukkit.getPlayer(ps.getUuid()) != null)
                 .filter(ps -> Bukkit.getPlayer(ps.getUuid()).isOnline())
                 .findFirst();
-    }
-
-    /**
-     * Schedules respawn near a teammate.
-     */
-    private void scheduleTeamRespawn(Player player, PlayerState playerState,
-                                     PlayerState anchor, RunState run) {
-        Player anchorPlayer = Bukkit.getPlayer(anchor.getUuid());
-        if (anchorPlayer == null || !anchorPlayer.isOnline()) {
-            // Anchor went offline - apply death penalty instead
-            applyDeathPenalty(player, playerState, run);
-            return;
-        }
-
-        // Schedule respawn after short delay
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!player.isOnline()) return;
-
-            // Force respawn if still dead
-            if (player.isDead()) {
-                player.spigot().respawn();
-            }
-
-            // Teleport to anchor location
-            Location respawnLoc = findSafeLocationNear(anchorPlayer.getLocation());
-            player.teleport(respawnLoc);
-
-            // Mark as alive again
-            run.markAlive(player.getUniqueId());
-
-            // Apply invulnerability
-            applyRespawnInvulnerability(player, playerState);
-
-            i18n.send(player, "info.respawned_to_team", "player", anchorPlayer.getName());
-
-        }, 20L); // 1 second delay
     }
 
     /**
@@ -181,6 +131,9 @@ public class DeathService {
         // Remove from run participants
         run.removeParticipant(player.getUniqueId());
 
+        // Check if teammates are still alive (for appropriate message)
+        boolean hasLivingTeammates = run.getAliveCount() > 0;
+
         // Schedule respawn and teleport to prep area
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) return;
@@ -192,8 +145,14 @@ public class DeathService {
             // Teleport to prep area
             teleportToPrep(player);
 
-            i18n.send(player, "info.died_cooldown",
-                    "seconds", config.getDeathCooldownSeconds());
+            // Send appropriate message based on whether teammates are still alive
+            if (hasLivingTeammates) {
+                i18n.send(player, "info.died_can_rejoin",
+                        "seconds", config.getDeathCooldownSeconds());
+            } else {
+                i18n.send(player, "info.died_cooldown",
+                        "seconds", config.getDeathCooldownSeconds());
+            }
 
         }, 20L);
 
@@ -232,47 +191,6 @@ public class DeathService {
                 Bukkit.getScheduler().runTask(plugin, () -> player.teleport(lobby));
             }
         });
-    }
-
-    /**
-     * Finds a safe location near the anchor point.
-     */
-    private Location findSafeLocationNear(Location center) {
-        World world = center.getWorld();
-        if (world == null) return center;
-
-        // Try random offsets
-        for (int attempts = 0; attempts < 10; attempts++) {
-            double offsetX = ThreadLocalRandom.current().nextDouble(-3, 3);
-            double offsetZ = ThreadLocalRandom.current().nextDouble(-3, 3);
-
-            Location candidate = center.clone().add(offsetX, 0, offsetZ);
-            candidate.setY(world.getHighestBlockYAt(candidate) + 1);
-
-            if (isSafeLocation(candidate)) {
-                return candidate;
-            }
-        }
-
-        // Fallback to original location
-        return center.clone().add(0, 1, 0);
-    }
-
-    /**
-     * Checks if a location is safe for teleportation.
-     */
-    private boolean isSafeLocation(Location loc) {
-        if (loc.getWorld() == null) return false;
-
-        // Check for solid ground
-        Location below = loc.clone().subtract(0, 1, 0);
-        if (!below.getBlock().getType().isSolid()) return false;
-
-        // Check for air at feet and head level
-        if (!loc.getBlock().isPassable()) return false;
-        if (!loc.clone().add(0, 1, 0).getBlock().isPassable()) return false;
-
-        return true;
     }
 
     /**
