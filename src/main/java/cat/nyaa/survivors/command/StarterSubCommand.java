@@ -59,8 +59,8 @@ public class StarterSubCommand implements SubCommand {
 
     private void handleWeaponSelection(Player player, PlayerState playerState, String[] args) {
         if (args.length < 2) {
-            // Show available weapons
-            showAvailableWeapons(player);
+            // Open GUI for weapon selection
+            plugin.getStarterService().openWeaponGui(player);
             return;
         }
 
@@ -93,8 +93,8 @@ public class StarterSubCommand implements SubCommand {
         }
 
         if (args.length < 2) {
-            // Show available helmets
-            showAvailableHelmets(player);
+            // Open GUI for helmet selection
+            plugin.getStarterService().openHelmetGui(player);
             return;
         }
 

@@ -99,6 +99,20 @@ public class ScoreboardService {
     }
 
     /**
+     * Gets the perma-score for a player.
+     */
+    public int getPermaScore(Player player) {
+        Scoreboard main = scoreboardManager.getMainScoreboard();
+        String objName = config.getPermaScoreObjectiveName();
+
+        Objective obj = main.getObjective(objName);
+        if (obj != null) {
+            return obj.getScore(player.getName()).getScore();
+        }
+        return 0;
+    }
+
+    /**
      * Sets up the sidebar scoreboard for a player in a run.
      */
     public void setupSidebar(Player player) {

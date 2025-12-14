@@ -84,8 +84,8 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `/vrs starter helmet` - Helmet selection
 - [x] `/vrs starter clear` - Clear selections
 - [x] `/vrs ready` - Toggle ready status
-- [ ] `/vrs quit` - Leave current run
-- [ ] `/vrs status` - Show player status
+- [x] `/vrs quit` - Leave current run
+- [x] `/vrs status` - Show player status
 
 ### 3.3 Team Commands
 - [x] `/vrs team create <name>` - Create team
@@ -120,12 +120,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 ## Phase 4: Game Services
 
 ### 4.1 Starter Selection Service
-- [ ] `StarterService` class
-- [ ] Weapon selection GUI
-- [ ] Helmet selection GUI
-- [ ] Item granting with PDC markers
-- [ ] Re-selection (remove previous, grant new)
-- [ ] Auto-open helmet after weapon
+- [x] `StarterService` class
+- [x] Weapon selection GUI
+- [x] Helmet selection GUI
+- [x] Item granting with PDC markers
+- [x] Re-selection (remove previous, grant new)
+- [x] Auto-open helmet after weapon
 
 ### 4.2 Ready & Countdown Service
 - [x] `ReadyService` class
@@ -237,23 +237,23 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Show/hide sidebar
 
 ### 6.3 GUI System
-- [ ] Base GUI holder class
-- [ ] Starter weapon GUI
-- [ ] Starter helmet GUI
+- [x] Base GUI holder class
+- [x] Starter weapon GUI
+- [x] Starter helmet GUI
 - [ ] Upgrade selection GUI
-- [ ] Click event handling
-- [ ] GUI close handling
+- [x] Click event handling
+- [x] GUI close handling
 
 ---
 
 ## Phase 7: Event Listeners
 
 ### 7.1 Inventory Listener
-- [ ] `InventoryListener` class
-- [ ] Drop prevention in restricted modes
-- [ ] Pickup prevention in restricted modes
-- [ ] Equipment slot locking (weapon, helmet)
-- [ ] GUI click handling
+- [x] `InventoryListener` class
+- [x] Drop prevention in restricted modes
+- [x] Pickup prevention in restricted modes (prevents pickup while GUI is open)
+- [x] Equipment slot locking (weapon, helmet)
+- [x] GUI click handling (cancels all interactions including number key swaps)
 
 ### 7.2 Player Listener
 - [x] `PlayerListener` class
@@ -374,17 +374,17 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 |-------|--------|------------|
 | 1. Foundation | In Progress | 85% |
 | 2. Core Data Models | Complete | 100% |
-| 3. Commands | In Progress | 75% |
-| 4. Game Services | In Progress | 80% |
+| 3. Commands | In Progress | 90% |
+| 4. Game Services | In Progress | 95% |
 | 5. Gameplay Systems | Not Started | 0% |
-| 6. UI & Display | In Progress | 60% |
-| 7. Event Listeners | In Progress | 50% |
+| 6. UI & Display | In Progress | 90% |
+| 7. Event Listeners | In Progress | 80% |
 | 8. Persistence | Not Started | 0% |
 | 9. Global Systems | Not Started | 0% |
 | 10. Testing | In Progress | 40% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~45%**
+**Overall: ~57%**
 
 ---
 

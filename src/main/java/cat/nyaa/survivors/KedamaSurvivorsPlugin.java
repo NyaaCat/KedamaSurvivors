@@ -3,10 +3,12 @@ package cat.nyaa.survivors;
 import cat.nyaa.survivors.command.VrsCommand;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
+import cat.nyaa.survivors.listener.InventoryListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
 import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.RunService;
+import cat.nyaa.survivors.service.StarterService;
 import cat.nyaa.survivors.service.StateService;
 import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.util.TemplateEngine;
@@ -29,6 +31,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private TemplateEngine templateEngine;
     private ScoreboardService scoreboardService;
     private WorldService worldService;
+    private StarterService starterService;
     private ReadyService readyService;
     private RunService runService;
 
@@ -79,6 +82,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // World service for combat world management (must be before ReadyService and RunService)
         worldService = new WorldService(this);
 
+        // Starter service for equipment selection and granting
+        starterService = new StarterService(this);
+
         // Ready service for ready/countdown logic
         readyService = new ReadyService(this);
 
@@ -99,6 +105,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
     }
 
     private void startTasks() {
@@ -175,5 +182,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public RunService getRunService() {
         return runService;
+    }
+
+    public StarterService getStarterService() {
+        return starterService;
     }
 }

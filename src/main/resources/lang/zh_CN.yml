@@ -71,6 +71,18 @@ info:
   helmet_equipped: "§7已装备护甲: §f{name}"
 
 # ============================================================
+# 装备选择
+# ============================================================
+
+starter:
+  weapon_selected: "§7武器已选择: §f{weapon}"
+  helmet_selected: "§7护甲已选择: §f{helmet}"
+  selection_complete: "§2装备选择完成，可以准备了"
+  help: "§7使用 §f/vrs starter weapon §7或 §f/vrs starter helmet §7选择装备"
+  none: "§8无"
+  cleared: "§7已清除装备选择"
+
+# ============================================================
 # 成功提示 (绿色)
 # ============================================================
 
@@ -102,21 +114,30 @@ error:
   player_not_found: "§c找不到玩家 §f{player}"
   invalid_argument: "§c参数无效: §f{arg}"
   command_failed: "§c命令执行失败"
+  unknown_command: "§c未知命令: §f{command}"
+  player_only: "§c该命令只能由玩家执行"
 
   # 状态检查
   not_in_lobby: "§c你必须在准备区才能执行此操作"
   not_in_run: "§c你当前不在战斗中"
+  not_in_game: "§c你不在游戏中"
   already_in_run: "§c你已经在战斗中了"
   already_ready: "§c你已经准备好了"
   not_ready: "§c你还没有准备好"
   on_cooldown: "§c冷却中，剩余 §f{seconds} §c秒"
+  join_disabled: "§c当前不允许进入战斗"
   join_disabled_error: "§c当前不允许进入战斗"
+  cannot_quit_now: "§c当前状态无法退出"
+  run_not_found: "§c找不到运行实例"
 
   # 装备选择
   no_weapon_selected: "§c请先选择武器"
   no_helmet_selected: "§c请先选择护甲"
   select_weapon_first: "§c请先选择武器"
+  select_starters_first: "§c请先选择装备"
+  weapon_first: "§c请先选择武器"
   invalid_selection: "§c无效的选择"
+  invalid_option: "§c无效选项: §f{option}"
 
   # 队伍
   already_in_team: "§c你已经在一个队伍中了"
@@ -138,7 +159,14 @@ error:
   # 管理
   capture_no_item: "§c请手持要捕获的物品"
   template_exists: "§c模板 §f{id} §c已存在"
-  run_not_found: "§c找不到运行实例 §f{id}"
+
+# ============================================================
+# 退出消息
+# ============================================================
+
+quit:
+  cancelled_countdown: "§7已取消准备"
+  left_run: "§7已退出战斗"
 
 # ============================================================
 # 队伍消息
@@ -182,6 +210,13 @@ gui:
   select_helmet: "§b选择初始护甲"
   upgrade_title: "§6§l选择升级"
 
+  # 装备选择 GUI
+  starter_weapon_title: "§8[ §6选择武器 §8]"
+  starter_helmet_title: "§8[ §3选择护甲 §8]"
+  item_prefix: "§f"
+  currently_selected: "§2✓ 已选择"
+  click_to_select: "§7点击选择"
+
   # 升级选项
   upgrade_weapon_item:
     name: "§6§l⚔ 升级武器"
@@ -214,44 +249,55 @@ gui:
 
 sidebar:
   title: "§6§l武 生"
+
+# 记分板使用的键 (与侧边栏共用，低对比度)
+scoreboard:
+  title: "§6§l武 生"
   weapon_level: "§6武器 §fLv.{level}"
-  helmet_level: "§b护甲 §fLv.{level}"
-  xp: "§a经验 §f{bar} {percent}%"
-  xp_held: "§a待结算 §f{amount}"
-  coins: "§e金币 §f{amount}"
-  perma_score: "§d积分 §f{amount}"
-  team: "§7队伍 §f{name}"
-  team_members: "§7成员 §f{online}/{total}"
+  helmet_level: "§3护甲 §fLv.{level}"
+  xp: "§7经验 §f{bar} {percent}%"
+  coins: "§7金币 §f{amount}"
+  perma_score: "§7积分 §f{amount}"
+  team: "§7队伍 §f{name} §8(§f{count}§8/§f{max}§8)"
   time: "§7时间 §f{time}"
-  blank: ""
 
 # ============================================================
 # 状态命令输出
 # ============================================================
 
 status:
-  header: "§7========== §6武生状态 §7=========="
+  header: "§8========== §7武生状态 §8=========="
+  footer: "§8================================"
   mode: "§7模式: {mode}"
   world: "§7世界: §f{world}"
-  team: "§7队伍: §f{name} §7({online}/{total} 在线)"
-  no_team: "§7队伍: §f无"
+  team: "§7队伍: §f{team} §8(§7{role}§8) §7成员 §f{members}§8/§f{max}"
+  no_team: "§7队伍: §8无"
+  starters: "§7装备: §f{weapon} §8/ §f{helmet}"
+  ready: "§7准备: {status}"
+  ready_yes: "§2已准备"
+  ready_no: "§8未准备"
+  role_leader: "§6队长"
+  role_member: "§7队员"
+  run: "§7战斗: §f{world} §8| §7时间 §f{time} §8| §7击杀 §f{kills}"
+  equipment: "§6武器 §fLv.{weapon_level} §8| §3护甲 §fLv.{helmet_level} §8| §7经验 §f{xp}§8/§f{xp_required}"
   weapon: "§6武器: §f{group} Lv.{level}"
-  helmet: "§b护甲: §f{group} Lv.{level}"
-  xp: "§a经验: §f{progress}/{required} ({percent}%)"
-  xp_held: "§a待结算经验: §f{amount}"
-  coins: "§e金币: §f{amount}"
-  perma_score: "§d永久积分: §f{amount}"
-  cooldown: "§c冷却: §f{seconds} 秒"
+  helmet: "§3护甲: §f{group} Lv.{level}"
+  xp: "§7经验: §f{progress}§8/§f{required} §8(§7{percent}%§8)"
+  xp_held: "§7待结算经验: §f{amount}"
+  coins: "§7金币: §f{amount}"
+  perma_score: "§7永久积分: §f{score}"
+  cooldown: "§7冷却: §f{seconds}§7秒"
   run_time: "§7运行时间: §f{time}"
+  none_selected: "§8未选择"
 
-  # 模式显示名
-  mode_lobby: "§f准备区"
-  mode_ready: "§a已准备"
+  # 模式显示名 - 使用低对比度
+  mode_lobby: "§7准备区"
+  mode_ready: "§2已准备"
   mode_countdown: "§e倒计时"
-  mode_in_run: "§c战斗中"
-  mode_cooldown: "§7冷却中"
-  mode_grace_eject: "§e维护传送中"
-  mode_disconnected: "§7断线中"
+  mode_in_run: "§6战斗中"
+  mode_cooldown: "§8冷却中"
+  mode_grace_eject: "§e维护传送"
+  mode_disconnected: "§8断线"
 
 # ============================================================
 # 管理员消息
@@ -280,6 +326,22 @@ debug:
   tick_budget: "§7本tick预算: §f{used}/{max}"
 
 # ============================================================
+# 帮助消息
+# ============================================================
+
+help:
+  header: "§8========== §7武生命令 §8=========="
+  footer: "§8使用 §f/vrs <命令> §8获取帮助"
+  command:
+    starter: "§f/vrs starter §8- §7选择初始装备"
+    team: "§f/vrs team §8- §7队伍管理"
+    ready: "§f/vrs ready §8- §7切换准备状态"
+    quit: "§f/vrs quit §8- §7退出当前战斗"
+    status: "§f/vrs status §8- §7查看状态"
+    admin: "§f/vrs admin §8- §7管理员命令"
+    reload: "§f/vrs reload §8- §7重载配置"
+
+# ============================================================
 # 倒计时与标题
 # ============================================================
 
@@ -288,6 +350,39 @@ countdown:
   subtitle: "§7准备进入战斗"
   final_title: "§a开始!"
   final_subtitle: "§7祝你好运"
+  cancelled: "§7倒计时取消: §f{player} §7未准备"
+  cancelled_disconnect: "§7倒计时取消: 玩家断线"
+
+# ============================================================
+# 断线消息
+# ============================================================
+
+disconnect:
+  grace_expired: "§7断线保护已过期"
+  reconnected: "§2已重连"
+  teammate_reconnected: "§f{player} §7已重连"
+  teammate_disconnected: "§f{player} §7已断线"
+
+# ============================================================
+# 准备消息
+# ============================================================
+
+ready:
+  all_ready: "§2全员准备就绪！"
+
+# ============================================================
+# 重生消息
+# ============================================================
+
+respawn:
+  invulnerability_start: "§7无敌保护 §f{seconds} §7秒"
+
+# ============================================================
+# 运行消息
+# ============================================================
+
+run:
+  team_wiped: "§7队伍全灭"
 
 # ============================================================
 # 动作栏消息
@@ -295,8 +390,8 @@ countdown:
 
 actionbar:
   cooldown: "§c冷却中 §f{seconds}s"
-  invulnerable: "§b无敌保护 §f{seconds}s"
-  xp_progress: "§a经验 §f{progress}/{required}"
+  invulnerable: "§3无敌保护 §f{seconds}s"
+  xp_progress: "§7经验 §f{progress}§8/§f{required}"
   grace_eject: "§e传送倒计时 §f{seconds}s"
 
 # ============================================================
