@@ -193,8 +193,7 @@ public class JoinSwitchService {
                     .player(player)
                     .executeAsConsole(config.getPrepCommand());
 
-            // Remove scoreboard
-            plugin.getScoreboardService().removeSidebar(player);
+            // Don't remove scoreboard - let it auto-update to lobby mode
 
             i18n.send(player, "info.ejected_maintenance");
         }

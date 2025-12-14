@@ -17,8 +17,12 @@
 #
 # Available placeholders for spawnCommands:
 #   {sx}, {sy}, {sz} - spawn coordinates
+#   {runWorld} - the world where the run is active (auto-wrapped if not specified)
 #   {enemyLevel} - calculated enemy level
-#   {player} - target player name
+#   {enemyType} - the entity type from archetype config
+#
+# NOTE: Commands are automatically wrapped with "execute in {runWorld} run ..." if they
+# don't already start with "execute in". This ensures mobs spawn in the correct world.
 #
 # Example:
 #   zombie:

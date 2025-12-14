@@ -252,8 +252,7 @@ public class RunService {
             Player player = Bukkit.getPlayer(memberId);
             if (player == null) continue;
 
-            // Remove scoreboard
-            plugin.getScoreboardService().removeSidebar(player);
+            // Don't remove scoreboard - let it auto-update to lobby mode
 
             // Send end message
             String msgKey = reason == EndReason.WIPE ? "run.ended_wipe" : "run.ended";
@@ -262,15 +261,21 @@ public class RunService {
                     "coins", totalCoins,
                     "time", run.getElapsedFormatted());
 
-            // Apply cooldown if death-related
-            if (reason == EndReason.WIPE || reason == EndReason.DEATH) {
-                Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
-                playerStateOpt.ifPresent(ps -> {
+            // Apply cooldown and clear starter selections
+            Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
+            playerStateOpt.ifPresent(ps -> {
+                // Clear starter selections so player must re-select next run
+                ps.setStarterWeaponOptionId(null);
+                ps.setStarterHelmetOptionId(null);
+
+                if (reason == EndReason.WIPE || reason == EndReason.DEATH) {
                     long cooldownEnd = System.currentTimeMillis() + config.getDeathCooldownMs();
                     ps.setCooldownUntilMillis(cooldownEnd);
                     ps.setMode(PlayerMode.COOLDOWN);
-                });
-            }
+                } else {
+                    ps.setMode(PlayerMode.LOBBY);
+                }
+            });
         }
 
         // Clean up state

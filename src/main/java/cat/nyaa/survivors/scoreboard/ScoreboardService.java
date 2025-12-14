@@ -163,6 +163,7 @@ public class ScoreboardService {
 
     /**
      * Updates the sidebar for a specific player.
+     * Content varies based on player mode (lobby vs in-run).
      */
     public void updatePlayerSidebar(Player player) {
         UUID playerId = player.getUniqueId();
@@ -188,58 +189,110 @@ public class ScoreboardService {
         // Build sidebar lines (scores are used for ordering, higher = top)
         int score = 15;
 
-        // Weapon level
-        String weaponLine = i18n.get("scoreboard.weapon_level", "level", playerState.getWeaponLevel());
-        sidebar.getScore(weaponLine).setScore(score--);
+        boolean inRun = runOpt.isPresent() && runOpt.get().isActive();
 
-        // Helmet level
-        String helmetLine = i18n.get("scoreboard.helmet_level", "level", playerState.getHelmetLevel());
-        sidebar.getScore(helmetLine).setScore(score--);
+        if (inRun) {
+            // =============== IN-RUN SCOREBOARD ===============
 
-        // Empty line
-        sidebar.getScore(" ").setScore(score--);
+            // Weapon level
+            String weaponLine = i18n.get("scoreboard.weapon_level", "level", playerState.getWeaponLevel());
+            sidebar.getScore(weaponLine).setScore(score--);
 
-        // XP bar
-        String xpBar = buildXpBar(playerState);
-        String xpLine = i18n.get("scoreboard.xp", "bar", xpBar, "percent", getXpPercent(playerState));
-        sidebar.getScore(xpLine).setScore(score--);
+            // Helmet level
+            String helmetLine = i18n.get("scoreboard.helmet_level", "level", playerState.getHelmetLevel());
+            sidebar.getScore(helmetLine).setScore(score--);
 
-        // Upgrade countdown (only when pending and not both at max)
-        if (playerState.isUpgradePending() &&
-                !(playerState.isWeaponAtMax() && playerState.isHelmetAtMax())) {
-            int remainingSeconds = playerState.getUpgradeRemainingSeconds();
-            if (remainingSeconds > 0) {
-                String upgradeLine = i18n.get("scoreboard.upgrade_countdown", "seconds", remainingSeconds);
-                sidebar.getScore(upgradeLine).setScore(score--);
+            // Empty line
+            sidebar.getScore(" ").setScore(score--);
+
+            // XP bar
+            String xpBar = buildXpBar(playerState);
+            String xpLine = i18n.get("scoreboard.xp", "bar", xpBar, "percent", getXpPercent(playerState));
+            sidebar.getScore(xpLine).setScore(score--);
+
+            // Upgrade countdown (only when pending and not both at max)
+            if (playerState.isUpgradePending() &&
+                    !(playerState.isWeaponAtMax() && playerState.isHelmetAtMax())) {
+                int remainingSeconds = playerState.getUpgradeRemainingSeconds();
+                if (remainingSeconds > 0) {
+                    String upgradeLine = i18n.get("scoreboard.upgrade_countdown", "seconds", remainingSeconds);
+                    sidebar.getScore(upgradeLine).setScore(score--);
+                }
             }
-        }
 
-        // Coins (held XP as coins during upgrade pending)
-        String coinsLine = i18n.get("scoreboard.coins", "amount", playerState.getXpHeld());
-        sidebar.getScore(coinsLine).setScore(score--);
+            // Coins (held XP as coins during upgrade pending)
+            String coinsLine = i18n.get("scoreboard.coins", "amount", playerState.getXpHeld());
+            sidebar.getScore(coinsLine).setScore(score--);
 
-        // Empty line
-        sidebar.getScore("  ").setScore(score--);
+            // Empty line
+            sidebar.getScore("  ").setScore(score--);
 
-        // Perma score
-        String permaLine = i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore()));
-        sidebar.getScore(permaLine).setScore(score--);
+            // Perma score
+            String permaLine = i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore()));
+            sidebar.getScore(permaLine).setScore(score--);
 
-        // Team info
-        if (teamOpt.isPresent()) {
-            TeamState team = teamOpt.get();
-            String teamLine = i18n.get("scoreboard.team",
-                    "name", team.getName(),
-                    "count", team.getMemberCount(),
-                    "max", config.getMaxTeamSize());
-            sidebar.getScore(teamLine).setScore(score--);
-        }
+            // Team info
+            if (teamOpt.isPresent()) {
+                TeamState team = teamOpt.get();
+                String teamLine = i18n.get("scoreboard.team",
+                        "name", team.getName(),
+                        "count", team.getMemberCount(),
+                        "max", config.getMaxTeamSize());
+                sidebar.getScore(teamLine).setScore(score--);
+            }
 
-        // Run time
-        if (runOpt.isPresent()) {
+            // Run time
             RunState run = runOpt.get();
             String timeLine = i18n.get("scoreboard.time", "time", run.getElapsedFormatted());
             sidebar.getScore(timeLine).setScore(score--);
+
+        } else {
+            // =============== LOBBY SCOREBOARD ===============
+
+            // Perma score
+            String permaLine = i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore()));
+            sidebar.getScore(permaLine).setScore(score--);
+
+            // Empty line
+            sidebar.getScore(" ").setScore(score--);
+
+            // Team info
+            if (teamOpt.isPresent()) {
+                TeamState team = teamOpt.get();
+                String teamLine = i18n.get("scoreboard.team",
+                        "name", team.getName(),
+                        "count", team.getMemberCount(),
+                        "max", config.getMaxTeamSize());
+                sidebar.getScore(teamLine).setScore(score--);
+            } else {
+                // No team - show hint
+                String noTeamLine = i18n.get("scoreboard.no_team");
+                sidebar.getScore(noTeamLine).setScore(score--);
+            }
+
+            // Empty line
+            sidebar.getScore("  ").setScore(score--);
+
+            // Player mode/status
+            String statusKey = switch (playerState.getMode()) {
+                case LOBBY -> "scoreboard.status_lobby";
+                case READY -> "scoreboard.status_ready";
+                case COUNTDOWN -> "scoreboard.status_countdown";
+                case COOLDOWN -> "scoreboard.status_cooldown";
+                default -> "scoreboard.status_lobby";
+            };
+            String statusLine = i18n.get(statusKey);
+            sidebar.getScore(statusLine).setScore(score--);
+
+            // Selected starters (if any)
+            if (playerState.getStarterWeaponOptionId() != null) {
+                String weaponSelected = i18n.get("scoreboard.starter_weapon_selected");
+                sidebar.getScore(weaponSelected).setScore(score--);
+            }
+            if (playerState.getStarterHelmetOptionId() != null) {
+                String helmetSelected = i18n.get("scoreboard.starter_helmet_selected");
+                sidebar.getScore(helmetSelected).setScore(score--);
+            }
         }
     }
 

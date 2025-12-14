@@ -61,6 +61,11 @@ public class PlayerListener implements Listener {
         if (playerState.getMode() == PlayerMode.DISCONNECTED) {
             handleReconnect(player, playerState);
         }
+
+        // Setup scoreboard for all players (always visible)
+        if (config.isScoreboardEnabled()) {
+            plugin.getScoreboardService().setupSidebar(player);
+        }
     }
 
     @EventHandler(priority = EventPriority.NORMAL)

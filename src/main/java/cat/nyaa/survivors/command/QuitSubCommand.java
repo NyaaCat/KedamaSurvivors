@@ -109,6 +109,10 @@ public class QuitSubCommand implements SubCommand {
         playerState.setCooldownUntilMillis(cooldownEnd);
         playerState.setMode(PlayerMode.COOLDOWN);
 
+        // Clear starter selections so player must re-select next run
+        playerState.setStarterWeaponOptionId(null);
+        playerState.setStarterHelmetOptionId(null);
+
         // Teleport to lobby
         org.bukkit.Location lobby = plugin.getConfigService().getLobbyLocation();
         player.teleportAsync(lobby).thenAccept(success -> {
@@ -120,8 +124,7 @@ public class QuitSubCommand implements SubCommand {
         // Remove VRS equipment
         plugin.getStarterService().removeAllVrsEquipment(player);
 
-        // Remove scoreboard
-        plugin.getScoreboardService().removeSidebar(player);
+        // Don't remove scoreboard - let it auto-update to lobby mode
 
         i18n.send(player, "quit.left_run");
     }

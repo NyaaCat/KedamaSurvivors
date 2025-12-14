@@ -3,6 +3,7 @@ package cat.nyaa.survivors.command.admin;
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.command.SubCommand;
 import cat.nyaa.survivors.config.ConfigService.CombatWorldConfig;
+import cat.nyaa.survivors.config.ConfigService.SpawnPointConfig;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.WorldService;
@@ -49,8 +50,10 @@ public class WorldSubCommand implements SubCommand {
             case "set" -> handleSet(sender, args);
             case "enable" -> handleEnable(sender, args);
             case "disable" -> handleDisable(sender, args);
-            case "setfallback" -> handleSetFallback(sender, args);
-            case "clearfallback" -> handleClearFallback(sender, args);
+            case "addspawn" -> handleAddSpawn(sender, args);
+            case "removespawn" -> handleRemoveSpawn(sender, args);
+            case "listspawns" -> handleListSpawns(sender, args);
+            case "clearspawns" -> handleClearSpawns(sender, args);
             default -> showHelp(sender);
         }
     }
@@ -63,8 +66,10 @@ public class WorldSubCommand implements SubCommand {
         i18n.send(sender, "admin.world.help.set_displayname");
         i18n.send(sender, "admin.world.help.set_weight");
         i18n.send(sender, "admin.world.help.set_bounds");
-        i18n.send(sender, "admin.world.help.setfallback");
-        i18n.send(sender, "admin.world.help.clearfallback");
+        i18n.send(sender, "admin.world.help.addspawn");
+        i18n.send(sender, "admin.world.help.removespawn");
+        i18n.send(sender, "admin.world.help.listspawns");
+        i18n.send(sender, "admin.world.help.clearspawns");
         i18n.send(sender, "admin.world.help.enable");
         i18n.send(sender, "admin.world.help.disable");
     }
@@ -129,9 +134,7 @@ public class WorldSubCommand implements SubCommand {
         for (CombatWorldConfig world : worlds) {
             boolean enabled = worldService.isWorldEnabled(world.name);
             String status = i18n.get(enabled ? "admin.world.status_enabled" : "admin.world.status_disabled");
-            String fallbackInfo = world.hasFallbackSpawn()
-                    ? String.format("%.1f, %.1f, %.1f", world.fallbackX, world.fallbackY, world.fallbackZ)
-                    : i18n.get("admin.world.no_fallback");
+            int spawnCount = world.spawnPoints.size();
             i18n.send(sender, "admin.world.list_entry",
                     "name", world.name,
                     "displayName", world.displayName,
@@ -141,7 +144,7 @@ public class WorldSubCommand implements SubCommand {
                     "maxX", world.maxX,
                     "minZ", world.minZ,
                     "maxZ", world.maxZ,
-                    "fallback", fallbackInfo);
+                    "spawnCount", spawnCount);
         }
     }
 
@@ -249,11 +252,11 @@ public class WorldSubCommand implements SubCommand {
         i18n.send(sender, "admin.world.disabled", "name", name);
     }
 
-    private void handleSetFallback(CommandSender sender, String[] args) {
-        // /vrs admin world setfallback <name> - uses player's current location
-        // /vrs admin world setfallback <name> <x> <y> <z> [yaw] [pitch]
+    private void handleAddSpawn(CommandSender sender, String[] args) {
+        // /vrs admin world addspawn <name> - uses player's current location
+        // /vrs admin world addspawn <name> <x> <y> <z> [yaw] [pitch]
         if (args.length < 2) {
-            i18n.send(sender, "admin.world.help.setfallback");
+            i18n.send(sender, "admin.world.help.addspawn");
             return;
         }
 
@@ -265,7 +268,7 @@ public class WorldSubCommand implements SubCommand {
         }
 
         double x, y, z;
-        float yaw = 0, pitch = 0;
+        Float yaw = null, pitch = null;
 
         if (args.length == 2) {
             // Use player's current location
@@ -292,23 +295,25 @@ public class WorldSubCommand implements SubCommand {
                 return;
             }
         } else {
-            i18n.send(sender, "admin.world.help.setfallback");
+            i18n.send(sender, "admin.world.help.addspawn");
             return;
         }
 
-        boolean success = adminConfig.setWorldFallbackSpawn(name, x, y, z, yaw, pitch);
+        boolean success = adminConfig.addWorldSpawnPoint(name, x, y, z, yaw, pitch);
         if (success) {
-            i18n.send(sender, "admin.world.fallback_set", "name", name,
+            int index = worldOpt.get().spawnPoints.size(); // New index after add
+            i18n.send(sender, "admin.world.spawn_added", "name", name,
+                    "index", index,
                     "x", String.format("%.1f", x),
                     "y", String.format("%.1f", y),
                     "z", String.format("%.1f", z));
         }
     }
 
-    private void handleClearFallback(CommandSender sender, String[] args) {
-        // /vrs admin world clearfallback <name>
-        if (args.length < 2) {
-            i18n.send(sender, "admin.world.help.clearfallback");
+    private void handleRemoveSpawn(CommandSender sender, String[] args) {
+        // /vrs admin world removespawn <name> <index>
+        if (args.length < 3) {
+            i18n.send(sender, "admin.world.help.removespawn");
             return;
         }
 
@@ -319,9 +324,78 @@ public class WorldSubCommand implements SubCommand {
             return;
         }
 
-        boolean success = adminConfig.clearWorldFallbackSpawn(name);
+        int index;
+        try {
+            index = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            i18n.send(sender, "error.invalid_number", "value", args[2]);
+            return;
+        }
+
+        // Convert to 0-based index
+        int zeroBasedIndex = index - 1;
+        boolean success = adminConfig.removeWorldSpawnPoint(name, zeroBasedIndex);
         if (success) {
-            i18n.send(sender, "admin.world.fallback_cleared", "name", name);
+            i18n.send(sender, "admin.world.spawn_removed", "name", name, "index", index);
+        } else {
+            i18n.send(sender, "admin.world.spawn_index_invalid", "name", name, "index", index);
+        }
+    }
+
+    private void handleListSpawns(CommandSender sender, String[] args) {
+        // /vrs admin world listspawns <name>
+        if (args.length < 2) {
+            i18n.send(sender, "admin.world.help.listspawns");
+            return;
+        }
+
+        String name = args[1];
+        Optional<CombatWorldConfig> worldOpt = adminConfig.getWorld(name);
+        if (worldOpt.isEmpty()) {
+            i18n.send(sender, "admin.world.not_found", "name", name);
+            return;
+        }
+
+        List<SpawnPointConfig> spawns = adminConfig.getWorldSpawnPoints(name);
+        i18n.send(sender, "admin.world.spawns_header", "name", name, "count", spawns.size());
+
+        if (spawns.isEmpty()) {
+            i18n.send(sender, "admin.world.spawns_empty");
+            return;
+        }
+
+        for (int i = 0; i < spawns.size(); i++) {
+            SpawnPointConfig sp = spawns.get(i);
+            String yawPitch = "";
+            if (sp.yaw != null && sp.pitch != null) {
+                yawPitch = String.format(" yaw=%.1f pitch=%.1f", sp.yaw, sp.pitch);
+            }
+            i18n.send(sender, "admin.world.spawn_entry",
+                    "index", i + 1,
+                    "x", String.format("%.1f", sp.x),
+                    "y", String.format("%.1f", sp.y),
+                    "z", String.format("%.1f", sp.z),
+                    "extra", yawPitch);
+        }
+    }
+
+    private void handleClearSpawns(CommandSender sender, String[] args) {
+        // /vrs admin world clearspawns <name>
+        if (args.length < 2) {
+            i18n.send(sender, "admin.world.help.clearspawns");
+            return;
+        }
+
+        String name = args[1];
+        Optional<CombatWorldConfig> worldOpt = adminConfig.getWorld(name);
+        if (worldOpt.isEmpty()) {
+            i18n.send(sender, "admin.world.not_found", "name", name);
+            return;
+        }
+
+        boolean success = adminConfig.clearWorldSpawnPoints(name);
+        if (success) {
+            i18n.send(sender, "admin.world.spawns_cleared", "name", name);
         }
     }
 
@@ -331,7 +405,8 @@ public class WorldSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("create", "delete", "list", "set", "enable", "disable", "setfallback", "clearfallback")) {
+            for (String sub : List.of("create", "delete", "list", "set", "enable", "disable",
+                    "addspawn", "removespawn", "listspawns", "clearspawns")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
@@ -354,7 +429,8 @@ public class WorldSubCommand implements SubCommand {
                         completions.add(world.getName());
                     }
                 }
-            } else if (List.of("delete", "enable", "disable", "setfallback", "clearfallback").contains(action)) {
+            } else if (List.of("delete", "enable", "disable", "addspawn", "removespawn",
+                    "listspawns", "clearspawns").contains(action)) {
                 // Suggest configured worlds
                 for (CombatWorldConfig world : adminConfig.getCombatWorlds()) {
                     if (world.name.toLowerCase().startsWith(partial)) {
@@ -371,6 +447,19 @@ public class WorldSubCommand implements SubCommand {
                 for (CombatWorldConfig world : adminConfig.getCombatWorlds()) {
                     if (world.name.toLowerCase().startsWith(partial)) {
                         completions.add(world.name);
+                    }
+                }
+            } else if (action.equals("removespawn")) {
+                // Suggest spawn point indices
+                String worldName = args[1];
+                Optional<CombatWorldConfig> worldOpt = adminConfig.getWorld(worldName);
+                if (worldOpt.isPresent()) {
+                    int count = worldOpt.get().spawnPoints.size();
+                    for (int i = 1; i <= count; i++) {
+                        String idx = String.valueOf(i);
+                        if (idx.startsWith(partial)) {
+                            completions.add(idx);
+                        }
                     }
                 }
             }

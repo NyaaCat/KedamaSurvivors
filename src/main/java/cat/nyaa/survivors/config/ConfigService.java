@@ -66,6 +66,7 @@ public class ConfigService {
     // Spawning limits
     private int spawnTickInterval;
     private boolean spawningEnabled;
+    private boolean blockNaturalSpawns;
     private int targetMobsPerPlayer;
     private int maxSpawnsPerPlayerPerTick;
     private int maxSpawnsPerTick;
@@ -249,6 +250,7 @@ public class ConfigService {
     private void loadSpawning() {
         spawnTickInterval = config.getInt("spawning.loop.tickInterval", 20);
         spawningEnabled = config.getBoolean("spawning.loop.enabled", true);
+        blockNaturalSpawns = config.getBoolean("spawning.loop.blockNaturalSpawns", true);
 
         targetMobsPerPlayer = config.getInt("spawning.limits.targetMobsPerPlayer", 10);
         maxSpawnsPerPlayerPerTick = config.getInt("spawning.limits.maxSpawnsPerPlayerPerTick", 3);
@@ -530,6 +532,7 @@ public class ConfigService {
 
     public int getSpawnTickInterval() { return spawnTickInterval; }
     public boolean isSpawningEnabled() { return spawningEnabled; }
+    public boolean isBlockNaturalSpawns() { return blockNaturalSpawns; }
     public int getTargetMobsPerPlayer() { return targetMobsPerPlayer; }
     public int getMaxSpawnsPerPlayerPerTick() { return maxSpawnsPerPlayerPerTick; }
     public int getMaxSpawnsPerTick() { return maxSpawnsPerTick; }

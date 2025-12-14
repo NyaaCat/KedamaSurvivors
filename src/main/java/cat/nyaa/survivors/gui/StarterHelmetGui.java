@@ -2,6 +2,7 @@ package cat.nyaa.survivors.gui;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.config.ItemTemplateConfig;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerState;
 import net.kyori.adventure.text.Component;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * GUI for selecting starter helmet.
@@ -62,30 +64,52 @@ public class StarterHelmetGui extends GuiHolder {
     }
 
     private ItemStack createDisplayItem(ConfigService.StarterOptionConfig option) {
-        Material material = option.displayMaterial != null ? option.displayMaterial : Material.IRON_HELMET;
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
+        ItemStack item = null;
 
-        if (meta != null) {
-            String name = option.displayItemName != null ? option.displayItemName : option.displayName;
-            meta.displayName(Component.text(i18n.get("gui.item_prefix") + name));
-
-            List<Component> lore = new ArrayList<>();
-            if (option.displayItemLore != null) {
-                for (String line : option.displayItemLore) {
-                    lore.add(Component.text(line.replace('&', '§')));
-                }
+        // Try to get actual NBT item from template
+        if (option.templateId != null && !option.templateId.isEmpty()) {
+            Optional<ItemTemplateConfig> templateOpt =
+                plugin.getAdminConfigService().getItemTemplate(option.templateId);
+            if (templateOpt.isPresent()) {
+                item = templateOpt.get().toItemStack();
             }
+        }
 
+        // Fallback to displayMaterial if template not found
+        if (item == null) {
+            Material material = option.displayMaterial != null ? option.displayMaterial : Material.IRON_HELMET;
+            item = new ItemStack(material);
+            // Set basic display name for fallback items
+            ItemMeta fallbackMeta = item.getItemMeta();
+            if (fallbackMeta != null) {
+                String name = option.displayItemName != null ? option.displayItemName : option.displayName;
+                fallbackMeta.displayName(Component.text(i18n.get("gui.item_prefix") + name));
+
+                // Add display lore if configured
+                if (option.displayItemLore != null) {
+                    List<Component> fallbackLore = new ArrayList<>();
+                    for (String line : option.displayItemLore) {
+                        fallbackLore.add(Component.text(line.replace('&', '§')));
+                    }
+                    fallbackMeta.lore(fallbackLore);
+                }
+                item.setItemMeta(fallbackMeta);
+            }
+        }
+
+        // Add selection hint lore (append to existing lore)
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            List<Component> lore = meta.lore();
+            if (lore == null) lore = new ArrayList<>();
+
+            lore.add(Component.empty());
             String currentSelection = playerState.getStarterHelmetOptionId();
             if (option.optionId.equals(currentSelection)) {
-                lore.add(Component.empty());
                 lore.add(Component.text(i18n.get("gui.currently_selected")));
             } else {
-                lore.add(Component.empty());
                 lore.add(Component.text(i18n.get("gui.click_to_select")));
             }
-
             meta.lore(lore);
             item.setItemMeta(meta);
         }

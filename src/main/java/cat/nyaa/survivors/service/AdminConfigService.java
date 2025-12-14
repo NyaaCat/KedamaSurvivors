@@ -6,6 +6,7 @@ import cat.nyaa.survivors.config.ConfigService.EquipmentGroupConfig;
 import cat.nyaa.survivors.config.ConfigService.EnemyArchetypeConfig;
 import cat.nyaa.survivors.config.ConfigService.StarterOptionConfig;
 import cat.nyaa.survivors.config.ConfigService.CombatWorldConfig;
+import cat.nyaa.survivors.config.ConfigService.SpawnPointConfig;
 import cat.nyaa.survivors.config.ConfigService.MerchantTemplateConfig;
 import cat.nyaa.survivors.config.ConfigService.MerchantTradeConfig;
 import cat.nyaa.survivors.config.ItemTemplateConfig;
@@ -745,20 +746,24 @@ public class AdminConfigService {
                 world.maxZ = bounds.getOrDefault("maxZ", 500).doubleValue();
             }
 
-            // Load fallback spawn point
+            // Load spawn points list
             @SuppressWarnings("unchecked")
-            Map<String, Number> fallback = (Map<String, Number>) map.get("fallbackSpawn");
-            if (fallback != null) {
-                Number x = fallback.get("x");
-                Number y = fallback.get("y");
-                Number z = fallback.get("z");
-                Number yaw = fallback.get("yaw");
-                Number pitch = fallback.get("pitch");
-                if (x != null) world.fallbackX = x.doubleValue();
-                if (y != null) world.fallbackY = y.doubleValue();
-                if (z != null) world.fallbackZ = z.doubleValue();
-                if (yaw != null) world.fallbackYaw = yaw.floatValue();
-                if (pitch != null) world.fallbackPitch = pitch.floatValue();
+            List<Map<?, ?>> spawnPointsList = (List<Map<?, ?>>) map.get("spawnPoints");
+            if (spawnPointsList != null) {
+                for (Map<?, ?> spawnMap : spawnPointsList) {
+                    SpawnPointConfig sp = new SpawnPointConfig();
+                    Number x = (Number) spawnMap.get("x");
+                    Number y = (Number) spawnMap.get("y");
+                    Number z = (Number) spawnMap.get("z");
+                    Number yaw = (Number) spawnMap.get("yaw");
+                    Number pitch = (Number) spawnMap.get("pitch");
+                    if (x != null) sp.x = x.doubleValue();
+                    if (y != null) sp.y = y.doubleValue();
+                    if (z != null) sp.z = z.doubleValue();
+                    if (yaw != null) sp.yaw = yaw.floatValue();
+                    if (pitch != null) sp.pitch = pitch.floatValue();
+                    world.spawnPoints.add(sp);
+                }
             }
 
             combatWorlds.add(world);
@@ -786,15 +791,19 @@ public class AdminConfigService {
             bounds.put("maxZ", world.maxZ);
             map.put("spawnBounds", bounds);
 
-            // Save fallback spawn if configured
-            if (world.hasFallbackSpawn()) {
-                Map<String, Number> fallback = new LinkedHashMap<>();
-                fallback.put("x", world.fallbackX);
-                fallback.put("y", world.fallbackY);
-                fallback.put("z", world.fallbackZ);
-                if (world.fallbackYaw != null) fallback.put("yaw", world.fallbackYaw);
-                if (world.fallbackPitch != null) fallback.put("pitch", world.fallbackPitch);
-                map.put("fallbackSpawn", fallback);
+            // Save spawn points list
+            if (!world.spawnPoints.isEmpty()) {
+                List<Map<String, Number>> spawnPointsList = new ArrayList<>();
+                for (SpawnPointConfig sp : world.spawnPoints) {
+                    Map<String, Number> spawnMap = new LinkedHashMap<>();
+                    spawnMap.put("x", sp.x);
+                    spawnMap.put("y", sp.y);
+                    spawnMap.put("z", sp.z);
+                    if (sp.yaw != null) spawnMap.put("yaw", sp.yaw);
+                    if (sp.pitch != null) spawnMap.put("pitch", sp.pitch);
+                    spawnPointsList.add(spawnMap);
+                }
+                map.put("spawnPoints", spawnPointsList);
             }
 
             list.add(map);
@@ -972,16 +981,13 @@ public class AdminConfigService {
     }
 
     /**
-     * Sets the fallback spawn point for a world.
+     * Adds a spawn point to a world.
      */
-    public boolean setWorldFallbackSpawn(String name, double x, double y, double z, float yaw, float pitch) {
+    public boolean addWorldSpawnPoint(String name, double x, double y, double z, Float yaw, Float pitch) {
         for (CombatWorldConfig world : combatWorlds) {
             if (world.name.equals(name)) {
-                world.fallbackX = x;
-                world.fallbackY = y;
-                world.fallbackZ = z;
-                world.fallbackYaw = yaw;
-                world.fallbackPitch = pitch;
+                SpawnPointConfig sp = new SpawnPointConfig(x, y, z, yaw, pitch);
+                world.spawnPoints.add(sp);
                 saveWorlds();
                 configService.updateCombatWorlds(combatWorlds);
                 return true;
@@ -991,22 +997,48 @@ public class AdminConfigService {
     }
 
     /**
-     * Clears the fallback spawn point for a world.
+     * Removes a spawn point from a world by index.
      */
-    public boolean clearWorldFallbackSpawn(String name) {
+    public boolean removeWorldSpawnPoint(String name, int index) {
         for (CombatWorldConfig world : combatWorlds) {
             if (world.name.equals(name)) {
-                world.fallbackX = null;
-                world.fallbackY = null;
-                world.fallbackZ = null;
-                world.fallbackYaw = null;
-                world.fallbackPitch = null;
+                if (index >= 0 && index < world.spawnPoints.size()) {
+                    world.spawnPoints.remove(index);
+                    saveWorlds();
+                    configService.updateCombatWorlds(combatWorlds);
+                    return true;
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Clears all spawn points from a world.
+     */
+    public boolean clearWorldSpawnPoints(String name) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.spawnPoints.clear();
                 saveWorlds();
                 configService.updateCombatWorlds(combatWorlds);
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Gets spawn points for a world.
+     */
+    public List<SpawnPointConfig> getWorldSpawnPoints(String name) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                return Collections.unmodifiableList(world.spawnPoints);
+            }
+        }
+        return Collections.emptyList();
     }
 
     /**

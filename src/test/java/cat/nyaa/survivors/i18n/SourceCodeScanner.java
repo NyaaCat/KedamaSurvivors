@@ -37,6 +37,13 @@ class SourceCodeScanner {
             "(notifyTeam|notifyRunPlayers)\\([^,]+,\\s*\"([a-z][a-z0-9_\\.]+)\""
     );
 
+    // Matches conditional/ternary key assignments that look like i18n keys
+    // e.g.: condition ? "run.ended_wipe" : "run.ended"
+    // Keys MUST contain at least one dot to be considered i18n keys (filters out simple strings like "yes"/"no")
+    private static final Pattern CONDITIONAL_KEY_PATTERN = Pattern.compile(
+            "\\?\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\"\\s*:\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\""
+    );
+
     /**
      * Scan source directory for all i18n key usages.
      *
@@ -115,6 +122,16 @@ class SourceCodeScanner {
         while (wrapperMatcher.find()) {
             String key = wrapperMatcher.group(2);
             addKey(key, file, lineNum, foundKeys);
+        }
+
+        // Check conditional/ternary key patterns
+        // Catches: condition ? "key1" : "key2" where both are likely i18n keys
+        Matcher conditionalMatcher = CONDITIONAL_KEY_PATTERN.matcher(line);
+        while (conditionalMatcher.find()) {
+            String key1 = conditionalMatcher.group(1);
+            String key2 = conditionalMatcher.group(2);
+            addKey(key1, file, lineNum, foundKeys);
+            addKey(key2, file, lineNum, foundKeys);
         }
     }
 

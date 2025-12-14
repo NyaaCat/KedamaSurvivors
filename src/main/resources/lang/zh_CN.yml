@@ -218,6 +218,7 @@ error:
   no_spawn_points: "§c找不到有效的出生点"
   world_not_found: "§c找不到世界 §f{world}"
   world_not_loaded: "§c世界 §f{world} §c未加载"
+  teleport_failed: "§c传送失败"
 
   # 管理
   capture_no_item: "§c请手持要捕获的物品"
@@ -355,6 +356,14 @@ scoreboard:
   team: "§7队伍 §f{name} §8(§f{count}§8/§f{max}§8)"
   time: "§7时间 §f{time}"
   upgrade_countdown: "§e升级 §f{seconds}s"
+  # Lobby-specific scoreboard lines
+  no_team: "§8无队伍"
+  status_lobby: "§7状态: §f准备区"
+  status_ready: "§7状态: §a已准备"
+  status_countdown: "§7状态: §e倒计时"
+  status_cooldown: "§7状态: §c冷却中"
+  starter_weapon_selected: "§2✓ §7武器已选择"
+  starter_helmet_selected: "§2✓ §7护甲已选择"
 
 # ============================================================
 # 状态命令输出
@@ -465,8 +474,10 @@ admin:
       set_displayname: "§f/vrs admin world set displayname <name> <displayName> §8- §7设置显示名称"
       set_weight: "§f/vrs admin world set weight <name> <weight> §8- §7设置权重"
       set_bounds: "§f/vrs admin world set bounds <name> <minX> <maxX> <minZ> <maxZ> §8- §7设置边界"
-      setfallback: "§f/vrs admin world setfallback <name> [x y z [yaw pitch]] §8- §7设置备用出生点(无参数使用当前位置)"
-      clearfallback: "§f/vrs admin world clearfallback <name> §8- §7清除备用出生点"
+      addspawn: "§f/vrs admin world addspawn <name> [x y z [yaw pitch]] §8- §7添加出生点(无参数使用当前位置)"
+      removespawn: "§f/vrs admin world removespawn <name> <index> §8- §7移除出生点"
+      listspawns: "§f/vrs admin world listspawns <name> §8- §7列出出生点"
+      clearspawns: "§f/vrs admin world clearspawns <name> §8- §7清除所有出生点"
       enable: "§f/vrs admin world enable <name> §8- §7启用世界"
       disable: "§f/vrs admin world disable <name> §8- §7禁用世界"
     created: "§a世界配置 §f{name} §a创建成功 (显示名: §f{displayName}§a)"
@@ -479,12 +490,17 @@ admin:
     displayname_set: "§a世界 §f{name} §a显示名称已设置为: §f{displayName}"
     weight_set: "§a世界 §f{name} §a权重已设置为: §f{weight}"
     bounds_set: "§a世界 §f{name} §a边界已设置: X[§f{minX}§a~§f{maxX}§a] Z[§f{minZ}§a~§f{maxZ}§a]"
-    fallback_set: "§a世界 §f{name} §a备用出生点已设置: §f{x}§a, §f{y}§a, §f{z}"
-    fallback_cleared: "§a世界 §f{name} §a备用出生点已清除"
-    no_fallback: "§8未设置"
+    # Spawn point management
+    spawn_added: "§a已添加出生点 §f#{index} §a到世界 §f{name}§a: §f{x}§a, §f{y}§a, §f{z}"
+    spawn_removed: "§a已移除世界 §f{name} §a的出生点 §f#{index}"
+    spawn_index_invalid: "§c出生点索引 §f{index} §c无效"
+    spawns_header: "§8========== §6世界 {name} 出生点 ({count}) §8=========="
+    spawns_empty: "§7无出生点"
+    spawn_entry: "§7[{index}] §f{x}§7, §f{y}§7, §f{z}{extra}"
+    spawns_cleared: "§a已清除世界 §f{name} §a的所有出生点"
     list_header: "§8========== §6战斗世界列表 §8=========="
     list_empty: "§7无世界配置"
-    list_entry: "§7- §f{name} §8(§7{displayName}§8) §7[{status}] 权重: §f{weight} §7边界: X[§f{minX}§7~§f{maxX}§7] Z[§f{minZ}§7~§f{maxZ}§7] §7备用: §f{fallback}"
+    list_entry: "§7- §f{name} §8(§7{displayName}§8) §7[{status}] 权重: §f{weight} §7边界: X[§f{minX}§7~§f{maxX}§7] Z[§f{minZ}§7~§f{maxZ}§7] §7出生点: §f{spawnCount}"
     status_enabled: "§a启用"
     status_disabled: "§c禁用"
   # 旧版世界管理消息（保留兼容）
@@ -693,6 +709,8 @@ ready:
   all_ready: "§2全员准备就绪！"
   now_ready: "§a你已准备就绪"
   no_longer_ready: "§7你已取消准备"
+  teammate_ready: "§f{player} §a准备就绪"
+  teammate_unready: "§f{player} §7取消准备"
 
 # ============================================================
 # 重生消息
@@ -707,6 +725,8 @@ respawn:
 
 run:
   team_wiped: "§7队伍全灭"
+  ended_wipe: "§c战斗结束 - 全员阵亡 §8| §7击杀: §f{kills} §8| §7金币: §f{coins} §8| §7时间: §f{time}"
+  ended: "§a战斗结束 §8| §7击杀: §f{kills} §8| §7金币: §f{coins} §8| §7时间: §f{time}"
 
 # ============================================================
 # 动作栏消息

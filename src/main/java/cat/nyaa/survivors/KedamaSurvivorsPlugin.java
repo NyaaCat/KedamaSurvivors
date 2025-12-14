@@ -6,6 +6,7 @@ import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.listener.CombatListener;
 import cat.nyaa.survivors.listener.InventoryListener;
 import cat.nyaa.survivors.listener.PlayerListener;
+import cat.nyaa.survivors.listener.SpawnListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
 import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.DeathService;
@@ -172,6 +173,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
         getServer().getPluginManager().registerEvents(new CombatListener(this), this);
+        getServer().getPluginManager().registerEvents(new SpawnListener(this), this);
     }
 
     private void startTasks() {
