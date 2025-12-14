@@ -52,8 +52,9 @@ public class DeathService {
         PlayerState playerState = playerStateOpt.get();
         if (playerState.getMode() != PlayerMode.IN_RUN) return false;
 
-        // Clear drops to prevent item loss
-        event.getDrops().clear();
+        // Keep inventory on death - we'll only clear VRS equipment in applyDeathPenalty
+        event.setKeepInventory(true);
+        event.setKeepLevel(false);  // Still reset XP level
         event.setDroppedExp(0);
 
         // Mark as dead in run
