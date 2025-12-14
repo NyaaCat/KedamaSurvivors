@@ -1,0 +1,21 @@
+# Merchant Templates
+# Templates for spawning merchant NPCs during runs
+#
+# Structure:
+# templates:
+#   <templateId>:
+#     displayName: "Display Name"
+#     trades:
+#       - item: "template_id"
+#         price: 10
+#         maxUses: 3
+#
+# Example:
+#   basic:
+#     displayName: "§e基础商人"
+#     trades:
+#       - item: "potion_health"
+#         price: 5
+#         maxUses: 3
+
+templates: {}

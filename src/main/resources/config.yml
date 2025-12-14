@@ -65,18 +65,8 @@ respawn:
 # ============================================================
 # Combat Worlds
 # ============================================================
+# Note: World list is now stored in data/worlds.yml
 worlds:
-  list:
-    - name: "arena_forest"
-      displayName: "§2森林竞技场"
-      enabled: true
-      weight: 1.0
-      spawnBounds:
-        minX: -500
-        maxX: 500
-        minZ: -500
-        maxZ: 500
-
   spawnSampling:
     maxAttempts: 50
     unsafeBlocks:
@@ -99,64 +89,17 @@ teleport:
 # ============================================================
 # Starter Selection
 # ============================================================
+# Note: Starter weapon/helmet options are now stored in data/starters.yml
 starterSelection:
   requireWeaponFirst: true
   autoOpenHelmetGui: true
 
-  weapons:
-    - optionId: "starter_sword"
-      displayName: "§f铁剑"
-      displayItem:
-        material: IRON_SWORD
-        name: "§f铁剑"
-        lore:
-          - "§7基础近战武器"
-      templateId: "sword_iron_1"
-      group: "sword"
-      level: 1
-
-  helmets:
-    - optionId: "starter_leather"
-      displayName: "§f皮革帽"
-      displayItem:
-        material: LEATHER_HELMET
-        name: "§f皮革帽"
-        lore:
-          - "§7基础防护"
-      templateId: "helmet_leather_1"
-      group: "light"
-      level: 1
-
-# ============================================================
-# Equipment Pools
-# ============================================================
-equipmentPools:
-  weapons:
-    sword:
-      displayName: "剑系"
-      levels:
-        1:
-          - "sword_iron_1"
-
-  helmets:
-    light:
-      displayName: "轻甲系"
-      levels:
-        1:
-          - "helmet_leather_1"
-
 # ============================================================
 # Inventory Rules
 # ============================================================
+# Note: Drop/pickup prevention is now hardcoded for all modes except LOBBY
+# Equipment pools are now stored in data/equipment/weapons.yml and data/equipment/helmets.yml
 inventoryRules:
-  preventDropModes:
-    - READY
-    - COUNTDOWN
-    - IN_RUN
-  preventPickupModes:
-    - READY
-    - COUNTDOWN
-    - IN_RUN
   lockEquipmentSlots: true
   weaponSlotIndex: 0
   rewards:
@@ -186,6 +129,7 @@ progression:
 # ============================================================
 # Enemy Spawning
 # ============================================================
+# Note: Archetypes are now stored in data/archetypes.yml
 spawning:
   loop:
     tickInterval: 20
@@ -215,19 +159,6 @@ spawning:
       timeStepSeconds: 60
       levelPerStep: 1
 
-  archetypes:
-    zombie:
-      enemyType: "minecraft:zombie"
-      weight: 3.0
-      spawnCommands:
-        - "summon zombie ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
-      rewards:
-        xpBase: 10
-        xpPerLevel: 5
-        coinBase: 1
-        coinPerLevel: 1
-        permaScoreChance: 0.01
-
   mobIdentification:
     mobTag: "vrs_mob"
     levelTagPattern: "vrs_lvl_(\\d+)"
@@ -250,6 +181,7 @@ rewards:
 # ============================================================
 # Merchants
 # ============================================================
+# Note: Merchant templates are now stored in data/merchants.yml
 merchants:
   enabled: true
 
@@ -265,11 +197,6 @@ merchants:
     invulnerable: true
     noAi: true
     glowing: false
-
-  templates:
-    basic:
-      displayName: "§e基础商人"
-      trades: []
 
 # ============================================================
 # Economy

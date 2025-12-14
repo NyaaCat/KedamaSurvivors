@@ -1,0 +1,27 @@
+# Combat Worlds
+# Managed via /vrs admin world commands
+#
+# Structure:
+# worlds:
+#   - name: "world_name"
+#     displayName: "Display Name"
+#     enabled: true
+#     weight: 1.0
+#     spawnBounds:
+#       minX: -500
+#       maxX: 500
+#       minZ: -500
+#       maxZ: 500
+#
+# Example:
+#   - name: "arena_forest"
+#     displayName: "§2森林竞技场"
+#     enabled: true
+#     weight: 1.0
+#     spawnBounds:
+#       minX: -500
+#       maxX: 500
+#       minZ: -500
+#       maxZ: 500
+
+worlds: []

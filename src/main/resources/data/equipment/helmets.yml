@@ -1,0 +1,22 @@
+# Helmet Equipment Groups
+# Managed via /vrs admin equipment group/item commands
+#
+# Structure:
+# groups:
+#   <groupId>:
+#     displayName: "Display Name"
+#     levelItems:
+#       <level>:
+#         - "template_id_1"
+#         - "template_id_2"
+#
+# Example:
+#   light:
+#     displayName: "轻甲系"
+#     levelItems:
+#       1:
+#         - "helmet_leather_1"
+#       2:
+#         - "helmet_iron_1"
+
+groups: {}

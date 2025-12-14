@@ -1,0 +1,34 @@
+# Starter Selection Options
+# Options available when players choose their initial equipment
+#
+# Structure:
+# weapons:
+#   - optionId: "unique_id"
+#     displayName: "Display Name"
+#     displayItem:
+#       material: MATERIAL_NAME
+#       name: "Item Name"
+#       lore:
+#         - "Lore line 1"
+#     templateId: "item_template_id"
+#     group: "equipment_group"
+#     level: 1
+#
+# helmets:
+#   - (same structure as weapons)
+#
+# Example:
+# weapons:
+#   - optionId: "starter_sword"
+#     displayName: "§f铁剑"
+#     displayItem:
+#       material: IRON_SWORD
+#       name: "§f铁剑"
+#       lore:
+#         - "§7基础近战武器"
+#     templateId: "sword_iron_1"
+#     group: "sword"
+#     level: 1
+
+weapons: []
+helmets: []
