@@ -580,6 +580,32 @@ public class ConfigService {
     public double getMerchantMinDistance() { return merchantMinDistance; }
     public double getMerchantMaxDistance() { return merchantMaxDistance; }
 
+    // ==================== Runtime Update Methods ====================
+
+    /**
+     * Updates weapon groups from AdminConfigService. Called when admin commands modify data.
+     */
+    public void updateWeaponGroups(Map<String, EquipmentGroupConfig> groups) {
+        this.weaponGroups.clear();
+        this.weaponGroups.putAll(groups);
+    }
+
+    /**
+     * Updates helmet groups from AdminConfigService. Called when admin commands modify data.
+     */
+    public void updateHelmetGroups(Map<String, EquipmentGroupConfig> groups) {
+        this.helmetGroups.clear();
+        this.helmetGroups.putAll(groups);
+    }
+
+    /**
+     * Updates enemy archetypes from AdminConfigService. Called when admin commands modify data.
+     */
+    public void updateEnemyArchetypes(Map<String, EnemyArchetypeConfig> archetypes) {
+        this.enemyArchetypes.clear();
+        this.enemyArchetypes.putAll(archetypes);
+    }
+
     // ==================== Config Data Classes ====================
 
     public static class CombatWorldConfig {

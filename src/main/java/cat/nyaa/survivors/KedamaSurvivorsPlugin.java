@@ -7,6 +7,7 @@ import cat.nyaa.survivors.listener.CombatListener;
 import cat.nyaa.survivors.listener.InventoryListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
+import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.PersistenceService;
 import cat.nyaa.survivors.service.ReadyService;
@@ -36,6 +37,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private static KedamaSurvivorsPlugin instance;
 
     private ConfigService configService;
+    private AdminConfigService adminConfigService;
     private I18nService i18nService;
     private StateService stateService;
     private TemplateEngine templateEngine;
@@ -84,6 +86,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Config must be first
         configService = new ConfigService(this);
         configService.loadConfig();
+
+        // Admin config for equipment/archetype data (depends on configService)
+        adminConfigService = new AdminConfigService(this);
+        adminConfigService.loadAll();
 
         // I18n depends on config for language selection
         i18nService = new I18nService(this, configService);
@@ -246,6 +252,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
      */
     public void reload() {
         configService.loadConfig();
+        adminConfigService.loadAll();
         i18nService.loadLanguage();
         getLogger().info("Configuration reloaded.");
     }
@@ -258,6 +265,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public ConfigService getConfigService() {
         return configService;
+    }
+
+    public AdminConfigService getAdminConfigService() {
+        return adminConfigService;
     }
 
     public I18nService getI18nService() {

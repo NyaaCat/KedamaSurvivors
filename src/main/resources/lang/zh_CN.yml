@@ -433,6 +433,58 @@ admin:
     run_list_header: "§8========== §6运行列表 §8=========="
     run_list_entry: "§7- §f{id} §8| §7队伍: §f{team} §8| §7世界: §f{world} §8| §7状态: {status}"
 
+  # 装备管理
+  equipment:
+    help:
+      header: "§8========== §6装备管理命令 §8=========="
+      group_create: "§f/vrs admin equipment group create <weapon|helmet> <groupId> [displayName] §8- §7创建装备组"
+      group_delete: "§f/vrs admin equipment group delete <weapon|helmet> <groupId> §8- §7删除装备组"
+      group_list: "§f/vrs admin equipment group list [weapon|helmet] §8- §7列出装备组"
+      item_add: "§f/vrs admin equipment item add <weapon|helmet> <groupId> <level> §8- §7添加手持物品到组"
+      item_remove: "§f/vrs admin equipment item remove <weapon|helmet> <groupId> <level> <index> §8- §7移除物品"
+      item_list: "§f/vrs admin equipment item list <weapon|helmet> <groupId> [level] §8- §7列出物品"
+    invalid_type: "§c无效的装备类型，请使用 weapon 或 helmet"
+    invalid_level: "§c无效的等级，等级必须大于0"
+    group_created: "§a装备组 §f{groupId} §a创建成功 (类型: §f{type}§a, 显示名: §f{displayName}§a)"
+    group_exists: "§c装备组 §f{groupId} §c已存在"
+    group_deleted: "§a装备组 §f{type}/{groupId} §a已删除"
+    group_not_found: "§c找不到装备组 §f{groupId}"
+    group_has_items: "§e警告: 该组包含 §f{count} §e个物品"
+    group_list_header: "§8========== §6装备组 ({type}) §8=========="
+    group_list_empty: "§7无装备组"
+    group_list_entry: "§7- §f{groupId} §8(§7{displayName}§8) §7等级: §f{levels} §7物品: §f{items}"
+    no_item_in_hand: "§c请手持要添加的物品"
+    item_added: "§a物品已添加到 §f{groupId} §a等级 §f{level} §8(模板ID: §f{templateId}§8)"
+    item_removed: "§a已从 §f{groupId} §a等级 §f{level} §a移除物品 §8(模板ID: §f{templateId}§8)"
+    item_not_found: "§c找不到索引 §f{index} §c的物品"
+    item_list_header: "§8========== §6{groupId} 等级{level} 物品 §8=========="
+    item_list_empty: "§7无物品"
+    item_list_entry: "§7[{index}] §f{templateId} §8- §7{material}"
+
+  # 刷怪器管理
+  spawner:
+    help:
+      header: "§8========== §6刷怪器管理命令 §8=========="
+      archetype_create: "§f/vrs admin spawner archetype create <id> <entityType> [weight] §8- §7创建原型"
+      archetype_delete: "§f/vrs admin spawner archetype delete <id> §8- §7删除原型"
+      archetype_list: "§f/vrs admin spawner archetype list §8- §7列出所有原型"
+      archetype_addcmd: "§f/vrs admin spawner archetype addcommand <id> <command...> §8- §7添加生成命令"
+      archetype_removecmd: "§f/vrs admin spawner archetype removecommand <id> <index> §8- §7移除生成命令"
+      archetype_reward: "§f/vrs admin spawner archetype reward <id> <xpBase> <xpPerLevel> <coinBase> <coinPerLevel> <permaChance> §8- §7设置奖励"
+    invalid_weight: "§c无效的权重，必须大于0"
+    archetype_created: "§a原型 §f{id} §a创建成功 (实体: §f{entityType}§a, 权重: §f{weight}§a)"
+    archetype_exists: "§c原型 §f{id} §c已存在"
+    archetype_deleted: "§a原型 §f{id} §a已删除"
+    archetype_not_found: "§c找不到原型 §f{id}"
+    archetype_list_header: "§8========== §6敌人原型列表 §8=========="
+    archetype_list_empty: "§7无原型"
+    archetype_list_entry: "§7- §f{id} §8(§7{entityType}§8) §7权重: §f{weight} §7命令: §f{cmdCount}"
+    command_added: "§a已向原型 §f{id} §a添加生成命令"
+    command_removed: "§a已从原型 §f{id} §a移除命令 §f#{index}"
+    command_invalid_index: "§c无效的命令索引 §f{index}"
+    rewards_set: "§a已设置原型 §f{id} §a的奖励"
+    rewards_info: "§7  经验: §f{xpBase} + {xpPerLevel}/级 §8| §7金币: §f{coinBase} + {coinPerLevel}/级 §8| §7积分概率: §f{permaChance}"
+
 # ============================================================
 # 调试信息
 # ============================================================

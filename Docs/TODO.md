@@ -108,6 +108,10 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `/vrs admin kick` - Kick player from game
 - [x] `/vrs admin reset` - Reset player state
 - [x] `/vrs admin setperma` - Set perma-score
+- [x] `/vrs admin equipment group create|delete|list` - Equipment group management
+- [x] `/vrs admin equipment item add|remove|list` - Equipment item management (NBT capture)
+- [x] `/vrs admin spawner archetype create|delete|list` - Enemy archetype management
+- [x] `/vrs admin spawner archetype addcommand|removecommand|reward` - Archetype commands and rewards
 
 ### 3.5 Debug Commands
 - [x] `/vrs debug player <player>` - Player state dump
@@ -279,10 +283,10 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 ## Phase 8: Persistence
 
 ### 8.1 Item Storage
-- [ ] Item template YAML structure
-- [ ] NBT serialization/deserialization
-- [ ] Item capture command implementation
-- [ ] Template loading on startup/reload
+- [x] Item template YAML structure
+- [x] NBT serialization/deserialization
+- [x] Item capture command implementation
+- [x] Template loading on startup/reload
 
 ### 8.2 Runtime Persistence
 - [x] Player state JSON serialization
@@ -381,12 +385,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 5. Gameplay Systems | Complete | 100% |
 | 6. UI & Display | Complete | 100% |
 | 7. Event Listeners | Complete | 100% |
-| 8. Persistence | In Progress | 70% |
+| 8. Persistence | In Progress | 90% |
 | 9. Global Systems | Complete | 100% |
 | 10. Testing | In Progress | 75% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~88%**
+**Overall: ~92%**
 
 ---
 

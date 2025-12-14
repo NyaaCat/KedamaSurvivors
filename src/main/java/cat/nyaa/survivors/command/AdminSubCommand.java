@@ -1,6 +1,8 @@
 package cat.nyaa.survivors.command;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
+import cat.nyaa.survivors.command.admin.EquipmentSubCommand;
+import cat.nyaa.survivors.command.admin.SpawnerSubCommand;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
@@ -17,6 +19,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +38,10 @@ public class AdminSubCommand implements SubCommand {
     private final WorldService worldService;
     private final TemplateEngine templateEngine;
 
+    // Nested subcommand handlers
+    private EquipmentSubCommand equipmentSubCommand;
+    private SpawnerSubCommand spawnerSubCommand;
+
     public AdminSubCommand(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfigService();
@@ -44,6 +51,18 @@ public class AdminSubCommand implements SubCommand {
         this.scoreboardService = plugin.getScoreboardService();
         this.worldService = plugin.getWorldService();
         this.templateEngine = plugin.getTemplateEngine();
+    }
+
+    /**
+     * Lazily initializes nested subcommands. Called after AdminConfigService is ready.
+     */
+    private void initSubCommands() {
+        if (equipmentSubCommand == null) {
+            equipmentSubCommand = new EquipmentSubCommand(plugin);
+        }
+        if (spawnerSubCommand == null) {
+            spawnerSubCommand = new SpawnerSubCommand(plugin);
+        }
     }
 
     @Override
@@ -65,6 +84,14 @@ public class AdminSubCommand implements SubCommand {
             case "join" -> handleJoin(sender, args);
             case "world" -> handleWorld(sender, args);
             case "debug" -> handleDebug(sender, args);
+            case "equipment" -> {
+                initSubCommands();
+                equipmentSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
+            case "spawner" -> {
+                initSubCommands();
+                spawnerSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
             default -> i18n.send(sender, "error.unknown_command", "command", action);
         }
     }
@@ -80,6 +107,8 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.help.join");
         i18n.send(sender, "admin.help.world");
         i18n.send(sender, "admin.help.debug");
+        i18n.send(sender, "admin.help.equipment");
+        i18n.send(sender, "admin.help.spawner");
     }
 
     private void showStatus(CommandSender sender) {
@@ -475,12 +504,24 @@ public class AdminSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "debug")) {
+            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "debug", "equipment", "spawner")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
             }
-        } else if (args.length == 2) {
+        } else if (args.length >= 2) {
+            String action = args[0].toLowerCase();
+            // Delegate to nested subcommands for equipment and spawner
+            if (action.equals("equipment")) {
+                initSubCommands();
+                return equipmentSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("spawner")) {
+                initSubCommands();
+                return spawnerSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
+        }
+
+        if (args.length == 2) {
             String action = args[0].toLowerCase();
             String partial = args[1].toLowerCase();
 

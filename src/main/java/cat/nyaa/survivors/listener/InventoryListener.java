@@ -31,10 +31,15 @@ public class InventoryListener implements Listener {
     private final StateService state;
     private final StarterService starter;
 
-    // Restricted modes where equipment cannot be modified
+    // Restricted modes where equipment cannot be modified and drops/pickups are prevented
+    // All modes except LOBBY are restricted
     private static final Set<PlayerMode> RESTRICTED_MODES = Set.of(
+            PlayerMode.READY,
             PlayerMode.COUNTDOWN,
-            PlayerMode.IN_RUN
+            PlayerMode.IN_RUN,
+            PlayerMode.COOLDOWN,
+            PlayerMode.GRACE_EJECT,
+            PlayerMode.DISCONNECTED
     );
 
     public InventoryListener(KedamaSurvivorsPlugin plugin) {
@@ -105,12 +110,9 @@ public class InventoryListener implements Listener {
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
 
-        // Prevent dropping VRS items during restricted modes
+        // Prevent ALL item drops during restricted modes (all modes except LOBBY)
         if (isInRestrictedMode(player)) {
-            ItemStack item = event.getItemDrop().getItemStack();
-            if (starter.isVrsItem(item)) {
-                event.setCancelled(true);
-            }
+            event.setCancelled(true);
         }
     }
 
@@ -139,6 +141,12 @@ public class InventoryListener implements Listener {
         // Prevent item pickup while GUI is open
         InventoryHolder holder = player.getOpenInventory().getTopInventory().getHolder();
         if (holder instanceof GuiHolder) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Prevent ALL item pickups during restricted modes (all modes except LOBBY)
+        if (isInRestrictedMode(player)) {
             event.setCancelled(true);
         }
     }
