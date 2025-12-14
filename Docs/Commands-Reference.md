@@ -68,7 +68,14 @@ Toggles ready status for entering combat.
 **Usage:**
 ```
 /vrs ready
+/vrs ready solo
 ```
+
+**Arguments:**
+| Argument | Description |
+|----------|-------------|
+| *(none)* | Toggle ready status (requires existing team) |
+| `solo` | Auto-create a solo team and toggle ready |
 
 **Permission:** `vrs.player` (default: true)
 
@@ -77,15 +84,17 @@ Toggles ready status for entering combat.
 - Not on cooldown (or have bypass permission)
 - Starter weapon and helmet must be selected
 - Not already in a run
+- Must be in a team (use `solo` argument to auto-create)
 
 **Behavior:**
-- **Solo:** Starts countdown immediately when ready
+- **Solo (`/vrs ready solo`):** Creates a team named `Team_{PlayerName}_{random4digits}` and marks ready
 - **Team:** Waits for all online team members to be ready, then starts countdown
 - **Toggle:** Running again while ready will cancel ready status
 
 **Examples:**
 ```
-/vrs ready    # Mark yourself ready (or unready if already ready)
+/vrs ready         # Mark yourself ready (requires team)
+/vrs ready solo    # Create solo team and mark ready
 ```
 
 ---

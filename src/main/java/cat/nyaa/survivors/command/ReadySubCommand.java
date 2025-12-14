@@ -5,12 +5,14 @@ import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.TeamState;
+import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.StateService;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -21,92 +23,72 @@ public class ReadySubCommand implements SubCommand {
     private final KedamaSurvivorsPlugin plugin;
     private final I18nService i18n;
     private final StateService state;
+    private final ReadyService readyService;
+    private final Random random = new Random();
 
     public ReadySubCommand(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
         this.i18n = plugin.getI18nService();
         this.state = plugin.getStateService();
+        this.readyService = plugin.getReadyService();
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         Player player = (Player) sender;
-        PlayerState playerState = state.getOrCreatePlayer(player.getUniqueId(), player.getName());
+        UUID playerId = player.getUniqueId();
 
-        // Must be in lobby
-        if (playerState.getMode() != PlayerMode.LOBBY) {
-            i18n.send(sender, "error.not_in_lobby");
-            return;
-        }
+        // Ensure player state exists
+        state.getOrCreatePlayer(playerId, player.getName());
 
-        // Must be in a team
-        Optional<TeamState> teamOpt = state.getPlayerTeam(player.getUniqueId());
-        if (teamOpt.isEmpty()) {
-            i18n.send(sender, "error.not_in_team");
-            return;
-        }
-
-        // Must have selected starters
-        if (!playerState.hasSelectedStarters()) {
-            i18n.send(sender, "error.select_starters_first");
-            return;
-        }
-
-        TeamState team = teamOpt.get();
-
-        // Toggle ready state
-        boolean wasReady = playerState.isReady();
-        boolean isNowReady = !wasReady;
-
-        playerState.setReady(isNowReady);
-        team.setReady(player.getUniqueId(), isNowReady);
-
-        if (isNowReady) {
-            i18n.send(sender, "ready.now_ready");
-            notifyTeam(team, player, true);
-
-            // Check if all team members are ready
-            if (team.isAllReady()) {
-                triggerCountdown(team);
+        // Handle "solo" argument - create solo team if not in one
+        if (args.length > 0 && args[0].equalsIgnoreCase("solo")) {
+            if (!state.isInTeam(playerId)) {
+                TeamState team = createSoloTeam(player);
+                i18n.send(player, "success.solo_team_created", "name", team.getName());
             }
-        } else {
-            i18n.send(sender, "ready.no_longer_ready");
-            notifyTeam(team, player, false);
         }
+
+        // Check if in team, show solo hint if not
+        if (!state.isInTeam(playerId)) {
+            i18n.send(player, "error.not_in_team_solo_hint");
+            return;
+        }
+
+        // Delegate to ReadyService for validation and toggle
+        // ReadyService.toggleReady() handles all validation and sends appropriate messages
+        readyService.toggleReady(player);
     }
 
-    private void notifyTeam(TeamState team, Player readyPlayer, boolean isReady) {
-        String msgKey = isReady ? "ready.teammate_ready" : "ready.teammate_unready";
+    /**
+     * Creates a solo team for a player with a unique name.
+     * Team name format: Team_{PlayerName}_{random 4 digits}
+     */
+    private TeamState createSoloTeam(Player player) {
+        String baseName = "Team_" + player.getName() + "_";
+        String teamName;
 
-        for (UUID memberId : team.getMembers()) {
-            if (!memberId.equals(readyPlayer.getUniqueId())) {
-                Player member = Bukkit.getPlayer(memberId);
-                if (member != null) {
-                    i18n.send(member, msgKey, "player", readyPlayer.getName());
-                }
-            }
-        }
-    }
+        // Generate unique name with 4-digit suffix
+        do {
+            teamName = baseName + String.format("%04d", random.nextInt(10000));
+        } while (state.findTeamByName(teamName).isPresent());
 
-    private void triggerCountdown(TeamState team) {
-        // Notify all team members
-        for (UUID memberId : team.getMembers()) {
-            Player member = Bukkit.getPlayer(memberId);
-            if (member != null) {
-                i18n.send(member, "ready.all_ready");
-
-                // Update player mode
-                Optional<PlayerState> playerState = state.getPlayer(memberId);
-                playerState.ifPresent(ps -> ps.setMode(PlayerMode.COUNTDOWN));
-            }
-        }
-
-        // TODO: Start actual countdown task via ReadyService
-        plugin.getLogger().info("Team " + team.getName() + " is ready! Starting countdown...");
+        return state.createTeam(teamName, player.getUniqueId());
     }
 
     @Override
     public boolean isPlayerOnly() {
         return true;
+    }
+
+    @Override
+    public List<String> tabComplete(CommandSender sender, String[] args) {
+        if (args.length == 1) {
+            String partial = args[0].toLowerCase();
+            if ("solo".startsWith(partial)) {
+                return Collections.singletonList("solo");
+            }
+        }
+        return Collections.emptyList();
     }
 }

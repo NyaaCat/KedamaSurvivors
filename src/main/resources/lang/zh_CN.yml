@@ -149,6 +149,7 @@ success:
   spawner_resumed: "§a刷怪已恢复"
   merchant_spawned: "§a商人已生成"
   merchants_cleared: "§a已清除 §f{count} §a个商人"
+  solo_team_created: "§a已创建单人队伍: §f{name}"
 
 # ============================================================
 # 错误提示 (红色但不刺眼)
@@ -178,6 +179,7 @@ error:
   join_disabled_error: "§c当前不允许进入战斗"
   cannot_quit_now: "§c当前状态无法退出"
   run_not_found: "§c找不到运行实例"
+  not_in_team_solo_hint: "§c你不在任何队伍中。使用 §f/vrs ready solo §c单人开始"
 
   # 装备选择
   no_weapon_selected: "§c请先选择武器"

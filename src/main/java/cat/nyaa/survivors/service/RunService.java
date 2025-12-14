@@ -183,6 +183,10 @@ public class RunService {
             Player player = Bukkit.getPlayer(memberId);
             if (player == null) continue;
 
+            Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
+            if (playerStateOpt.isEmpty()) continue;
+            PlayerState playerState = playerStateOpt.get();
+
             Location spawnPoint = run.getNextSpawnPoint();
             if (spawnPoint != null) {
                 // Execute prep command if configured
@@ -193,6 +197,9 @@ public class RunService {
 
                 // Execute enter command if configured
                 executeCommand(config.getEnterCommand(), player, spawnPoint);
+
+                // Grant starter equipment
+                plugin.getStarterService().grantStarterEquipment(player, playerState);
 
                 // Setup scoreboard
                 plugin.getScoreboardService().setupSidebar(player);
