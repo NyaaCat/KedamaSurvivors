@@ -93,7 +93,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Admin config for equipment/archetype data (depends on configService)
         adminConfigService = new AdminConfigService(this);
-        adminConfigService.loadAll();
+        adminConfigService.initialize();
 
         // I18n depends on config for language selection
         i18nService = new I18nService(this, configService);
@@ -284,7 +284,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
      */
     public void reload() {
         configService.loadConfig();
-        adminConfigService.loadAll();
+        adminConfigService.reload();
         i18nService.loadLanguage();
         getLogger().info("Configuration reloaded.");
     }
