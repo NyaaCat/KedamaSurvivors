@@ -216,13 +216,13 @@ Invites a player to your team.
 
 ---
 
-### `/vrs team join <team>`
+### `/vrs team accept <team>`
 
-Joins a team you've been invited to.
+Accepts a team invitation you've received.
 
 **Usage:**
 ```
-/vrs team join <team>
+/vrs team accept <team>
 ```
 
 **Permission:** `vrs.team.join` (default: true)
@@ -230,7 +230,7 @@ Joins a team you've been invited to.
 **Arguments:**
 | Argument | Description |
 |----------|-------------|
-| `team` | Team name to join |
+| `team` | Team name to accept invitation for |
 
 **Requirements:**
 - Must have valid invite to the team
@@ -239,7 +239,7 @@ Joins a team you've been invited to.
 
 **Examples:**
 ```
-/vrs team join Alpha
+/vrs team accept Alpha
 ```
 
 ---
@@ -366,371 +366,185 @@ Transfers team ownership to another member.
 
 ## 3. Admin Commands
 
-### `/vrs join enable|disable`
+All admin commands are under `/vrs admin` or `/vrs reload`.
+
+### `/vrs reload`
+
+Reloads all plugin configuration.
+
+**Usage:**
+```
+/vrs reload
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Behavior:**
+- Reloads config.yml, language files, item templates, and all data files
+- Active runs are not affected
+
+---
+
+### `/vrs admin`
+
+Root command for all administration functions.
+
+**Usage:**
+```
+/vrs admin <subcommand>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Available Subcommands:**
+| Subcommand | Description |
+|------------|-------------|
+| `status` | Show server status |
+| `endrun` | End active runs |
+| `forcestart` | Force start a team's run |
+| `kick` | Kick player from game |
+| `reset` | Reset player state |
+| `setperma` | Set player's perma-score |
+| `join` | Toggle global join switch |
+| `world` | World management |
+| `starter` | Starter option management |
+| `equipment` | Equipment group management |
+| `spawner` | Enemy archetype management |
+| `merchant` | Merchant template management |
+| `config` | Runtime config management |
+| `debug` | Debug commands |
+
+---
+
+### `/vrs admin status`
+
+Shows server game status.
+
+**Usage:**
+```
+/vrs admin status
+```
+
+**Output includes:**
+- Total players tracked
+- Active teams
+- Active runs
+- Players currently in runs
+
+---
+
+### `/vrs admin join enable|disable`
 
 Toggles the global join switch.
 
 **Usage:**
 ```
-/vrs join enable
-/vrs join disable
+/vrs admin join enable
+/vrs admin join disable
+/vrs admin join
 ```
 
-**Permission:** `vrs.admin.join` (default: op)
-
-**Behavior on disable:**
-- New players cannot enter combat
-- Active players receive grace warning
-- After grace period, players are ejected to prep area
-
----
-
-### `/vrs world enable|disable <world>`
-
-Enables or disables a combat world.
-
-**Usage:**
-```
-/vrs world enable <world>
-/vrs world disable <world>
-/vrs world list
-```
-
-**Permission:** `vrs.admin.world` (default: op)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `world` | World name from config |
+**Permission:** `vrs.admin` (default: op)
 
 **Behavior:**
-- Disabled worlds are not selected for new runs
-- Existing runs in disabled worlds continue normally
-
-**Examples:**
-```
-/vrs world enable arena_forest
-/vrs world disable arena_nether
-/vrs world list
-```
+- Without argument: shows current status
+- `enable`: allows new players to enter combat
+- `disable`: prevents new games, active players receive grace warning and are ejected
 
 ---
 
-### `/vrs reload`
+### `/vrs admin forcestart <team>`
 
-Reloads plugin configuration.
-
-**Usage:**
-```
-/vrs reload
-/vrs reload config
-/vrs reload lang
-/vrs reload items
-/vrs reload all
-```
-
-**Permission:** `vrs.admin.reload` (default: op)
-
-**Subcommands:**
-| Subcommand | Description |
-|------------|-------------|
-| *(none)* | Reload all configurations |
-| `config` | Reload config.yml only |
-| `lang` | Reload language files only |
-| `items` | Reload item templates only |
-| `all` | Same as no argument |
-
----
-
-### `/vrs force start <player|team>`
-
-Force starts a run for a player or team.
+Force starts a run for a team.
 
 **Usage:**
 ```
-/vrs force start <target> [flags]
+/vrs admin forcestart <teamName>
 ```
 
-**Permission:** `vrs.admin.force` (default: op)
+**Permission:** `vrs.admin` (default: op)
 
 **Arguments:**
 | Argument | Description |
 |----------|-------------|
-| `target` | Player name or team name |
+| `teamName` | Name of the team to start |
 
-**Flags:**
-| Flag | Description |
-|------|-------------|
-| `--bypassCooldown` | Ignore cooldown check |
-| `--bypassJoinSwitch` | Ignore join switch status |
-| `--world=<name>` | Force specific world |
+**Requirements:**
+- Team must exist
+- Team must not already be in a run
 
 **Examples:**
 ```
-/vrs force start Steve
-/vrs force start Alpha --bypassCooldown
-/vrs force start Steve --world=arena_forest
+/vrs admin forcestart Alpha
 ```
 
 ---
 
-### `/vrs force stop <player|team>`
+### `/vrs admin endrun [team]`
 
-Force stops a run for a player or team.
-
-**Usage:**
-```
-/vrs force stop <target> [flags]
-```
-
-**Permission:** `vrs.admin.force` (default: op)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `target` | Player name or team name |
-
-**Flags:**
-| Flag | Description |
-|------|-------------|
-| `--noPenalty` | Don't apply death penalty |
-| `--noCooldown` | Don't apply cooldown |
-
-**Examples:**
-```
-/vrs force stop Steve
-/vrs force stop Alpha --noPenalty
-```
-
----
-
-### `/vrs merchant spawn [world] [template]`
-
-Manually spawns a merchant.
+Ends active runs.
 
 **Usage:**
 ```
-/vrs merchant spawn [world] [template]
+/vrs admin endrun
+/vrs admin endrun <teamName>
 ```
 
-**Permission:** `vrs.admin.merchant` (default: op)
-
-**Arguments:**
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `world` | Target world | Current world |
-| `template` | Merchant template ID | Random |
-
-**Examples:**
-```
-/vrs merchant spawn
-/vrs merchant spawn arena_forest basic
-/vrs merchant spawn arena_forest advanced
-```
-
----
-
-### `/vrs merchant clear [world]`
-
-Removes all merchants.
-
-**Usage:**
-```
-/vrs merchant clear [world]
-```
-
-**Permission:** `vrs.admin.merchant` (default: op)
-
-**Arguments:**
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `world` | Target world | All worlds |
-
----
-
-### `/vrs spawner pause|resume [world]`
-
-Pauses or resumes enemy spawning.
-
-**Usage:**
-```
-/vrs spawner pause [world]
-/vrs spawner resume [world]
-```
-
-**Permission:** `vrs.admin.spawner` (default: op)
-
-**Arguments:**
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `world` | Target world | All worlds |
-
----
-
-### `/vrs item capture <type> <group> <level> <templateId>`
-
-Captures held item as a template.
-
-**Usage:**
-```
-/vrs item capture weapon <group> <level> <templateId>
-/vrs item capture helmet <group> <level> <templateId>
-```
-
-**Permission:** `vrs.admin.capture` (default: op)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `type` | `weapon` or `helmet` |
-| `group` | Equipment group ID |
-| `level` | Level number |
-| `templateId` | Unique template ID |
+**Permission:** `vrs.admin` (default: op)
 
 **Behavior:**
-- Captures NBT of item in main hand
-- Saves to `data/items/weapons.yml` or `data/items/helmets.yml`
-- Can be used in equipment pools
+- Without argument: ends ALL active runs
+- With team name: ends only that team's run
 
 **Examples:**
 ```
-# Hold diamond sword, then:
-/vrs item capture weapon sword 3 sword_diamond_3
-
-# Hold iron helmet, then:
-/vrs item capture helmet medium 2 helmet_iron_2
+/vrs admin endrun           # End all runs
+/vrs admin endrun Alpha     # End Alpha team's run
 ```
 
 ---
 
-### `/vrs admin merchant template create <templateId> [displayName]`
+### `/vrs admin kick <player>`
 
-Creates a new merchant template.
-
-**Usage:**
-```
-/vrs admin merchant template create <templateId> [displayName]
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `templateId` | Unique template identifier (alphanumeric + underscore) |
-| `displayName` | Display name for the merchant (optional, supports color codes) |
-
-**Examples:**
-```
-/vrs admin merchant template create potions "§dPotion Merchant"
-/vrs admin merchant template create basic_supplies "§eBasic Supplies"
-```
-
----
-
-### `/vrs admin merchant template delete <templateId>`
-
-Deletes a merchant template.
+Kicks a player from the game system.
 
 **Usage:**
 ```
-/vrs admin merchant template delete <templateId>
+/vrs admin kick <player>
 ```
 
 **Permission:** `vrs.admin` (default: op)
-
----
-
-### `/vrs admin merchant template list`
-
-Lists all merchant templates.
-
-**Usage:**
-```
-/vrs admin merchant template list
-```
-
-**Permission:** `vrs.admin` (default: op)
-
----
-
-### `/vrs admin merchant trade add <templateId> <costAmount> [maxUses]`
-
-Adds a trade to a merchant template using the item in your main hand.
-
-**Usage:**
-```
-/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Arguments:**
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `templateId` | Target merchant template | - |
-| `costAmount` | Number of coins required | - |
-| `maxUses` | Maximum times this trade can be used | 10 |
 
 **Behavior:**
-- Captures the NBT of the item in your main hand
-- Creates an item template in `data/items/`
-- Adds the trade to the merchant template
-- Cost is always in coins (emeralds)
-
-**Examples:**
-```
-# Hold a health potion, then:
-/vrs admin merchant trade add potions 25 5
-# Result: Trade for health potion, costs 25 coins, max 5 uses
-
-# Hold a golden apple:
-/vrs admin merchant trade add basic_supplies 15 3
-```
+- Removes player from their team
+- Resets all player state
 
 ---
 
-### `/vrs admin merchant trade remove <templateId> <index>`
+### `/vrs admin reset <player>`
 
-Removes a trade from a merchant template by index.
+Resets a player's game state.
 
 **Usage:**
 ```
-/vrs admin merchant trade remove <templateId> <index>
+/vrs admin reset <player>
 ```
 
 **Permission:** `vrs.admin` (default: op)
 
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `templateId` | Target merchant template |
-| `index` | Trade index (0-based, shown in trade list) |
+**Behavior:**
+- Resets player state to defaults
+- Does not remove from team
 
 ---
 
-### `/vrs admin merchant trade list <templateId>`
-
-Lists all trades in a merchant template.
-
-**Usage:**
-```
-/vrs admin merchant trade list <templateId>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
----
-
-### `/vrs setperma <player> <amount>`
+### `/vrs admin setperma <player> <amount>`
 
 Sets a player's perma-score.
 
 **Usage:**
 ```
-/vrs setperma <player> <amount>
-/vrs setperma <player> +<amount>
-/vrs setperma <player> -<amount>
+/vrs admin setperma <player> <amount>
 ```
 
 **Permission:** `vrs.admin` (default: op)
@@ -739,29 +553,206 @@ Sets a player's perma-score.
 | Argument | Description |
 |----------|-------------|
 | `player` | Target player |
-| `amount` | Score value (prefix +/- for relative) |
+| `amount` | Score value (integer) |
 
 **Examples:**
 ```
-/vrs setperma Steve 1000        # Set to 1000
-/vrs setperma Steve +100        # Add 100
-/vrs setperma Steve -50         # Remove 50
+/vrs admin setperma Steve 1000
+```
+
+---
+
+### `/vrs admin world`
+
+Manages combat world configurations.
+
+**Subcommands:**
+```
+/vrs admin world create <name> [displayName]
+/vrs admin world delete <name>
+/vrs admin world list
+/vrs admin world enable <name>
+/vrs admin world disable <name>
+/vrs admin world set displayname <name> <displayName>
+/vrs admin world set weight <name> <weight>
+/vrs admin world set bounds <name> <minX> <maxX> <minZ> <maxZ>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Examples:**
+```
+/vrs admin world create combat_arena "Forest Arena"
+/vrs admin world set bounds combat_arena -500 500 -500 500
+/vrs admin world enable combat_arena
+/vrs admin world list
+```
+
+---
+
+### `/vrs admin starter`
+
+Manages starter equipment options.
+
+**Subcommands:**
+```
+/vrs admin starter create <weapon|helmet> <optionId> <templateId> <group> <level> [displayName]
+/vrs admin starter delete <weapon|helmet> <optionId>
+/vrs admin starter list [weapon|helmet]
+/vrs admin starter set displayname <weapon|helmet> <optionId> <displayName>
+/vrs admin starter set template <weapon|helmet> <optionId> <templateId>
+/vrs admin starter set group <weapon|helmet> <optionId> <group>
+/vrs admin starter set level <weapon|helmet> <optionId> <level>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+---
+
+### `/vrs admin equipment`
+
+Manages equipment groups and items.
+
+**Group Subcommands:**
+```
+/vrs admin equipment group create <weapon|helmet> <groupId> [displayName]
+/vrs admin equipment group delete <weapon|helmet> <groupId>
+/vrs admin equipment group list [weapon|helmet]
+/vrs admin equipment group set displayname <weapon|helmet> <groupId> <displayName>
+```
+
+**Item Subcommands:**
+```
+/vrs admin equipment item add <weapon|helmet> <groupId> <level>
+/vrs admin equipment item remove <weapon|helmet> <groupId> <level> <index>
+/vrs admin equipment item list <weapon|helmet> <groupId> [level]
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Note:** The `item add` command captures the NBT of the item in your main hand and auto-generates a template ID.
+
+**Examples:**
+```
+# Create a sword equipment group
+/vrs admin equipment group create weapon sword "Sword Path"
+
+# Hold an iron sword, then add it to level 1
+/vrs admin equipment item add weapon sword 1
+
+# List items in the sword group
+/vrs admin equipment item list weapon sword
+```
+
+---
+
+### `/vrs admin spawner`
+
+Manages enemy archetypes.
+
+**Subcommands:**
+```
+/vrs admin spawner archetype create <id> <entityType> [weight]
+/vrs admin spawner archetype delete <id>
+/vrs admin spawner archetype list
+/vrs admin spawner archetype addcommand <id> <command...>
+/vrs admin spawner archetype removecommand <id> <index>
+/vrs admin spawner archetype reward <id> <xpBase> <xpPerLevel> <coinBase> <coinPerLevel> <permaChance>
+/vrs admin spawner archetype set weight <id> <weight>
+/vrs admin spawner archetype set entitytype <id> <entityType>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Examples:**
+```
+# Create a zombie archetype
+/vrs admin spawner archetype create zombie ZOMBIE 3.0
+
+# Add spawn command
+/vrs admin spawner archetype addcommand zombie summon zombie ${sx} ${sy} ${sz} {Tags:["vrs_mob","vrs_lvl_${enemyLevel}"]}
+
+# Set rewards
+/vrs admin spawner archetype reward zombie 10 5 1 1 0.01
+```
+
+---
+
+### `/vrs admin merchant`
+
+Manages merchant templates and trades.
+
+**Template Subcommands:**
+```
+/vrs admin merchant template create <templateId> [displayName]
+/vrs admin merchant template delete <templateId>
+/vrs admin merchant template list
+/vrs admin merchant template set displayname <templateId> <displayName>
+```
+
+**Trade Subcommands:**
+```
+/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
+/vrs admin merchant trade remove <templateId> <index>
+/vrs admin merchant trade list <templateId>
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Note:** The `trade add` command captures the NBT of the item in your main hand.
+
+**Examples:**
+```
+# Create a merchant template
+/vrs admin merchant template create potions "§dPotion Merchant"
+
+# Hold a health potion, add as trade for 25 coins, max 5 uses
+/vrs admin merchant trade add potions 25 5
+
+# List trades
+/vrs admin merchant trade list potions
+```
+
+---
+
+### `/vrs admin config`
+
+Manages runtime configuration values.
+
+**Subcommands:**
+```
+/vrs admin config get <property>
+/vrs admin config set <property> <value>
+/vrs admin config list [category]
+```
+
+**Permission:** `vrs.admin` (default: op)
+
+**Available Categories:** teleport, timing, spawning, rewards, progression, teams, merchants, upgrade, scoreboard
+
+**Examples:**
+```
+/vrs admin config list timing
+/vrs admin config get deathCooldownSeconds
+/vrs admin config set deathCooldownSeconds 120
 ```
 
 ---
 
 ## 4. Debug Commands
 
-### `/vrs debug player <player>`
+All debug commands are under `/vrs admin debug`.
+
+### `/vrs admin debug player <player>`
 
 Shows detailed player state information.
 
 **Usage:**
 ```
-/vrs debug player <player>
+/vrs admin debug player <player>
 ```
 
-**Permission:** `vrs.admin.debug` (default: op)
+**Permission:** `vrs.admin` (default: op)
 
 **Output includes:**
 - All PlayerState fields
@@ -772,40 +763,38 @@ Shows detailed player state information.
 
 ---
 
-### `/vrs debug perf`
+### `/vrs admin debug perf`
 
 Shows performance statistics.
 
 **Usage:**
 ```
-/vrs debug perf
+/vrs admin debug perf
 ```
 
-**Permission:** `vrs.admin.debug` (default: op)
+**Permission:** `vrs.admin` (default: op)
 
 **Output includes:**
-- Command queue size
-- Spawn queue size
-- Active VRS mob counts per world
-- Tick budget usage
-- Average operation times
+- Players tracked, teams, active runs
+- Memory usage
+- TPS
 
 ---
 
-### `/vrs debug templates <name> <player>`
+### `/vrs admin debug templates <name> <player>`
 
 Tests template expansion with a player's context.
 
 **Usage:**
 ```
-/vrs debug templates <templateName> <player>
+/vrs admin debug templates <templateName> <player>
 ```
 
-**Permission:** `vrs.admin.debug` (default: op)
+**Permission:** `vrs.admin` (default: op)
 
 **Examples:**
 ```
-/vrs debug templates enterCommand Steve
+/vrs admin debug templates enterCommand Steve
 ```
 
 **Output:**
@@ -816,17 +805,17 @@ Expanded: tp Steve arena_forest 100 64 100
 
 ---
 
-### `/vrs debug run <runId>`
+### `/vrs admin debug run [runId|list]`
 
 Shows detailed run state information.
 
 **Usage:**
 ```
-/vrs debug run <runId>
-/vrs debug run list
+/vrs admin debug run list
+/vrs admin debug run <runId>
 ```
 
-**Permission:** `vrs.admin.debug` (default: op)
+**Permission:** `vrs.admin` (default: op)
 
 ---
 
@@ -838,19 +827,11 @@ Shows detailed run state information.
 | `vrs.team` | Team-related commands | true |
 | `vrs.team.create` | Create teams | true |
 | `vrs.team.invite` | Invite to team | true |
-| `vrs.team.join` | Join teams | true |
+| `vrs.team.join` | Accept team invitations | true |
 | `vrs.team.leave` | Leave teams | true |
 | `vrs.team.kick` | Kick from team | true |
 | `vrs.team.disband` | Disband teams | true |
 | `vrs.admin` | All admin commands | op |
-| `vrs.admin.reload` | Reload configuration | op |
-| `vrs.admin.world` | World management | op |
-| `vrs.admin.join` | Join switch control | op |
-| `vrs.admin.force` | Force start/stop | op |
-| `vrs.admin.capture` | Item/trade capture | op |
-| `vrs.admin.debug` | Debug commands | op |
-| `vrs.admin.merchant` | Merchant control | op |
-| `vrs.admin.spawner` | Spawner control | op |
 | `vrs.cooldown.bypass` | Bypass death cooldown | op |
 
 ---
@@ -860,9 +841,8 @@ Shows detailed run state information.
 All commands support tab completion:
 
 - Player names auto-complete for team/admin commands
-- Team names auto-complete for join/force commands
+- Team names auto-complete for accept/forcestart commands
 - World names auto-complete for world commands
-- Template IDs auto-complete for capture commands
 - Subcommands auto-complete at each level
 
 ---

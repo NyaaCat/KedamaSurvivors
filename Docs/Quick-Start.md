@@ -43,8 +43,8 @@ worlds:
 **Option B: Use admin commands:**
 
 ```
-/vrs admin world add combat_arena
-/vrs admin world bounds combat_arena -500 500 -500 500
+/vrs admin world create combat_arena "Forest Arena"
+/vrs admin world set bounds combat_arena -500 500 -500 500
 /vrs admin world enable combat_arena
 ```
 
@@ -123,24 +123,29 @@ Players select their starting weapon and helmet before entering combat.
 
 #### 3a: Capture Item Templates
 
-Hold the item you want to use and run:
+First, create equipment groups, then add items to them by holding the item in your hand:
 
 ```
-/vrs item capture weapon <group> <level> <templateId>
-/vrs item capture helmet <group> <level> <templateId>
+# Create equipment groups first
+/vrs admin equipment group create weapon sword "Sword Path"
+/vrs admin equipment group create helmet light "Light Armor"
+
+# Hold the item you want to add, then run:
+/vrs admin equipment item add weapon <groupId> <level>
+/vrs admin equipment item add helmet <groupId> <level>
 ```
 
 **Examples:**
 
 ```
 # Hold an iron sword, then run:
-/vrs item capture weapon sword 1 sword_iron_1
+/vrs admin equipment item add weapon sword 1
 
 # Hold a leather helmet, then run:
-/vrs item capture helmet light 1 helmet_leather_1
+/vrs admin equipment item add helmet light 1
 ```
 
-This saves the item's NBT data to `data/items/<templateId>.yml`.
+This captures the item's NBT data and auto-generates a template ID.
 
 #### 3b: Configure Starter Options
 
@@ -392,8 +397,8 @@ At minimum, you need:
 
 1. Start the server with the plugin installed
 2. Verify configuration loaded: `/vrs reload`
-3. Check worlds are registered: `/vrs world list`
-4. Enable game entry: `/vrs join enable`
+3. Check worlds are registered: `/vrs admin world list`
+4. Enable game entry: `/vrs admin join enable`
 
 ### As a Player
 
@@ -403,7 +408,7 @@ At minimum, you need:
 
 2. **Create or join a team**:
    - Solo: `/vrs team create MyTeam`
-   - Join existing: `/vrs team join TeamName`
+   - Join existing: `/vrs team accept TeamName` (after receiving invite)
 
 3. **Ready up**: `/vrs ready`
    - All team members must be ready

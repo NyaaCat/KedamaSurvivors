@@ -23,7 +23,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Placeholder support in messages (`{key}`)
 - [x] Color code parsing (`§` and `&`)
 - [x] Clickable message components
-- [x] `MessageKey` enum for type-safe message keys
+- [x] String-based message keys with validation tests
 
 ### 1.4 Template Engine
 - [x] `TemplateEngine` - Placeholder expansion (`{key}`)
