@@ -359,39 +359,61 @@ public class StarterService {
     /**
      * Grants an upgraded equipment item to a player.
      * Used by UpgradeService when player levels up.
+     * First tries to use the templateId to get a full NBT item from AdminConfigService,
+     * then falls back to creating a basic item from material tier.
      *
      * @param player     The player to grant to
-     * @param templateId The template ID (currently unused, using material lookup)
+     * @param templateId The template ID for the item
      * @param type       "weapon" or "helmet"
      * @param group      Equipment group
      * @param level      New equipment level
      * @return The granted item, or null if failed
      */
     public ItemStack grantUpgradeItem(Player player, String templateId, String type, String group, int level) {
-        // Determine material based on level (simple tier system)
-        Material material = getMaterialForLevel(type, level);
+        ItemStack item = null;
 
-        ItemStack item = new ItemStack(material);
+        // Try to get item from template first (preserves full NBT)
+        if (templateId != null && !templateId.isEmpty()) {
+            Optional<ItemTemplateConfig> templateOpt =
+                plugin.getAdminConfigService().getItemTemplate(templateId);
+            if (templateOpt.isPresent()) {
+                item = templateOpt.get().toItemStack();
+                plugin.getLogger().info("Created upgrade item from template: " + templateId);
+            } else {
+                plugin.getLogger().warning("Item template not found for upgrade: " + templateId);
+            }
+        }
+
+        // Fallback to material-based creation if template not found
+        if (item == null) {
+            Material material = getMaterialForLevel(type, level);
+            item = new ItemStack(material);
+
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                // Set display name based on group and level
+                String displayName = getDisplayName(type, group, level);
+                meta.displayName(net.kyori.adventure.text.Component.text(displayName));
+
+                // Add lore with level info
+                java.util.List<net.kyori.adventure.text.Component> lore = new java.util.ArrayList<>();
+                lore.add(net.kyori.adventure.text.Component.text(
+                        i18n.get("item.level_indicator", "level", level)));
+                meta.lore(lore);
+                item.setItemMeta(meta);
+            }
+
+            plugin.getLogger().info("Created fallback upgrade item: " + material);
+        }
+
+        // Add PDC markers (always applied, even for template items)
         ItemMeta meta = item.getItemMeta();
-
         if (meta != null) {
-            // Set display name based on group and level
-            String displayName = getDisplayName(type, group, level);
-            meta.displayName(net.kyori.adventure.text.Component.text(displayName));
-
-            // Add lore with level info
-            java.util.List<net.kyori.adventure.text.Component> lore = new java.util.ArrayList<>();
-            lore.add(net.kyori.adventure.text.Component.text(
-                    i18n.get("item.level_indicator", "level", level)));
-            meta.lore(lore);
-
-            // Add PDC markers
             PersistentDataContainer pdc = meta.getPersistentDataContainer();
             pdc.set(keyVrsItem, PersistentDataType.BYTE, (byte) 1);
             pdc.set(keyEquipmentType, PersistentDataType.STRING, type);
             pdc.set(keyEquipmentGroup, PersistentDataType.STRING, group);
             pdc.set(keyEquipmentLevel, PersistentDataType.INTEGER, level);
-
             item.setItemMeta(meta);
         }
 
