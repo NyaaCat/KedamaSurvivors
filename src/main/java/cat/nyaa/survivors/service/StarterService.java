@@ -439,6 +439,78 @@ public class StarterService {
         return "§6" + groupName + " §7Lv." + level;
     }
 
+    /**
+     * Regrants equipment to a player based on their tracked state.
+     * Used when a player loses their equipment but needs it back.
+     *
+     * @param player      The player to regrant to
+     * @param playerState The player's state with tracked equipment info
+     */
+    public void regrantEquipmentFromState(Player player, PlayerState playerState) {
+        String weaponGroup = playerState.getWeaponGroup();
+        int weaponLevel = playerState.getWeaponLevel();
+        String helmetGroup = playerState.getHelmetGroup();
+        int helmetLevel = playerState.getHelmetLevel();
+
+        // Regrant weapon if tracked
+        if (weaponGroup != null && weaponLevel > 0) {
+            // Check if player already has weapon
+            if (!isVrsEquipment(player.getInventory().getItemInMainHand(), "weapon")) {
+                grantUpgradeItem(player, null, "weapon", weaponGroup, weaponLevel);
+                plugin.getLogger().info("Regranted weapon to " + player.getName() +
+                    ": group=" + weaponGroup + ", level=" + weaponLevel);
+            }
+        }
+
+        // Regrant helmet if tracked
+        if (helmetGroup != null && helmetLevel > 0) {
+            // Check if player already has helmet
+            if (!isVrsEquipment(player.getInventory().getHelmet(), "helmet")) {
+                grantUpgradeItem(player, null, "helmet", helmetGroup, helmetLevel);
+                plugin.getLogger().info("Regranted helmet to " + player.getName() +
+                    ": group=" + helmetGroup + ", level=" + helmetLevel);
+            }
+        }
+    }
+
+    /**
+     * Checks if a player has their tracked equipment.
+     * Returns true if both weapon and helmet match the tracked state.
+     */
+    public boolean hasTrackedEquipment(Player player, PlayerState playerState) {
+        // Check weapon
+        String weaponGroup = playerState.getWeaponGroup();
+        int weaponLevel = playerState.getWeaponLevel();
+        if (weaponGroup != null && weaponLevel > 0) {
+            ItemStack weapon = player.getInventory().getItemInMainHand();
+            if (!isVrsEquipment(weapon, "weapon")) {
+                return false;
+            }
+            String itemGroup = getEquipmentGroup(weapon);
+            int itemLevel = getEquipmentLevel(weapon);
+            if (!weaponGroup.equals(itemGroup) || weaponLevel != itemLevel) {
+                return false;
+            }
+        }
+
+        // Check helmet
+        String helmetGroup = playerState.getHelmetGroup();
+        int helmetLevel = playerState.getHelmetLevel();
+        if (helmetGroup != null && helmetLevel > 0) {
+            ItemStack helmet = player.getInventory().getHelmet();
+            if (!isVrsEquipment(helmet, "helmet")) {
+                return false;
+            }
+            String itemGroup = getEquipmentGroup(helmet);
+            int itemLevel = getEquipmentLevel(helmet);
+            if (!helmetGroup.equals(itemGroup) || helmetLevel != itemLevel) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // PDC key getters for external use
     public NamespacedKey getKeyVrsItem() { return keyVrsItem; }
     public NamespacedKey getKeyEquipmentType() { return keyEquipmentType; }

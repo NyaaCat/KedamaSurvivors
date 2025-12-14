@@ -133,7 +133,7 @@ public class TeamSubCommand implements SubCommand {
         i18n.send(player, "team.invite_sent", "player", target.getName());
         i18n.sendClickable(target, "team.invite_received",
                 "/vrs team accept " + team.getName(),
-                "player", player.getName(),
+                "inviter", player.getName(),
                 "team", team.getName());
     }
 

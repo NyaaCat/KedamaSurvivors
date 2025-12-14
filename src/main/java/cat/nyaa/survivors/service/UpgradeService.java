@@ -195,7 +195,9 @@ public class UpgradeService {
 
         EquipmentGroupConfig groupConfig = config.getWeaponGroups().get(group);
         if (groupConfig == null) {
-            i18n.send(player, "error.invalid_group");
+            plugin.getLogger().warning("Invalid weapon group '" + group + "' for player " + player.getName() +
+                    ". Available groups: " + config.getWeaponGroups().keySet());
+            i18n.send(player, "error.invalid_group", "group", String.valueOf(group));
             return;
         }
 
@@ -241,7 +243,9 @@ public class UpgradeService {
 
         EquipmentGroupConfig groupConfig = config.getHelmetGroups().get(group);
         if (groupConfig == null) {
-            i18n.send(player, "error.invalid_group");
+            plugin.getLogger().warning("Invalid helmet group '" + group + "' for player " + player.getName() +
+                    ". Available groups: " + config.getHelmetGroups().keySet());
+            i18n.send(player, "error.invalid_group", "group", String.valueOf(group));
             return;
         }
 

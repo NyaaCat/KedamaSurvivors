@@ -254,13 +254,25 @@ public class PersistenceService {
         writeJsonFile(file, dataList);
     }
 
-    private void writeJsonFile(Path file, Object data) {
+    private synchronized void writeJsonFile(Path file, Object data) {
+        // Ensure parent directory exists
+        try {
+            Files.createDirectories(file.getParent());
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to create directory for " + file.getFileName(), e);
+            return;
+        }
+
         Path tempFile = file.resolveSibling(file.getFileName() + ".tmp");
         try (Writer writer = Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8)) {
             gson.toJson(data, writer);
             writer.flush();
-            // Atomic rename
-            Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            // Try atomic move first, fall back to regular move if not supported
+            try {
+                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to save data to " + file.getFileName(), e);
             // Clean up temp file
@@ -348,6 +360,7 @@ public class PersistenceService {
         public String starterWeaponOptionId;
         public String starterHelmetOptionId;
         public long cooldownUntilMillis;
+        public int permaScore;
 
         public static PlayerStateData fromPlayerState(PlayerState player) {
             PlayerStateData data = new PlayerStateData();
@@ -366,6 +379,7 @@ public class PersistenceService {
 
             data.starterWeaponOptionId = player.getStarterWeaponOptionId();
             data.starterHelmetOptionId = player.getStarterHelmetOptionId();
+            data.permaScore = player.getPermaScore();
 
             return data;
         }
@@ -383,6 +397,7 @@ public class PersistenceService {
 
             player.setStarterWeaponOptionId(starterWeaponOptionId);
             player.setStarterHelmetOptionId(starterHelmetOptionId);
+            player.setPermaScore(permaScore);
 
             return player;
         }

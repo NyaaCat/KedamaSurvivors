@@ -189,7 +189,7 @@ error:
   weapon_first: "§c请先选择武器"
   invalid_selection: "§c无效的选择"
   invalid_option: "§c无效选项: §f{option}"
-  invalid_group: "§c无效的装备组"
+  invalid_group: "§c无效的装备组: §f{group}"
   no_items_at_level: "§c该等级没有可用物品"
 
   # 队伍
@@ -238,7 +238,7 @@ quit:
 
 team:
   # 通知
-  invite_received: "§7你收到了来自 §f{team} §7的队伍邀请 (邀请人: §f{inviter}§7)"
+  invite_received: "§7你收到了来自 §f{team} §7的队伍邀请 (邀请人: §f{inviter}§7) 点击这里加入..."
   click_to_join: "§e§n[点击加入]"
   player_joined: "§f{player} §7加入了队伍"
   player_left: "§f{player} §7离开了队伍"

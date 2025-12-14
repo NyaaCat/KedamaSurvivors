@@ -452,7 +452,11 @@ public class SpawnerService {
             Player player = Bukkit.getPlayer(playerId);
             if (player == null || !player.isOnline()) continue;
 
-            if (player.getLocation().distanceSquared(center) <= radius * radius) {
+            // Skip players in different worlds (e.g., dead players teleported to lobby)
+            Location playerLoc = player.getLocation();
+            if (!playerLoc.getWorld().equals(center.getWorld())) continue;
+
+            if (playerLoc.distanceSquared(center) <= radius * radius) {
                 Optional<PlayerState> playerStateOpt = state.getPlayer(playerId);
                 if (playerStateOpt.isPresent()) {
                     totalLevel += playerStateOpt.get().getRunLevel();  // Use runLevel
@@ -475,7 +479,11 @@ public class SpawnerService {
             Player player = Bukkit.getPlayer(playerId);
             if (player == null || !player.isOnline()) continue;
 
-            if (player.getLocation().distanceSquared(center) <= radius * radius) {
+            // Skip players in different worlds (e.g., dead players teleported to lobby)
+            Location playerLoc = player.getLocation();
+            if (!playerLoc.getWorld().equals(center.getWorld())) continue;
+
+            if (playerLoc.distanceSquared(center) <= radius * radius) {
                 count++;
             }
         }
