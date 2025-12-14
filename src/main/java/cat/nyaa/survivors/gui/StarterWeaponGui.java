@@ -120,6 +120,10 @@ public class StarterWeaponGui extends GuiHolder {
 
         // Update selection
         playerState.setStarterWeaponOptionId(optionId);
+
+        // Grant the weapon immediately
+        plugin.getStarterService().grantSingleStarterItem(player, selected, "weapon");
+
         i18n.send(player, "starter.weapon_selected", "weapon", selected.displayName);
 
         // Close GUI

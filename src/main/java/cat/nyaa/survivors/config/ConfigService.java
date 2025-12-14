@@ -2,8 +2,10 @@ package cat.nyaa.survivors.config;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.util.ConfigException;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -125,7 +127,11 @@ public class ConfigService {
     private String itemsPath;
     private String runtimePath;
 
-    // Teleport commands
+    // Teleport settings
+    private String lobbyWorld;
+    private double lobbyX;
+    private double lobbyY;
+    private double lobbyZ;
     private String prepCommand;
     private String enterCommand;
     private String respawnCommand;
@@ -314,9 +320,13 @@ public class ConfigService {
     }
 
     private void loadTeleport() {
-        prepCommand = config.getString("teleport.prepCommand", "tp ${player} world 0 64 0");
-        enterCommand = config.getString("teleport.enterCommand", "tp ${player} ${world} ${x} ${y} ${z} ${yaw} ${pitch}");
-        respawnCommand = config.getString("teleport.respawnCommand", "tp ${player} ${world} ${x} ${y} ${z}");
+        lobbyWorld = config.getString("teleport.lobbyWorld", "world");
+        lobbyX = config.getDouble("teleport.lobbyX", 0);
+        lobbyY = config.getDouble("teleport.lobbyY", 64);
+        lobbyZ = config.getDouble("teleport.lobbyZ", 0);
+        prepCommand = config.getString("teleport.prepCommand", "");
+        enterCommand = config.getString("teleport.enterCommand", "");
+        respawnCommand = config.getString("teleport.respawnCommand", "");
     }
 
     private void loadTemplates() {
@@ -575,6 +585,15 @@ public class ConfigService {
     public String getItemsPath() { return itemsPath; }
     public String getRuntimePath() { return runtimePath; }
 
+    public String getLobbyWorld() { return lobbyWorld; }
+    public double getLobbyX() { return lobbyX; }
+    public double getLobbyY() { return lobbyY; }
+    public double getLobbyZ() { return lobbyZ; }
+    public org.bukkit.Location getLobbyLocation() {
+        org.bukkit.World world = org.bukkit.Bukkit.getWorld(lobbyWorld);
+        if (world == null) world = org.bukkit.Bukkit.getWorlds().get(0);
+        return new org.bukkit.Location(world, lobbyX, lobbyY, lobbyZ);
+    }
     public String getPrepCommand() { return prepCommand; }
     public String getEnterCommand() { return enterCommand; }
     public String getRespawnCommand() { return respawnCommand; }
@@ -644,7 +663,11 @@ public class ConfigService {
 
     // ==================== Runtime Setters ====================
 
-    // Teleport commands
+    // Teleport settings
+    public void setLobbyWorld(String world) { this.lobbyWorld = world; }
+    public void setLobbyX(double x) { this.lobbyX = x; }
+    public void setLobbyY(double y) { this.lobbyY = y; }
+    public void setLobbyZ(double z) { this.lobbyZ = z; }
     public void setPrepCommand(String command) { this.prepCommand = command; }
     public void setEnterCommand(String command) { this.enterCommand = command; }
     public void setRespawnCommand(String command) { this.respawnCommand = command; }
@@ -694,6 +717,75 @@ public class ConfigService {
     public void setScoreboardTitle(String title) { this.scoreboardTitle = title; }
     public void setScoreboardUpdateInterval(int interval) { this.scoreboardUpdateInterval = interval; }
 
+    // ==================== Config Save ====================
+
+    /**
+     * Saves current configuration values to config.yml.
+     * Called after runtime changes via /vrs admin config set.
+     */
+    public void saveConfig() {
+        // Teleport settings
+        config.set("teleport.lobbyWorld", lobbyWorld);
+        config.set("teleport.lobbyX", lobbyX);
+        config.set("teleport.lobbyY", lobbyY);
+        config.set("teleport.lobbyZ", lobbyZ);
+        config.set("teleport.prepCommand", prepCommand);
+        config.set("teleport.enterCommand", enterCommand);
+        config.set("teleport.respawnCommand", respawnCommand);
+
+        // Timings
+        config.set("cooldown.deathCooldownSeconds", deathCooldownSeconds);
+        config.set("respawn.invulnerabilitySeconds", respawnInvulnerabilitySeconds);
+        config.set("disconnect.graceSeconds", disconnectGraceSeconds);
+        config.set("ready.countdownSeconds", countdownSeconds);
+
+        // Spawning
+        config.set("spawning.positioning.minSpawnDistance", minSpawnDistance);
+        config.set("spawning.positioning.maxSpawnDistance", maxSpawnDistance);
+        config.set("spawning.positioning.maxSampleAttempts", maxSampleAttempts);
+        config.set("spawning.loop.tickInterval", spawnTickInterval);
+        config.set("spawning.limits.targetMobsPerPlayer", targetMobsPerPlayer);
+        config.set("spawning.limits.maxSpawnsPerTick", maxSpawnsPerTick);
+
+        // Rewards
+        config.set("rewards.xpShare.radius", xpShareRadius);
+        config.set("rewards.xpShare.sharePercent", xpSharePercent);
+
+        // Progression
+        config.set("progression.baseXpRequired", baseXpRequired);
+        config.set("progression.xpPerLevelIncrease", xpPerLevelIncrease);
+        config.set("progression.xpMultiplierPerLevel", xpMultiplierPerLevel);
+        config.set("progression.weaponLevelWeight", weaponLevelWeight);
+        config.set("progression.helmetLevelWeight", helmetLevelWeight);
+
+        // Teams
+        config.set("teams.maxSize", maxTeamSize);
+        config.set("teams.inviteExpirySeconds", inviteExpirySeconds);
+
+        // Merchants
+        config.set("merchants.enabled", merchantsEnabled);
+        config.set("merchants.spawn.intervalSeconds", merchantSpawnInterval);
+        config.set("merchants.spawn.lifetimeSeconds", merchantLifetime);
+        config.set("merchants.spawn.minDistanceFromPlayers", merchantMinDistance);
+        config.set("merchants.spawn.maxDistanceFromPlayers", merchantMaxDistance);
+
+        // Upgrade
+        config.set("upgrade.timeoutSeconds", upgradeTimeoutSeconds);
+        config.set("upgrade.reminderIntervalSeconds", upgradeReminderIntervalSeconds);
+
+        // Scoreboard
+        config.set("scoreboard.enabled", scoreboardEnabled);
+        config.set("scoreboard.title", scoreboardTitle);
+        config.set("scoreboard.updateInterval", scoreboardUpdateInterval);
+
+        try {
+            config.save(new java.io.File(plugin.getDataFolder(), "config.yml"));
+            plugin.getLogger().info("Configuration saved to config.yml");
+        } catch (java.io.IOException e) {
+            plugin.getLogger().severe("Failed to save config.yml: " + e.getMessage());
+        }
+    }
+
     // ==================== Config Upgrade ====================
 
     /**
@@ -725,18 +817,50 @@ public class ConfigService {
         public boolean enabled;
         public double weight;
         public double minX, maxX, minZ, maxZ;
-        // Fallback spawn point used when random sampling fails
-        public Double fallbackX;
-        public Double fallbackY;
-        public Double fallbackZ;
-        public Float fallbackYaw;
-        public Float fallbackPitch;
+
+        // List of spawn points - randomly selected during run start
+        public List<SpawnPointConfig> spawnPoints = new ArrayList<>();
 
         /**
-         * Checks if a fallback spawn point is configured.
+         * Gets a random spawn point from the configured list.
+         * @param world The world to create the Location in
+         * @return A random spawn Location, or null if no spawn points configured
          */
-        public boolean hasFallbackSpawn() {
-            return fallbackX != null && fallbackY != null && fallbackZ != null;
+        public Location getRandomSpawnPoint(World world) {
+            if (spawnPoints.isEmpty()) return null;
+            SpawnPointConfig sp = spawnPoints.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(spawnPoints.size()));
+            Location loc = new Location(world, sp.x, sp.y, sp.z);
+            if (sp.yaw != null) loc.setYaw(sp.yaw);
+            if (sp.pitch != null) loc.setPitch(sp.pitch);
+            return loc;
+        }
+
+        /**
+         * Checks if this world has spawn points configured.
+         */
+        public boolean hasSpawnPoints() {
+            return !spawnPoints.isEmpty();
+        }
+    }
+
+    /**
+     * Configuration for a spawn point within a combat world.
+     */
+    public static class SpawnPointConfig {
+        public double x;
+        public double y;
+        public double z;
+        public Float yaw;
+        public Float pitch;
+
+        public SpawnPointConfig() {}
+
+        public SpawnPointConfig(double x, double y, double z, Float yaw, Float pitch) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.yaw = yaw;
+            this.pitch = pitch;
         }
     }
 

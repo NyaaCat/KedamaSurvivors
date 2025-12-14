@@ -218,19 +218,16 @@ public class DeathService {
     }
 
     /**
-     * Teleports player to the prep area.
+     * Teleports player to the lobby area.
      */
     private void teleportToPrep(Player player) {
-        String prepCommand = config.getPrepCommand();
-        if (prepCommand != null && !prepCommand.isEmpty()) {
-            // Use configured command
-            String expanded = prepCommand.replace("${player}", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), expanded);
-        } else {
-            // Fallback to world spawn
-            World world = Bukkit.getWorlds().get(0);
-            player.teleport(world.getSpawnLocation());
-        }
+        Location lobby = config.getLobbyLocation();
+        player.teleportAsync(lobby).thenAccept(success -> {
+            if (!success) {
+                // Fallback to sync teleport if async fails
+                Bukkit.getScheduler().runTask(plugin, () -> player.teleport(lobby));
+            }
+        });
     }
 
     /**

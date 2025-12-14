@@ -7,7 +7,7 @@
 #     enemyType: "minecraft:entity_type"
 #     weight: 1.0
 #     spawnCommands:
-#       - "command with ${placeholders}"
+#       - "command with {placeholders}"
 #     rewards:
 #       xpBase: 10
 #       xpPerLevel: 5
@@ -16,16 +16,16 @@
 #       permaScoreChance: 0.01
 #
 # Available placeholders for spawnCommands:
-#   ${sx}, ${sy}, ${sz} - spawn coordinates
-#   ${enemyLevel} - calculated enemy level
-#   ${player} - target player name
+#   {sx}, {sy}, {sz} - spawn coordinates
+#   {enemyLevel} - calculated enemy level
+#   {player} - target player name
 #
 # Example:
 #   zombie:
 #     enemyType: "minecraft:zombie"
 #     weight: 3.0
 #     spawnCommands:
-#       - "summon zombie ${sx} ${sy} ${sz} {Tags:[\"vrs_mob\",\"vrs_lvl_${enemyLevel}\"]}"
+#       - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\"]}"
 #     rewards:
 #       xpBase: 10
 #       xpPerLevel: 5

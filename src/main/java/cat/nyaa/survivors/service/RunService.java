@@ -7,6 +7,7 @@ import cat.nyaa.survivors.model.*;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -35,7 +36,7 @@ public class RunService {
 
     /**
      * Starts a new run for a team asynchronously.
-     * Uses async chunk loading to avoid server lag.
+     * Uses Paper's teleportAsync for async chunk loading.
      */
     public CompletableFuture<RunState> startRunAsync(TeamState team) {
         // Select a random combat world
@@ -46,40 +47,41 @@ public class RunService {
             return CompletableFuture.completedFuture(null);
         }
 
+        // Check if world has spawn points configured
+        if (!worldConfig.hasSpawnPoints()) {
+            plugin.getLogger().warning("No spawn points configured for world: " + worldConfig.name);
+            notifyTeam(team, "error.no_spawn_points");
+            resetTeamToLobby(team);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        World world = Bukkit.getWorld(worldConfig.name);
+        if (world == null) {
+            plugin.getLogger().warning("World not loaded: " + worldConfig.name);
+            notifyTeam(team, "error.no_combat_worlds");
+            resetTeamToLobby(team);
+            return CompletableFuture.completedFuture(null);
+        }
+
         // Create run state
         RunState run = state.createRun(team.getTeamId(), worldConfig.name);
+        run.start();
 
-        // Sample spawn points asynchronously
-        int spawnCount = Math.max(team.getMemberCount() * 2, 5);
+        // Initialize player states
+        for (UUID memberId : team.getMembers()) {
+            initializePlayerForRun(memberId, run);
+        }
 
-        return worldService.sampleSpawnPointsAsync(worldConfig, spawnCount)
-                .thenApply(spawnPoints -> {
-                    if (spawnPoints.isEmpty()) {
-                        notifyTeam(team, "error.no_spawn_points");
-                        state.endRun(run.getRunId());
-                        resetTeamToLobby(team);
-                        return null;
-                    }
+        // Teleport players using Paper async teleport
+        teleportTeamToRunAsync(team, run, worldConfig, world);
 
-                    run.setSpawnPoints(spawnPoints);
-                    run.start();
+        // Notify start
+        notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
 
-                    // Initialize player states
-                    for (UUID memberId : team.getMembers()) {
-                        initializePlayerForRun(memberId, run);
-                    }
+        plugin.getLogger().info("Started run " + run.getRunId() + " for team " + team.getName() +
+                " in world " + worldConfig.name);
 
-                    // Teleport players
-                    teleportTeamToRun(team, run);
-
-                    // Notify start
-                    notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
-
-                    plugin.getLogger().info("Started run " + run.getRunId() + " for team " + team.getName() +
-                            " in world " + worldConfig.name);
-
-                    return run;
-                });
+        return CompletableFuture.completedFuture(run);
     }
 
     /**
@@ -96,21 +98,24 @@ public class RunService {
             return null;
         }
 
-        // Create run state
-        RunState run = state.createRun(team.getTeamId(), worldConfig.name);
-
-        // Sample spawn points
-        int spawnCount = Math.max(team.getMemberCount() * 2, 5);
-        List<Location> spawnPoints = worldService.sampleSpawnPoints(worldConfig, spawnCount);
-
-        if (spawnPoints.isEmpty()) {
+        // Check if world has spawn points configured
+        if (!worldConfig.hasSpawnPoints()) {
+            plugin.getLogger().warning("No spawn points configured for world: " + worldConfig.name);
             notifyTeam(team, "error.no_spawn_points");
-            state.endRun(run.getRunId());
             resetTeamToLobby(team);
             return null;
         }
 
-        run.setSpawnPoints(spawnPoints);
+        World world = Bukkit.getWorld(worldConfig.name);
+        if (world == null) {
+            plugin.getLogger().warning("World not loaded: " + worldConfig.name);
+            notifyTeam(team, "error.no_combat_worlds");
+            resetTeamToLobby(team);
+            return null;
+        }
+
+        // Create run state
+        RunState run = state.createRun(team.getTeamId(), worldConfig.name);
         run.start();
 
         // Initialize player states
@@ -118,8 +123,8 @@ public class RunService {
             initializePlayerForRun(memberId, run);
         }
 
-        // Teleport players
-        teleportTeamToRun(team, run);
+        // Teleport players using Paper async teleport
+        teleportTeamToRunAsync(team, run, worldConfig, world);
 
         // Notify start
         notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
@@ -176,9 +181,11 @@ public class RunService {
     }
 
     /**
-     * Teleports all team members to the run arena.
+     * Teleports all team members to the run arena using Paper's async teleport API.
+     * This allows async chunk loading for smoother teleportation.
      */
-    private void teleportTeamToRun(TeamState team, RunState run) {
+    private void teleportTeamToRunAsync(TeamState team, RunState run,
+                                         ConfigService.CombatWorldConfig worldConfig, World world) {
         for (UUID memberId : team.getMembers()) {
             Player player = Bukkit.getPlayer(memberId);
             if (player == null) continue;
@@ -187,23 +194,40 @@ public class RunService {
             if (playerStateOpt.isEmpty()) continue;
             PlayerState playerState = playerStateOpt.get();
 
-            Location spawnPoint = run.getNextSpawnPoint();
-            if (spawnPoint != null) {
-                // Execute prep command if configured
-                executeCommand(config.getPrepCommand(), player, spawnPoint);
-
-                // Teleport
-                player.teleport(spawnPoint);
-
-                // Execute enter command if configured
-                executeCommand(config.getEnterCommand(), player, spawnPoint);
-
-                // Grant starter equipment
-                plugin.getStarterService().grantStarterEquipment(player, playerState);
-
-                // Setup scoreboard
-                plugin.getScoreboardService().setupSidebar(player);
+            // Select random spawn from configured list
+            Location spawnPoint = worldConfig.getRandomSpawnPoint(world);
+            if (spawnPoint == null) {
+                plugin.getLogger().severe("No spawn point available for player " + player.getName());
+                i18n.send(player, "error.no_spawn_points");
+                continue;
             }
+
+            // Store spawn point in run state for respawns
+            run.addSpawnPoint(spawnPoint);
+
+            // Use Paper's async teleport API for async chunk loading
+            final Location finalSpawnPoint = spawnPoint;
+            player.teleportAsync(spawnPoint).thenAccept(success -> {
+                // All post-teleport actions run on main thread
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (success) {
+                        // Execute enter command if configured (optional hooks only)
+                        executeCommand(config.getEnterCommand(), player, finalSpawnPoint);
+                    } else {
+                        // Fallback: try sync teleport if async failed
+                        plugin.getLogger().warning("Async teleport failed for " + player.getName() + ", trying sync");
+                        player.teleport(finalSpawnPoint);
+                    }
+
+                    // Starter equipment is already granted in GUI selection - just setup scoreboard
+                    plugin.getScoreboardService().setupSidebar(player);
+
+                    plugin.getLogger().info("Teleported " + player.getName() + " to " +
+                            finalSpawnPoint.getWorld().getName() + " at " +
+                            String.format("%.1f, %.1f, %.1f", finalSpawnPoint.getX(),
+                                    finalSpawnPoint.getY(), finalSpawnPoint.getZ()));
+                });
+            });
         }
     }
 

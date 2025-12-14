@@ -78,12 +78,19 @@ worlds:
     requiredHeadroom: 2
 
 # ============================================================
-# Teleport Commands
+# Teleport Settings
 # ============================================================
 teleport:
-  prepCommand: "tp ${player} world 0 64 0"
-  enterCommand: "tp ${player} ${world} ${x} ${y} ${z} ${yaw} ${pitch}"
-  respawnCommand: "tp ${player} ${world} ${x} ${y} ${z}"
+  # Lobby location - where players go when quitting or after death
+  lobbyWorld: "world"
+  lobbyX: 0
+  lobbyY: 64
+  lobbyZ: 0
+  # Optional commands - API handles teleportation, these are for extra setup only
+  # Use {player}, {world}, {x}, {y}, {z}, {yaw}, {pitch} placeholders
+  prepCommand: ""
+  enterCommand: ""
+  respawnCommand: ""
 
 # ============================================================
 # Starter Selection

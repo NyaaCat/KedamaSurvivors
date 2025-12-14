@@ -109,6 +109,14 @@ public class QuitSubCommand implements SubCommand {
         playerState.setCooldownUntilMillis(cooldownEnd);
         playerState.setMode(PlayerMode.COOLDOWN);
 
+        // Teleport to lobby
+        org.bukkit.Location lobby = plugin.getConfigService().getLobbyLocation();
+        player.teleportAsync(lobby).thenAccept(success -> {
+            if (!success) {
+                org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> player.teleport(lobby));
+            }
+        });
+
         // Remove VRS equipment
         plugin.getStarterService().removeAllVrsEquipment(player);
 

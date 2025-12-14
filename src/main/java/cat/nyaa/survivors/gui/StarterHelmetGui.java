@@ -114,6 +114,10 @@ public class StarterHelmetGui extends GuiHolder {
         }
 
         playerState.setStarterHelmetOptionId(optionId);
+
+        // Grant the helmet immediately
+        plugin.getStarterService().grantSingleStarterItem(player, selected, "helmet");
+
         i18n.send(player, "starter.helmet_selected", "helmet", selected.displayName);
 
         player.closeInventory();

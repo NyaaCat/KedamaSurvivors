@@ -2,6 +2,7 @@ package cat.nyaa.survivors.service;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.config.ItemTemplateConfig;
 import cat.nyaa.survivors.gui.StarterHelmetGui;
 import cat.nyaa.survivors.gui.StarterWeaponGui;
 import cat.nyaa.survivors.i18n.I18nService;
@@ -15,6 +16,8 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.Optional;
 
 /**
  * Service for managing starter equipment selection and granting.
@@ -89,10 +92,19 @@ public class StarterService {
         String weaponOptionId = playerState.getStarterWeaponOptionId();
         String helmetOptionId = playerState.getStarterHelmetOptionId();
 
+        plugin.getLogger().info("Granting starters for " + player.getName() +
+            " - weapon=" + weaponOptionId + ", helmet=" + helmetOptionId);
+
         if (weaponOptionId == null || helmetOptionId == null) {
+            plugin.getLogger().warning("Starter selection incomplete for " + player.getName() +
+                " - weapon=" + weaponOptionId + ", helmet=" + helmetOptionId);
             i18n.send(player, "error.select_starters_first");
             return false;
         }
+
+        // Debug: Log available starters
+        plugin.getLogger().info("Available weapons: " + config.getStarterWeapons().size() +
+            ", helmets: " + config.getStarterHelmets().size());
 
         // Find weapon config
         ConfigService.StarterOptionConfig weaponConfig = config.getStarterWeapons().stream()
@@ -108,51 +120,113 @@ public class StarterService {
 
         if (weaponConfig == null || helmetConfig == null) {
             plugin.getLogger().warning("Invalid starter selection for " + player.getName() +
-                    ": weapon=" + weaponOptionId + ", helmet=" + helmetOptionId);
+                    ": weapon=" + weaponOptionId + " (found=" + (weaponConfig != null) + ")" +
+                    ", helmet=" + helmetOptionId + " (found=" + (helmetConfig != null) + ")");
             return false;
         }
+
+        plugin.getLogger().info("Found configs - weapon: " + weaponConfig.optionId +
+            " (template=" + weaponConfig.templateId + "), helmet: " + helmetConfig.optionId +
+            " (template=" + helmetConfig.templateId + ")");
 
         // Grant weapon
         ItemStack weapon = createEquipmentItem(weaponConfig, "weapon");
         if (weapon != null) {
             grantWeapon(player, weapon);
+            plugin.getLogger().info("Granted weapon to " + player.getName() + ": " + weapon.getType());
+        } else {
+            plugin.getLogger().warning("Failed to create weapon item for " + player.getName());
         }
 
         // Grant helmet
         ItemStack helmet = createEquipmentItem(helmetConfig, "helmet");
         if (helmet != null) {
             grantHelmet(player, helmet);
+            plugin.getLogger().info("Granted helmet to " + player.getName() + ": " + helmet.getType());
+        } else {
+            plugin.getLogger().warning("Failed to create helmet item for " + player.getName());
         }
 
         return true;
     }
 
     /**
+     * Grants a single starter item immediately (for GUI selection).
+     * Removes any existing VRS item of the same type first.
+     * @param player The player to grant the item to
+     * @param option The starter option config
+     * @param type Either "weapon" or "helmet"
+     */
+    public void grantSingleStarterItem(Player player, ConfigService.StarterOptionConfig option, String type) {
+        // Remove existing VRS item of this type
+        removeVrsEquipment(player, type);
+
+        // Create and grant new item
+        ItemStack item = createEquipmentItem(option, type);
+        if (item != null) {
+            if ("weapon".equals(type)) {
+                // Directly set in slot 0 (grantWeapon would remove again which we already did)
+                player.getInventory().setItem(0, item);
+            } else if ("helmet".equals(type)) {
+                // Directly set helmet (grantHelmet would remove again which we already did)
+                player.getInventory().setHelmet(item);
+            }
+            plugin.getLogger().info("Granted " + type + " to " + player.getName() + ": " + item.getType());
+        } else {
+            plugin.getLogger().warning("Failed to create " + type + " item for " + player.getName());
+        }
+    }
+
+    /**
      * Creates an equipment item with PDC markers.
+     * First tries to use the templateId to get a full NBT item from AdminConfigService,
+     * then falls back to creating a basic item from displayMaterial.
      */
     private ItemStack createEquipmentItem(ConfigService.StarterOptionConfig option, String type) {
-        Material material = option.displayMaterial;
-        if (material == null) {
-            material = "weapon".equals(type) ? Material.IRON_SWORD : Material.IRON_HELMET;
+        ItemStack item = null;
+
+        // Try to get item from template first
+        if (option.templateId != null && !option.templateId.isEmpty()) {
+            Optional<ItemTemplateConfig> templateOpt =
+                plugin.getAdminConfigService().getItemTemplate(option.templateId);
+            if (templateOpt.isPresent()) {
+                item = templateOpt.get().toItemStack();
+                plugin.getLogger().info("Created starter item from template: " + option.templateId);
+            } else {
+                plugin.getLogger().warning("Item template not found: " + option.templateId +
+                    " for starter option: " + option.optionId);
+            }
         }
 
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-
-        if (meta != null) {
-            // Set display name
-            if (option.displayItemName != null) {
-                meta.displayName(net.kyori.adventure.text.Component.text(
-                        option.displayItemName.replace('&', '§')));
+        // Fallback to displayMaterial if template not found
+        if (item == null) {
+            Material material = option.displayMaterial;
+            if (material == null) {
+                material = "weapon".equals(type) ? Material.IRON_SWORD : Material.IRON_HELMET;
             }
+            item = new ItemStack(material);
+            plugin.getLogger().info("Created fallback starter item: " + material +
+                " for option: " + option.optionId);
 
-            // Add PDC markers
+            // Set display name from config
+            if (option.displayItemName != null) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(net.kyori.adventure.text.Component.text(
+                        option.displayItemName.replace('&', '§')));
+                    item.setItemMeta(meta);
+                }
+            }
+        }
+
+        // Add PDC markers to identify as VRS equipment
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
             PersistentDataContainer pdc = meta.getPersistentDataContainer();
             pdc.set(keyVrsItem, PersistentDataType.BYTE, (byte) 1);
             pdc.set(keyEquipmentType, PersistentDataType.STRING, type);
-            pdc.set(keyEquipmentGroup, PersistentDataType.STRING, option.group);
+            pdc.set(keyEquipmentGroup, PersistentDataType.STRING, option.group != null ? option.group : "default");
             pdc.set(keyEquipmentLevel, PersistentDataType.INTEGER, option.level);
-
             item.setItemMeta(meta);
         }
 

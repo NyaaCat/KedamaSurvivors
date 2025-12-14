@@ -31,7 +31,11 @@ public class ConfigSubCommand implements SubCommand {
 
         // Define all configurable properties
         this.properties = Map.ofEntries(
-                // Teleport commands
+                // Teleport settings
+                entry("lobbyWorld", new StringProperty(config::getLobbyWorld, config::setLobbyWorld)),
+                entry("lobbyX", new DoubleProperty(config::getLobbyX, config::setLobbyX)),
+                entry("lobbyY", new DoubleProperty(config::getLobbyY, config::setLobbyY)),
+                entry("lobbyZ", new DoubleProperty(config::getLobbyZ, config::setLobbyZ)),
                 entry("prepCommand", new StringProperty(config::getPrepCommand, config::setPrepCommand)),
                 entry("enterCommand", new StringProperty(config::getEnterCommand, config::setEnterCommand)),
                 entry("respawnCommand", new StringProperty(config::getRespawnCommand, config::setRespawnCommand)),
@@ -156,6 +160,7 @@ public class ConfigSubCommand implements SubCommand {
 
         try {
             property.setFromString(valueStr);
+            config.saveConfig();  // Persist to file immediately
             i18n.send(sender, "admin.config.property_set",
                     "property", propertyName,
                     "value", valueStr);
@@ -177,7 +182,7 @@ public class ConfigSubCommand implements SubCommand {
 
         // Group properties by category
         Map<String, List<String>> categories = Map.of(
-                "teleport", List.of("prepCommand", "enterCommand", "respawnCommand"),
+                "teleport", List.of("lobbyWorld", "lobbyX", "lobbyY", "lobbyZ", "prepCommand", "enterCommand", "respawnCommand"),
                 "timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"),
                 "spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "maxSpawnsPerTick"),
                 "rewards", List.of("xpShareRadius", "xpSharePercent"),
