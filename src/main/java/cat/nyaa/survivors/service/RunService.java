@@ -292,6 +292,9 @@ public class RunService {
         if (anchorOpt.isEmpty()) {
             // No living teammates - can't rejoin
             i18n.send(player, "error.no_teammates_alive");
+            // Reset player state back to LOBBY since rejoin failed
+            playerState.setMode(PlayerMode.LOBBY);
+            playerState.setReady(false);
             return;
         }
 
@@ -300,6 +303,9 @@ public class RunService {
 
         if (anchorPlayer == null || !anchorPlayer.isOnline()) {
             i18n.send(player, "error.no_teammates_alive");
+            // Reset player state back to LOBBY since rejoin failed
+            playerState.setMode(PlayerMode.LOBBY);
+            playerState.setReady(false);
             return;
         }
 

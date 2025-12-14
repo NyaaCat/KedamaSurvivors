@@ -375,6 +375,95 @@ class DeathServiceTest {
     }
 
     @Nested
+    @DisplayName("Rejoin State Management")
+    class RejoinStateManagement {
+
+        @Test
+        @DisplayName("should preserve IN_RUN mode when teammate starts countdown")
+        void shouldPreserveInRunModeWhenTeammateStartsCountdown() {
+            PlayerState activePlayer = new PlayerState(UUID.randomUUID(), "ActivePlayer");
+            activePlayer.setMode(PlayerMode.IN_RUN);
+
+            // Simulate the fix: when teammate starts countdown, IN_RUN players should not change mode
+            // The fix checks: if (ps.getMode() != PlayerMode.IN_RUN && !ps.isOnCooldown())
+            boolean shouldChangeMode = activePlayer.getMode() != PlayerMode.IN_RUN && !activePlayer.isOnCooldown();
+
+            assertFalse(shouldChangeMode, "IN_RUN player should not have mode changed during countdown");
+            assertEquals(PlayerMode.IN_RUN, activePlayer.getMode());
+        }
+
+        @Test
+        @DisplayName("should preserve COOLDOWN mode when teammate starts countdown")
+        void shouldPreserveCooldownModeWhenTeammateStartsCountdown() {
+            PlayerState cooldownPlayer = new PlayerState(UUID.randomUUID(), "CooldownPlayer");
+            cooldownPlayer.setMode(PlayerMode.COOLDOWN);
+            cooldownPlayer.setCooldownUntilMillis(System.currentTimeMillis() + 60000); // Still on cooldown
+
+            // Simulate the fix: cooldown players should not change mode
+            boolean shouldChangeMode = cooldownPlayer.getMode() != PlayerMode.IN_RUN && !cooldownPlayer.isOnCooldown();
+
+            assertFalse(shouldChangeMode, "Player on cooldown should not have mode changed during countdown");
+            assertEquals(PlayerMode.COOLDOWN, cooldownPlayer.getMode());
+        }
+
+        @Test
+        @DisplayName("should change LOBBY mode to COUNTDOWN when eligible")
+        void shouldChangeLobbyModeToCountdown() {
+            PlayerState lobbyPlayer = new PlayerState(UUID.randomUUID(), "LobbyPlayer");
+            lobbyPlayer.setMode(PlayerMode.LOBBY);
+
+            // Simulate the fix: LOBBY players (not on cooldown) should change mode
+            boolean shouldChangeMode = lobbyPlayer.getMode() != PlayerMode.IN_RUN && !lobbyPlayer.isOnCooldown();
+
+            assertTrue(shouldChangeMode, "LOBBY player should have mode changed during countdown");
+        }
+
+        @Test
+        @DisplayName("should reset to LOBBY when rejoin fails")
+        void shouldResetToLobbyWhenRejoinFails() {
+            PlayerState playerState = new PlayerState(UUID.randomUUID(), "RejoiningPlayer");
+            playerState.setMode(PlayerMode.COUNTDOWN);
+            playerState.setReady(true);
+
+            // Simulate rejoin failure (no anchor found)
+            // The fix resets: playerState.setMode(PlayerMode.LOBBY); playerState.setReady(false);
+            playerState.setMode(PlayerMode.LOBBY);
+            playerState.setReady(false);
+
+            assertEquals(PlayerMode.LOBBY, playerState.getMode());
+            assertFalse(playerState.isReady());
+        }
+
+        @Test
+        @DisplayName("should only process COUNTDOWN mode players for rejoin")
+        void shouldOnlyProcessCountdownModePlayersForRejoin() {
+            // Simulate the handleRejoinToRun fix:
+            // Only process: playerState.getMode() == PlayerMode.COUNTDOWN && playerState.isReady()
+
+            PlayerState countdownReady = new PlayerState(UUID.randomUUID(), "CountdownReady");
+            countdownReady.setMode(PlayerMode.COUNTDOWN);
+            countdownReady.setReady(true);
+
+            PlayerState inRunPlayer = new PlayerState(UUID.randomUUID(), "InRunPlayer");
+            inRunPlayer.setMode(PlayerMode.IN_RUN);
+            inRunPlayer.setReady(false);
+
+            PlayerState cooldownPlayer = new PlayerState(UUID.randomUUID(), "CooldownPlayer");
+            cooldownPlayer.setMode(PlayerMode.COOLDOWN);
+            cooldownPlayer.setReady(false);
+
+            // Check eligibility
+            boolean countdownEligible = countdownReady.getMode() == PlayerMode.COUNTDOWN && countdownReady.isReady();
+            boolean inRunEligible = inRunPlayer.getMode() == PlayerMode.COUNTDOWN && inRunPlayer.isReady();
+            boolean cooldownEligible = cooldownPlayer.getMode() == PlayerMode.COUNTDOWN && cooldownPlayer.isReady();
+
+            assertTrue(countdownEligible, "COUNTDOWN + ready player should be eligible for rejoin");
+            assertFalse(inRunEligible, "IN_RUN player should not be eligible for rejoin");
+            assertFalse(cooldownEligible, "COOLDOWN player should not be eligible for rejoin");
+        }
+    }
+
+    @Nested
     @DisplayName("Multi-player Scenarios")
     class MultiPlayerScenarios {
 

@@ -131,17 +131,26 @@ public class ReadyService {
         // Cancel any existing countdown
         cancelCountdown(teamId);
 
-        // Set all members to COUNTDOWN mode
+        // Set only eligible members to COUNTDOWN mode (not IN_RUN, not on cooldown)
         for (UUID memberId : team.getMembers()) {
-            state.getPlayer(memberId).ifPresent(ps -> ps.setMode(PlayerMode.COUNTDOWN));
+            state.getPlayer(memberId).ifPresent(ps -> {
+                // Don't change mode for players already in run or still on cooldown
+                if (ps.getMode() != PlayerMode.IN_RUN && !ps.isOnCooldown()) {
+                    ps.setMode(PlayerMode.COUNTDOWN);
+                }
+            });
         }
 
-        // Notify team
+        // Notify only players in countdown (not those in run or on cooldown)
         for (UUID memberId : team.getMembers()) {
-            Player member = Bukkit.getPlayer(memberId);
-            if (member != null) {
-                i18n.send(member, "ready.all_ready");
-            }
+            state.getPlayer(memberId).ifPresent(ps -> {
+                if (ps.getMode() == PlayerMode.COUNTDOWN) {
+                    Player member = Bukkit.getPlayer(memberId);
+                    if (member != null) {
+                        i18n.send(member, "ready.all_ready");
+                    }
+                }
+            });
         }
 
         // Start countdown task
@@ -291,8 +300,15 @@ public class ReadyService {
                 return;
             }
 
-            // Send countdown message
+            // Send countdown message only to players in COUNTDOWN mode
             for (UUID memberId : team.getMembers()) {
+                Optional<PlayerState> memberStateOpt = state.getPlayer(memberId);
+                if (memberStateOpt.isEmpty()) continue;
+
+                PlayerState memberState = memberStateOpt.get();
+                // Only send feedback to players who are counting down (not IN_RUN or COOLDOWN)
+                if (memberState.getMode() != PlayerMode.COUNTDOWN) continue;
+
                 Player member = Bukkit.getPlayer(memberId);
                 if (member != null) {
                     sendCountdownFeedback(member, remaining);
@@ -352,15 +368,16 @@ public class ReadyService {
         }
 
         private void handleRejoinToRun(RunState run) {
-            // Find ready players who need to rejoin (not already IN_RUN)
+            // Find ready players who need to rejoin
             for (UUID memberId : team.getMembers()) {
                 Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
                 if (playerStateOpt.isEmpty()) continue;
 
                 PlayerState playerState = playerStateOpt.get();
 
-                // Only rejoin players who are ready but not already in run
-                if (playerState.isReady() && playerState.getMode() != PlayerMode.IN_RUN) {
+                // Only rejoin players who are in COUNTDOWN mode (properly set to rejoin)
+                // This filters out IN_RUN players and COOLDOWN players who weren't eligible
+                if (playerState.getMode() == PlayerMode.COUNTDOWN && playerState.isReady()) {
                     Player player = Bukkit.getPlayer(memberId);
                     if (player != null && player.isOnline()) {
                         plugin.getRunService().rejoinPlayerToRun(player, playerState, run);
