@@ -2,6 +2,8 @@
 
 A Vampire Survivors-style roguelite minigame plugin for Paper/Spigot 1.21.8+, blending elements of Vampire Survivors and CS: Arms Race.
 
+**[Quick Start Guide](Docs/Quick-Start.md)** | [Configuration Reference](Docs/Configuration-Reference.md) | [Commands Reference](Docs/Commands-Reference.md)
+
 ## Overview
 
 KedamaSurvivors is a standalone Paper plugin that provides a complete roguelite game loop:
