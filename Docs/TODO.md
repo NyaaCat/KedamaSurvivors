@@ -168,17 +168,17 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 ## Phase 5: Gameplay Systems
 
 ### 5.1 Spawner Service
-- [ ] `SpawnerService` class
-- [ ] Spawn loop with tick interval
-- [ ] Phase A: Main thread context collection
-- [ ] Phase B: Async spawn planning
-- [ ] Phase C: Main thread command execution
-- [ ] Enemy level calculation (avg level, player count, time)
-- [ ] Archetype weighted selection
-- [ ] Spawn position sampling
-- [ ] Mob count tracking with `vrs_mob` tag
-- [ ] Per-tick spawn/command budgets
-- [ ] Pause/resume per world
+- [x] `SpawnerService` class
+- [x] Spawn loop with tick interval
+- [x] Phase A: Main thread context collection
+- [x] Phase B: Async spawn planning
+- [x] Phase C: Main thread command execution
+- [x] Enemy level calculation (avg level, player count, time)
+- [x] Archetype weighted selection
+- [x] Spawn position sampling
+- [x] Mob count tracking with `vrs_mob` tag
+- [x] Per-tick spawn/command budgets
+- [x] Pause/resume per world
 
 ### 5.2 Reward Service
 - [x] `RewardService` class
@@ -211,12 +211,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Team wipe check on death
 
 ### 5.5 Merchant Service
-- [ ] `MerchantService` class
-- [ ] Merchant spawn location sampling
-- [ ] Villager entity creation and configuration
+- [x] `MerchantService` class
+- [x] Merchant spawn location sampling
+- [x] Villager entity creation and configuration
 - [ ] Trade recipe building from templates
-- [ ] Merchant rotation/despawn scheduling
-- [ ] Merchant clearing
+- [x] Merchant rotation/despawn scheduling
+- [x] Merchant clearing
 
 ---
 
@@ -302,21 +302,21 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 ## Phase 9: Global Systems
 
 ### 9.1 Join Switch Service
-- [ ] `JoinSwitchService` class
-- [ ] Enable/disable toggle
-- [ ] Grace eject initiation for active players
-- [ ] Grace warning messages
-- [ ] Eject execution after grace period
+- [x] `JoinSwitchService` class
+- [x] Enable/disable toggle
+- [x] Grace eject initiation for active players
+- [x] Grace warning messages
+- [x] Eject execution after grace period
 
 ### 9.2 Disconnect Checker
-- [ ] `DisconnectChecker` runnable
-- [ ] Periodic check for expired grace periods
-- [ ] Death penalty application for expired players
-- [ ] Team wipe check after expiry
+- [x] `DisconnectChecker` runnable
+- [x] Periodic check for expired grace periods
+- [x] Death penalty application for expired players
+- [x] Team wipe check after expiry
 
 ### 9.3 Cooldown Display
-- [ ] Actionbar cooldown display
-- [ ] Periodic update task
+- [x] Actionbar cooldown display
+- [x] Periodic update task
 
 ---
 
@@ -377,15 +377,15 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 2. Core Data Models | Complete | 100% |
 | 3. Commands | Complete | 100% |
 | 4. Game Services | In Progress | 95% |
-| 5. Gameplay Systems | In Progress | 75% |
+| 5. Gameplay Systems | Complete | 100% |
 | 6. UI & Display | Complete | 100% |
 | 7. Event Listeners | Complete | 100% |
 | 8. Persistence | Not Started | 0% |
-| 9. Global Systems | Not Started | 0% |
+| 9. Global Systems | Complete | 100% |
 | 10. Testing | In Progress | 70% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~70%**
+**Overall: ~85%**
 
 ---
 

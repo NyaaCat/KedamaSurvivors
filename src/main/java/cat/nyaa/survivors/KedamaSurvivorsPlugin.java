@@ -11,10 +11,15 @@ import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.RunService;
+import cat.nyaa.survivors.service.JoinSwitchService;
+import cat.nyaa.survivors.service.MerchantService;
+import cat.nyaa.survivors.service.SpawnerService;
 import cat.nyaa.survivors.service.StarterService;
 import cat.nyaa.survivors.service.StateService;
 import cat.nyaa.survivors.service.UpgradeService;
 import cat.nyaa.survivors.service.WorldService;
+import cat.nyaa.survivors.task.CooldownDisplay;
+import cat.nyaa.survivors.task.DisconnectChecker;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -41,6 +46,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private RewardService rewardService;
     private UpgradeService upgradeService;
     private DeathService deathService;
+    private SpawnerService spawnerService;
+    private JoinSwitchService joinSwitchService;
+    private DisconnectChecker disconnectChecker;
+    private CooldownDisplay cooldownDisplay;
+    private MerchantService merchantService;
 
     @Override
     public void onEnable() {
@@ -106,6 +116,21 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Death service for death/respawn handling
         deathService = new DeathService(this);
+
+        // Spawner service for enemy spawning
+        spawnerService = new SpawnerService(this);
+
+        // Join switch service for global entry control
+        joinSwitchService = new JoinSwitchService(this);
+
+        // Disconnect checker for grace period expiry
+        disconnectChecker = new DisconnectChecker(this);
+
+        // Cooldown display for actionbar
+        cooldownDisplay = new CooldownDisplay(this);
+
+        // Merchant service for villager traders
+        merchantService = new MerchantService(this);
     }
 
     private void registerCommands() {
@@ -130,6 +155,26 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         if (scoreboardService != null) {
             scoreboardService.start();
         }
+
+        // Start spawner service
+        if (spawnerService != null) {
+            spawnerService.start();
+        }
+
+        // Start disconnect checker
+        if (disconnectChecker != null) {
+            disconnectChecker.start();
+        }
+
+        // Start cooldown display
+        if (cooldownDisplay != null) {
+            cooldownDisplay.start();
+        }
+
+        // Start merchant service
+        if (merchantService != null) {
+            merchantService.start();
+        }
     }
 
     private void stopTasks() {
@@ -141,6 +186,31 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Stop scoreboard service
         if (scoreboardService != null) {
             scoreboardService.stop();
+        }
+
+        // Stop spawner service
+        if (spawnerService != null) {
+            spawnerService.stop();
+        }
+
+        // Stop disconnect checker
+        if (disconnectChecker != null) {
+            disconnectChecker.stop();
+        }
+
+        // Stop cooldown display
+        if (cooldownDisplay != null) {
+            cooldownDisplay.stop();
+        }
+
+        // Shutdown join switch service
+        if (joinSwitchService != null) {
+            joinSwitchService.shutdown();
+        }
+
+        // Stop merchant service
+        if (merchantService != null) {
+            merchantService.stop();
         }
 
         // Cancel all scheduled tasks
@@ -215,5 +285,17 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public DeathService getDeathService() {
         return deathService;
+    }
+
+    public SpawnerService getSpawnerService() {
+        return spawnerService;
+    }
+
+    public JoinSwitchService getJoinSwitchService() {
+        return joinSwitchService;
+    }
+
+    public MerchantService getMerchantService() {
+        return merchantService;
     }
 }
