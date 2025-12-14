@@ -111,6 +111,8 @@ public class PlayerListener implements Listener {
 
             Optional<RunState> runOpt = state.getTeamRun(team.getTeamId());
             if (runOpt.isPresent() && runOpt.get().isActive()) {
+                RunState run = runOpt.get();
+
                 // Restore to run
                 playerState.setMode(PlayerMode.IN_RUN);
                 playerState.setDisconnectedAtMillis(0);
@@ -118,6 +120,15 @@ public class PlayerListener implements Listener {
                 // Apply invulnerability
                 long invulEnd = System.currentTimeMillis() + config.getRespawnInvulnerabilityMs();
                 playerState.setInvulnerableUntilMillis(invulEnd);
+
+                // Teleport player back to run area
+                Location spawnPoint = run.getRandomSpawnPoint();
+                if (spawnPoint != null) {
+                    player.teleport(spawnPoint);
+                }
+
+                // Setup scoreboard
+                plugin.getScoreboardService().setupSidebar(player);
 
                 i18n.send(player, "disconnect.reconnected");
 
@@ -131,7 +142,6 @@ public class PlayerListener implements Listener {
                     }
                 }
 
-                // TODO: Teleport player back to run area
                 return;
             }
         }

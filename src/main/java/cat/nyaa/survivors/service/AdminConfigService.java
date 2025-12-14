@@ -92,10 +92,16 @@ public class AdminConfigService {
         loadItemTemplates();
         loadMerchants();
 
+        // Sync loaded data to ConfigService for runtime use
+        updateConfigService();
+
         plugin.getLogger().info("Loaded " + weaponGroups.size() + " weapon groups, " +
                 helmetGroups.size() + " helmet groups, " +
                 itemTemplates.size() + " item templates, " +
                 archetypes.size() + " archetypes, " +
+                starterWeapons.size() + " starter weapons, " +
+                starterHelmets.size() + " starter helmets, " +
+                combatWorlds.size() + " combat worlds, " +
                 merchantTemplates.size() + " merchant templates");
     }
 
@@ -424,7 +430,7 @@ public class AdminConfigService {
      */
     public void reload() {
         loadAll();
-        updateConfigService();
+        // updateConfigService() is called inside loadAll()
     }
 
     private void loadEquipmentGroups() {
@@ -810,6 +816,8 @@ public class AdminConfigService {
         configService.updateWeaponGroups(weaponGroups);
         configService.updateHelmetGroups(helmetGroups);
         configService.updateEnemyArchetypes(archetypes);
+        configService.updateCombatWorlds(combatWorlds);
+        configService.updateStarters(starterWeapons, starterHelmets);
     }
 
     // ==================== Equipment Group Set Operations ====================
