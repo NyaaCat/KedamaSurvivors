@@ -1,0 +1,345 @@
+package cat.nyaa.survivors.service;
+
+import cat.nyaa.survivors.KedamaSurvivorsPlugin;
+import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.i18n.I18nService;
+import cat.nyaa.survivors.model.PlayerMode;
+import cat.nyaa.survivors.model.PlayerState;
+import cat.nyaa.survivors.model.TeamState;
+import org.bukkit.Bukkit;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.*;
+
+/**
+ * Manages player ready state and team countdown.
+ */
+public class ReadyService {
+
+    private final KedamaSurvivorsPlugin plugin;
+    private final ConfigService config;
+    private final I18nService i18n;
+    private final StateService state;
+
+    // Active countdowns per team
+    private final Map<UUID, CountdownTask> activeCountdowns = new HashMap<>();
+
+    public ReadyService(KedamaSurvivorsPlugin plugin) {
+        this.plugin = plugin;
+        this.config = plugin.getConfigService();
+        this.i18n = plugin.getI18nService();
+        this.state = plugin.getStateService();
+    }
+
+    /**
+     * Toggles ready state for a player.
+     * @return true if player is now ready, false if unready
+     */
+    public boolean toggleReady(Player player) {
+        UUID playerId = player.getUniqueId();
+        PlayerState playerState = state.getOrCreatePlayer(playerId, player.getName());
+
+        // Validate eligibility
+        if (!canReady(player, playerState)) {
+            return false;
+        }
+
+        boolean wasReady = playerState.isReady();
+        boolean isNowReady = !wasReady;
+
+        playerState.setReady(isNowReady);
+
+        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
+        if (teamOpt.isPresent()) {
+            TeamState team = teamOpt.get();
+            team.setReady(playerId, isNowReady);
+
+            if (isNowReady) {
+                notifyTeam(team, player, true);
+                checkAndStartCountdown(team);
+            } else {
+                notifyTeam(team, player, false);
+                cancelCountdown(team.getTeamId());
+            }
+        }
+
+        return isNowReady;
+    }
+
+    /**
+     * Checks if a player can become ready.
+     */
+    public boolean canReady(Player player, PlayerState playerState) {
+        // Must be in lobby mode
+        if (playerState.getMode() != PlayerMode.LOBBY) {
+            i18n.send(player, "error.not_in_lobby");
+            return false;
+        }
+
+        // Must not be on cooldown
+        if (playerState.isOnCooldown()) {
+            i18n.send(player, "error.on_cooldown", "seconds", playerState.getCooldownRemainingSeconds());
+            return false;
+        }
+
+        // Must be in a team
+        if (!state.isInTeam(player.getUniqueId())) {
+            i18n.send(player, "error.not_in_team");
+            return false;
+        }
+
+        // Must have selected starters
+        if (!playerState.hasSelectedStarters()) {
+            i18n.send(player, "error.select_starters_first");
+            return false;
+        }
+
+        // Global join must be enabled
+        if (!config.isJoinEnabled()) {
+            i18n.send(player, "error.join_disabled");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks if all team members are ready and starts countdown if so.
+     */
+    private void checkAndStartCountdown(TeamState team) {
+        if (!team.isAllReady()) {
+            return;
+        }
+
+        // Already counting down?
+        if (activeCountdowns.containsKey(team.getTeamId())) {
+            return;
+        }
+
+        startCountdown(team);
+    }
+
+    /**
+     * Starts countdown for a team.
+     */
+    public void startCountdown(TeamState team) {
+        UUID teamId = team.getTeamId();
+
+        // Cancel any existing countdown
+        cancelCountdown(teamId);
+
+        // Set all members to COUNTDOWN mode
+        for (UUID memberId : team.getMembers()) {
+            state.getPlayer(memberId).ifPresent(ps -> ps.setMode(PlayerMode.COUNTDOWN));
+        }
+
+        // Notify team
+        for (UUID memberId : team.getMembers()) {
+            Player member = Bukkit.getPlayer(memberId);
+            if (member != null) {
+                i18n.send(member, "ready.all_ready");
+            }
+        }
+
+        // Start countdown task
+        int seconds = config.getCountdownSeconds();
+        CountdownTask task = new CountdownTask(team, seconds);
+        activeCountdowns.put(teamId, task);
+        task.start();
+    }
+
+    /**
+     * Cancels countdown for a team.
+     */
+    public void cancelCountdown(UUID teamId) {
+        CountdownTask task = activeCountdowns.remove(teamId);
+        if (task != null) {
+            task.cancel();
+
+            // Reset members to READY mode (or LOBBY if not ready)
+            state.getTeam(teamId).ifPresent(team -> {
+                for (UUID memberId : team.getMembers()) {
+                    state.getPlayer(memberId).ifPresent(ps -> {
+                        if (ps.getMode() == PlayerMode.COUNTDOWN) {
+                            ps.setMode(ps.isReady() ? PlayerMode.READY : PlayerMode.LOBBY);
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    /**
+     * Forces a team to start immediately (admin command).
+     */
+    public void forceStart(TeamState team) {
+        cancelCountdown(team.getTeamId());
+
+        // Set all members as ready
+        for (UUID memberId : team.getMembers()) {
+            state.getPlayer(memberId).ifPresent(ps -> {
+                ps.setReady(true);
+                ps.setMode(PlayerMode.COUNTDOWN);
+            });
+            team.setReady(memberId, true);
+        }
+
+        // Start with 0-second countdown (immediate)
+        CountdownTask task = new CountdownTask(team, 0);
+        activeCountdowns.put(team.getTeamId(), task);
+        task.start();
+    }
+
+    /**
+     * Handles player disconnect during countdown.
+     */
+    public void handleDisconnect(UUID playerId) {
+        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
+        if (teamOpt.isPresent()) {
+            TeamState team = teamOpt.get();
+            if (activeCountdowns.containsKey(team.getTeamId())) {
+                cancelCountdown(team.getTeamId());
+
+                // Notify team
+                for (UUID memberId : team.getMembers()) {
+                    if (!memberId.equals(playerId)) {
+                        Player member = Bukkit.getPlayer(memberId);
+                        if (member != null) {
+                            i18n.send(member, "countdown.cancelled_disconnect");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void notifyTeam(TeamState team, Player readyPlayer, boolean isReady) {
+        String msgKey = isReady ? "ready.teammate_ready" : "ready.teammate_unready";
+
+        for (UUID memberId : team.getMembers()) {
+            if (!memberId.equals(readyPlayer.getUniqueId())) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member != null) {
+                    i18n.send(member, msgKey, "player", readyPlayer.getName());
+                }
+            }
+        }
+    }
+
+    /**
+     * Clears all countdowns (for shutdown).
+     */
+    public void clearAll() {
+        for (CountdownTask task : activeCountdowns.values()) {
+            task.cancel();
+        }
+        activeCountdowns.clear();
+    }
+
+    /**
+     * Checks if a team is currently counting down.
+     */
+    public boolean isCountingDown(UUID teamId) {
+        return activeCountdowns.containsKey(teamId);
+    }
+
+    /**
+     * Gets remaining countdown seconds for a team.
+     */
+    public int getRemainingSeconds(UUID teamId) {
+        CountdownTask task = activeCountdowns.get(teamId);
+        return task != null ? task.remaining : 0;
+    }
+
+    // ==================== Countdown Task ====================
+
+    private class CountdownTask implements Runnable {
+        private final TeamState team;
+        private int remaining;
+        private BukkitTask bukkitTask;
+
+        CountdownTask(TeamState team, int seconds) {
+            this.team = team;
+            this.remaining = seconds;
+        }
+
+        void start() {
+            if (remaining <= 0) {
+                // Immediate start
+                onComplete();
+            } else {
+                // Schedule repeating task
+                bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, this, 0L, 20L);
+            }
+        }
+
+        void cancel() {
+            if (bukkitTask != null) {
+                bukkitTask.cancel();
+                bukkitTask = null;
+            }
+        }
+
+        @Override
+        public void run() {
+            if (remaining <= 0) {
+                cancel();
+                onComplete();
+                return;
+            }
+
+            // Send countdown message
+            for (UUID memberId : team.getMembers()) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member != null) {
+                    sendCountdownFeedback(member, remaining);
+                }
+            }
+
+            remaining--;
+        }
+
+        private void sendCountdownFeedback(Player player, int seconds) {
+            // Actionbar
+            if (config.isShowActionBar()) {
+                i18n.sendActionBar(player, "countdown.actionbar", "seconds", seconds);
+            }
+
+            // Title on specific seconds
+            if (config.isShowTitle() && (seconds <= 3 || seconds == 5 || seconds == 10)) {
+                i18n.sendTitle(player, "countdown.title", "countdown.subtitle",
+                        5, 15, 5, "seconds", seconds);
+            }
+
+            // Sound
+            Sound sound = config.getCountdownSound();
+            if (sound != null) {
+                float pitch = config.getCountdownSoundPitch();
+                player.playSound(player.getLocation(), sound, 1.0f, pitch);
+            }
+        }
+
+        private void onComplete() {
+            activeCountdowns.remove(team.getTeamId());
+
+            // Notify completion
+            for (UUID memberId : team.getMembers()) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member != null) {
+                    i18n.send(member, "countdown.starting");
+
+                    // Play teleport sound
+                    Sound teleportSound = config.getTeleportSound();
+                    if (teleportSound != null) {
+                        member.playSound(member.getLocation(), teleportSound, 1.0f, 1.0f);
+                    }
+                }
+            }
+
+            // Start the run
+            plugin.getRunService().startRun(team);
+        }
+    }
+}

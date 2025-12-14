@@ -128,39 +128,39 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [ ] Auto-open helmet after weapon
 
 ### 4.2 Ready & Countdown Service
-- [ ] `ReadyService` class
-- [ ] Ready toggle logic
-- [ ] Eligibility checks (cooldown, selections, join switch)
-- [ ] Team ready aggregation
-- [ ] Countdown task with title/actionbar/sound
-- [ ] Countdown cancellation on unready
+- [x] `ReadyService` class
+- [x] Ready toggle logic
+- [x] Eligibility checks (cooldown, selections, join switch)
+- [x] Team ready aggregation
+- [x] Countdown task with title/actionbar/sound
+- [x] Countdown cancellation on unready
 
 ### 4.3 World Service
-- [ ] `WorldService` class
-- [ ] Combat world registry from config
-- [ ] Weighted random world selection
-- [ ] Safe spawn location sampling
-- [ ] World bounds validation
-- [ ] Enable/disable without affecting active runs
+- [x] `WorldService` class
+- [x] Combat world registry from config
+- [x] Weighted random world selection
+- [x] Safe spawn location sampling
+- [x] World bounds validation
+- [x] Enable/disable without affecting active runs
 
 ### 4.4 Team Service
-- [ ] `TeamService` class
-- [ ] Create team
-- [ ] Invite with expiry
-- [ ] Join team validation
-- [ ] Leave team handling
-- [ ] Kick player
-- [ ] Disband team
-- [ ] Ownership transfer
-- [ ] Disconnect handling
-- [ ] Reconnect handling
-- [ ] Team wipe detection
+- [x] `TeamService` class (integrated into StateService)
+- [x] Create team
+- [x] Invite with expiry
+- [x] Join team validation
+- [x] Leave team handling
+- [x] Kick player
+- [x] Disband team
+- [x] Ownership transfer
+- [x] Disconnect handling
+- [x] Reconnect handling
+- [x] Team wipe detection
 
 ### 4.5 Run Lifecycle Service
-- [ ] `RunService` class
-- [ ] Run creation and initialization
-- [ ] Player teleportation to arena
-- [ ] Run ending (normal, wipe, force)
+- [x] `RunService` class
+- [x] Run creation and initialization
+- [x] Player teleportation to arena
+- [x] Run ending (normal, wipe, force)
 - [ ] Grace eject handling
 
 ---
@@ -375,7 +375,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 1. Foundation | In Progress | 85% |
 | 2. Core Data Models | Complete | 100% |
 | 3. Commands | In Progress | 75% |
-| 4. Game Services | Not Started | 0% |
+| 4. Game Services | In Progress | 80% |
 | 5. Gameplay Systems | Not Started | 0% |
 | 6. UI & Display | In Progress | 60% |
 | 7. Event Listeners | In Progress | 50% |
@@ -384,7 +384,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 10. Testing | In Progress | 40% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~35%**
+**Overall: ~45%**
 
 ---
 

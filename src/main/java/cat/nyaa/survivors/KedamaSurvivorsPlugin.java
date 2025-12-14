@@ -5,7 +5,10 @@ import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
+import cat.nyaa.survivors.service.ReadyService;
+import cat.nyaa.survivors.service.RunService;
 import cat.nyaa.survivors.service.StateService;
+import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -25,6 +28,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private StateService stateService;
     private TemplateEngine templateEngine;
     private ScoreboardService scoreboardService;
+    private WorldService worldService;
+    private ReadyService readyService;
+    private RunService runService;
 
     @Override
     public void onEnable() {
@@ -69,6 +75,15 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Scoreboard service for sidebar display
         scoreboardService = new ScoreboardService(this);
+
+        // World service for combat world management (must be before ReadyService and RunService)
+        worldService = new WorldService(this);
+
+        // Ready service for ready/countdown logic
+        readyService = new ReadyService(this);
+
+        // Run service for run lifecycle management
+        runService = new RunService(this);
     }
 
     private void registerCommands() {
@@ -94,6 +109,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     }
 
     private void stopTasks() {
+        // Clear ready service countdowns
+        if (readyService != null) {
+            readyService.clearAll();
+        }
+
         // Stop scoreboard service
         if (scoreboardService != null) {
             scoreboardService.stop();
@@ -143,5 +163,17 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public ScoreboardService getScoreboardService() {
         return scoreboardService;
+    }
+
+    public WorldService getWorldService() {
+        return worldService;
+    }
+
+    public ReadyService getReadyService() {
+        return readyService;
+    }
+
+    public RunService getRunService() {
+        return runService;
     }
 }
