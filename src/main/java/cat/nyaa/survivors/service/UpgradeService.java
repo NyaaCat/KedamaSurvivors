@@ -153,9 +153,9 @@ public class UpgradeService {
                 ? i18n.get(defenseKey, "amount", permaReward, "perma_name", permaName)
                 : i18n.get(defenseKey);
 
-        Component powerComponent = LEGACY_SERIALIZER.deserialize(config.getPrefix() + powerText)
+        Component powerComponent = LEGACY_SERIALIZER.deserialize(i18n.getPrefix() + powerText)
                 .clickEvent(ClickEvent.runCommand("/vrs upgrade power"));
-        Component defenseComponent = LEGACY_SERIALIZER.deserialize(config.getPrefix() + defenseText)
+        Component defenseComponent = LEGACY_SERIALIZER.deserialize(i18n.getPrefix() + defenseText)
                 .clickEvent(ClickEvent.runCommand("/vrs upgrade defense"));
 
         player.sendMessage(powerComponent);

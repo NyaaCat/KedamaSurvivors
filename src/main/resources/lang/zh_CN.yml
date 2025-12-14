@@ -164,6 +164,7 @@ error:
   player_only: "§c该命令只能由玩家执行"
   specify_player: "§c请指定玩家"
   invalid_number: "§c无效数字: §f{value}"
+  generic: "§c发生错误"
 
   # 状态检查
   not_in_lobby: "§c你必须在准备区才能执行此操作"
@@ -212,6 +213,7 @@ error:
 
   # 世界
   no_combat_worlds: "§c没有可用的战斗世界"
+  no_spawn_points: "§c找不到有效的出生点"
   world_not_found: "§c找不到世界 §f{world}"
   world_not_loaded: "§c世界 §f{world} §c未加载"
 
@@ -411,6 +413,7 @@ admin:
     equipment: "§f/vrs admin equipment §8- §7装备组管理"
     spawner: "§f/vrs admin spawner §8- §7刷怪器原型管理"
     merchant: "§f/vrs admin merchant §8- §7商人模板管理"
+    config: "§f/vrs admin config §8- §7配置管理"
 
   # 状态
   status:
@@ -466,7 +469,7 @@ admin:
     exists: "§c世界配置 §f{name} §c已存在"
     deleted: "§a世界配置 §f{name} §a已删除"
     not_found: "§c找不到世界配置: §f{name}"
-    world_not_loaded: "§c世界 §f{name} §c未在服务器加载"
+    world_not_loaded: "§c世界 §f{world} §c未在服务器加载"
     enabled: "§a世界 §f{name} §a已启用"
     disabled: "§a世界 §f{name} §a已禁用"
     displayname_set: "§a世界 §f{name} §a显示名称已设置为: §f{displayName}"
@@ -607,6 +610,21 @@ admin:
     trade_list_entry: "§7[{index}] §f{resultItem} §7x{resultAmount} §8- §7价格: §e{costAmount} §7金币 §8(§7最大 §f{maxUses} §7次§8)"
     displayname_set: "§a商人模板 §f{templateId} §a显示名称已设置为: §f{displayName}"
 
+  # 配置管理
+  config:
+    help:
+      header: "§8========== §6配置管理命令 §8=========="
+      get: "§f/vrs admin config get <property> §8- §7获取配置值"
+      set: "§f/vrs admin config set <property> <value> §8- §7设置配置值"
+      list: "§f/vrs admin config list [category] §8- §7列出配置项"
+    property_not_found: "§c找不到配置项: §f{property}"
+    property_value: "§7{property} §8= §f{value} §8(§7{type}§8)"
+    property_set: "§a已设置 §f{property} §a为: §f{value}"
+    invalid_value: "§c无效的值 §f{value} §8(§7需要: {type}§8)"
+    list_header: "§8========== §6配置项列表 §8=========="
+    list_entry: "§7- §f{property} §8= §f{value} §8(§7{type}§8)"
+    categories: "§7分类: §f{categories}"
+
 # ============================================================
 # 调试信息
 # ============================================================
@@ -643,6 +661,7 @@ help:
 countdown:
   title: "§e{seconds}"
   subtitle: "§7准备进入战斗"
+  actionbar: "§e传送倒计时 §f{seconds}s"
   final_title: "§a开始!"
   final_subtitle: "§7祝你好运"
   cancelled: "§7倒计时取消: §f{player} §7未准备"

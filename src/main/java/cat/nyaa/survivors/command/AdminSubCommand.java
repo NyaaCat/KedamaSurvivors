@@ -1,6 +1,7 @@
 package cat.nyaa.survivors.command;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
+import cat.nyaa.survivors.command.admin.ConfigSubCommand;
 import cat.nyaa.survivors.command.admin.EquipmentSubCommand;
 import cat.nyaa.survivors.command.admin.MerchantSubCommand;
 import cat.nyaa.survivors.command.admin.SpawnerSubCommand;
@@ -42,6 +43,7 @@ public class AdminSubCommand implements SubCommand {
     private final TemplateEngine templateEngine;
 
     // Nested subcommand handlers
+    private ConfigSubCommand configSubCommand;
     private EquipmentSubCommand equipmentSubCommand;
     private SpawnerSubCommand spawnerSubCommand;
     private MerchantSubCommand merchantSubCommand;
@@ -63,6 +65,9 @@ public class AdminSubCommand implements SubCommand {
      * Lazily initializes nested subcommands. Called after AdminConfigService is ready.
      */
     private void initSubCommands() {
+        if (configSubCommand == null) {
+            configSubCommand = new ConfigSubCommand(plugin);
+        }
         if (equipmentSubCommand == null) {
             equipmentSubCommand = new EquipmentSubCommand(plugin);
         }
@@ -118,6 +123,10 @@ public class AdminSubCommand implements SubCommand {
                 initSubCommands();
                 starterSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
             }
+            case "config" -> {
+                initSubCommands();
+                configSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
             default -> i18n.send(sender, "error.unknown_command", "command", action);
         }
     }
@@ -137,6 +146,7 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.help.equipment");
         i18n.send(sender, "admin.help.spawner");
         i18n.send(sender, "admin.help.merchant");
+        i18n.send(sender, "admin.help.config");
     }
 
     private void showStatus(CommandSender sender) {
@@ -478,7 +488,7 @@ public class AdminSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "starter", "debug", "equipment", "spawner", "merchant")) {
+            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "starter", "debug", "equipment", "spawner", "merchant", "config")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
@@ -501,6 +511,9 @@ public class AdminSubCommand implements SubCommand {
             } else if (action.equals("world")) {
                 initSubCommands();
                 return worldSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("config")) {
+                initSubCommands();
+                return configSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
             }
         }
 

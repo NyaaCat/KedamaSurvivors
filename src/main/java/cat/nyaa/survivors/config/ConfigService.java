@@ -26,7 +26,6 @@ public class ConfigService {
 
     // Cached config values
     private String language;
-    private String prefix;
     private boolean verbose;
 
     // Join switch
@@ -168,6 +167,10 @@ public class ConfigService {
      */
     public void loadConfig() {
         plugin.saveDefaultConfig();
+
+        // Upgrade config with any missing entries from defaults
+        upgradeConfigFile();
+
         plugin.reloadConfig();
         config = plugin.getConfig();
 
@@ -195,7 +198,6 @@ public class ConfigService {
 
     private void loadPluginSettings() {
         language = config.getString("plugin.language", "zh_CN");
-        prefix = config.getString("plugin.prefix", "§8[§6武§e生§8] §7");
         verbose = config.getBoolean("plugin.verbose", false);
     }
 
@@ -482,7 +484,6 @@ public class ConfigService {
     // ==================== Getters ====================
 
     public String getLanguage() { return language; }
-    public String getPrefix() { return prefix; }
     public boolean isVerbose() { return verbose; }
 
     public boolean isJoinEnabled() { return joinEnabled; }
@@ -639,6 +640,81 @@ public class ConfigService {
         this.starterWeapons.addAll(weapons);
         this.starterHelmets.clear();
         this.starterHelmets.addAll(helmets);
+    }
+
+    // ==================== Runtime Setters ====================
+
+    // Teleport commands
+    public void setPrepCommand(String command) { this.prepCommand = command; }
+    public void setEnterCommand(String command) { this.enterCommand = command; }
+    public void setRespawnCommand(String command) { this.respawnCommand = command; }
+
+    // Timings
+    public void setDeathCooldownSeconds(int seconds) { this.deathCooldownSeconds = seconds; }
+    public void setRespawnInvulnerabilitySeconds(int seconds) { this.respawnInvulnerabilitySeconds = seconds; }
+    public void setDisconnectGraceSeconds(int seconds) { this.disconnectGraceSeconds = seconds; }
+    public void setCountdownSeconds(int seconds) { this.countdownSeconds = seconds; }
+
+    // Spawning
+    public void setMinSpawnDistance(double distance) { this.minSpawnDistance = distance; }
+    public void setMaxSpawnDistance(double distance) { this.maxSpawnDistance = distance; }
+    public void setMaxSampleAttempts(int attempts) { this.maxSampleAttempts = attempts; }
+    public void setSpawnTickInterval(int interval) { this.spawnTickInterval = interval; }
+    public void setTargetMobsPerPlayer(int target) { this.targetMobsPerPlayer = target; }
+    public void setMaxSpawnsPerTick(int max) { this.maxSpawnsPerTick = max; }
+
+    // Rewards
+    public void setXpShareRadius(double radius) { this.xpShareRadius = radius; }
+    public void setXpSharePercent(double percent) { this.xpSharePercent = percent; }
+
+    // Progression
+    public void setBaseXpRequired(int value) { this.baseXpRequired = value; }
+    public void setXpPerLevelIncrease(int value) { this.xpPerLevelIncrease = value; }
+    public void setXpMultiplierPerLevel(double value) { this.xpMultiplierPerLevel = value; }
+    public void setWeaponLevelWeight(int value) { this.weaponLevelWeight = value; }
+    public void setHelmetLevelWeight(int value) { this.helmetLevelWeight = value; }
+
+    // Teams
+    public void setMaxTeamSize(int size) { this.maxTeamSize = size; }
+    public void setInviteExpirySeconds(int seconds) { this.inviteExpirySeconds = seconds; }
+
+    // Merchants
+    public void setMerchantsEnabled(boolean enabled) { this.merchantsEnabled = enabled; }
+    public void setMerchantSpawnInterval(int interval) { this.merchantSpawnInterval = interval; }
+    public void setMerchantLifetime(int lifetime) { this.merchantLifetime = lifetime; }
+    public void setMerchantMinDistance(double distance) { this.merchantMinDistance = distance; }
+    public void setMerchantMaxDistance(double distance) { this.merchantMaxDistance = distance; }
+
+    // Upgrade
+    public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
+    public void setUpgradeReminderIntervalSeconds(int seconds) { this.upgradeReminderIntervalSeconds = seconds; }
+
+    // Scoreboard
+    public void setScoreboardEnabled(boolean enabled) { this.scoreboardEnabled = enabled; }
+    public void setScoreboardTitle(String title) { this.scoreboardTitle = title; }
+    public void setScoreboardUpdateInterval(int interval) { this.scoreboardUpdateInterval = interval; }
+
+    // ==================== Config Upgrade ====================
+
+    /**
+     * Upgrades config.yml with any missing entries from defaults.
+     * Called before loading to ensure all new config keys are available.
+     */
+    private void upgradeConfigFile() {
+        File configFile = new File(plugin.getDataFolder(), "config.yml");
+        if (!configFile.exists()) {
+            return; // Will be created by saveDefaultConfig
+        }
+
+        ConfigUpgradeService upgradeService = new ConfigUpgradeService(plugin.getLogger());
+        try (java.io.InputStream defaultStream = plugin.getResource("config.yml")) {
+            int added = upgradeService.upgradeFile(configFile, defaultStream);
+            if (added > 0) {
+                plugin.getLogger().info("Upgraded config.yml with " + added + " new entries");
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().warning("Failed to upgrade config.yml: " + e.getMessage());
+        }
     }
 
     // ==================== Config Data Classes ====================

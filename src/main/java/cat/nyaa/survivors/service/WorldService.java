@@ -8,6 +8,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -106,7 +107,70 @@ public class WorldService {
     }
 
     /**
-     * Samples spawn points within the world bounds.
+     * Samples spawn points within the world bounds asynchronously.
+     * @param worldConfig the world configuration
+     * @param count number of spawn points to sample
+     * @return CompletableFuture with list of valid spawn locations
+     */
+    public CompletableFuture<List<Location>> sampleSpawnPointsAsync(ConfigService.CombatWorldConfig worldConfig, int count) {
+        World world = Bukkit.getWorld(worldConfig.name);
+        if (world == null) {
+            return CompletableFuture.completedFuture(Collections.emptyList());
+        }
+
+        int maxAttempts = config.getMaxSampleAttempts();
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        // Generate all candidate coordinates upfront
+        List<double[]> candidates = new ArrayList<>();
+        for (int i = 0; i < count * maxAttempts; i++) {
+            double x = random.nextDouble(worldConfig.minX, worldConfig.maxX);
+            double z = random.nextDouble(worldConfig.minZ, worldConfig.maxZ);
+            candidates.add(new double[]{x, z});
+        }
+
+        // Collect unique chunks that need loading
+        Set<Long> chunksToLoad = new HashSet<>();
+        for (double[] coord : candidates) {
+            int chunkX = (int) Math.floor(coord[0]) >> 4;
+            int chunkZ = (int) Math.floor(coord[1]) >> 4;
+            long chunkKey = ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
+            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                chunksToLoad.add(chunkKey);
+            }
+        }
+
+        // Load all chunks async, then find spawn points on main thread
+        List<CompletableFuture<Void>> chunkFutures = new ArrayList<>();
+        for (long chunkKey : chunksToLoad) {
+            int chunkX = (int) (chunkKey >> 32);
+            int chunkZ = (int) chunkKey;
+            chunkFutures.add(world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {}));
+        }
+
+        return CompletableFuture.allOf(chunkFutures.toArray(new CompletableFuture[0]))
+                .thenApplyAsync(v -> {
+                    // Now all chunks are loaded, find spawn points on main thread
+                    List<Location> spawnPoints = new ArrayList<>();
+                    int candidateIndex = 0;
+
+                    for (int i = 0; i < count && spawnPoints.size() < count && candidateIndex < candidates.size(); i++) {
+                        for (int attempt = 0; attempt < maxAttempts && candidateIndex < candidates.size(); attempt++) {
+                            double[] coord = candidates.get(candidateIndex++);
+                            Location loc = findSafeLocation(world, coord[0], coord[1]);
+                            if (loc != null) {
+                                spawnPoints.add(loc);
+                                break;
+                            }
+                        }
+                    }
+
+                    return spawnPoints;
+                }, runnable -> Bukkit.getScheduler().runTask(plugin, runnable));
+    }
+
+    /**
+     * Samples spawn points within the world bounds (synchronous version).
      * @param worldConfig the world configuration
      * @param count number of spawn points to sample
      * @return list of valid spawn locations
@@ -193,6 +257,14 @@ public class WorldService {
      * @return safe location or null if not found
      */
     public Location findSafeLocation(World world, double x, double z) {
+        int blockX = (int) Math.floor(x);
+        int blockZ = (int) Math.floor(z);
+
+        // Ensure chunk is loaded before accessing blocks
+        if (!world.isChunkLoaded(blockX >> 4, blockZ >> 4)) {
+            world.getChunkAt(blockX >> 4, blockZ >> 4);
+        }
+
         // Start from top and work down
         int startY = world.getMaxHeight() - 1;
         int minY = world.getMinHeight();
@@ -200,9 +272,9 @@ public class WorldService {
         // Find the highest solid block
         int safeY = -1;
         for (int y = startY; y > minY; y--) {
-            Block block = world.getBlockAt((int) x, y, (int) z);
-            Block above = world.getBlockAt((int) x, y + 1, (int) z);
-            Block twoAbove = world.getBlockAt((int) x, y + 2, (int) z);
+            Block block = world.getBlockAt(blockX, y, blockZ);
+            Block above = world.getBlockAt(blockX, y + 1, blockZ);
+            Block twoAbove = world.getBlockAt(blockX, y + 2, blockZ);
 
             if (isSolidGround(block) && isPassable(above) && isPassable(twoAbove)) {
                 safeY = y + 1;

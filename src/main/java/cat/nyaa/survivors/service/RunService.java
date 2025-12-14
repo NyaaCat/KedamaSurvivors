@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Manages run lifecycle - creation, execution, and termination.
@@ -33,13 +34,64 @@ public class RunService {
     }
 
     /**
-     * Starts a new run for a team.
+     * Starts a new run for a team asynchronously.
+     * Uses async chunk loading to avoid server lag.
      */
+    public CompletableFuture<RunState> startRunAsync(TeamState team) {
+        // Select a random combat world
+        ConfigService.CombatWorldConfig worldConfig = worldService.selectRandomWorld();
+        if (worldConfig == null) {
+            notifyTeam(team, "error.no_combat_worlds");
+            resetTeamToLobby(team);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        // Create run state
+        RunState run = state.createRun(team.getTeamId(), worldConfig.name);
+
+        // Sample spawn points asynchronously
+        int spawnCount = Math.max(team.getMemberCount() * 2, 5);
+
+        return worldService.sampleSpawnPointsAsync(worldConfig, spawnCount)
+                .thenApply(spawnPoints -> {
+                    if (spawnPoints.isEmpty()) {
+                        notifyTeam(team, "error.no_spawn_points");
+                        state.endRun(run.getRunId());
+                        resetTeamToLobby(team);
+                        return null;
+                    }
+
+                    run.setSpawnPoints(spawnPoints);
+                    run.start();
+
+                    // Initialize player states
+                    for (UUID memberId : team.getMembers()) {
+                        initializePlayerForRun(memberId, run);
+                    }
+
+                    // Teleport players
+                    teleportTeamToRun(team, run);
+
+                    // Notify start
+                    notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
+
+                    plugin.getLogger().info("Started run " + run.getRunId() + " for team " + team.getName() +
+                            " in world " + worldConfig.name);
+
+                    return run;
+                });
+    }
+
+    /**
+     * Starts a new run for a team (synchronous version).
+     * @deprecated Use {@link #startRunAsync(TeamState)} for better performance.
+     */
+    @Deprecated
     public RunState startRun(TeamState team) {
         // Select a random combat world
         ConfigService.CombatWorldConfig worldConfig = worldService.selectRandomWorld();
         if (worldConfig == null) {
-            notifyTeam(team, "error.no_combat_world");
+            notifyTeam(team, "error.no_combat_worlds");
             resetTeamToLobby(team);
             return null;
         }
@@ -70,7 +122,7 @@ public class RunService {
         teleportTeamToRun(team, run);
 
         // Notify start
-        notifyTeam(team, "run.started", "world", worldConfig.displayName);
+        notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
 
         plugin.getLogger().info("Started run " + run.getRunId() + " for team " + team.getName() +
                 " in world " + worldConfig.name);

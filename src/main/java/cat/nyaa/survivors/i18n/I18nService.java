@@ -2,6 +2,7 @@ package cat.nyaa.survivors.i18n;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.config.ConfigUpgradeService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -15,8 +16,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Handles internationalization and message formatting.
@@ -24,7 +23,6 @@ import java.util.regex.Pattern;
  */
 public class I18nService {
 
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{(\\w+)}");
     private static final LegacyComponentSerializer LEGACY_SERIALIZER =
             LegacyComponentSerializer.builder()
                     .character('§')
@@ -53,6 +51,9 @@ public class I18nService {
         if (!langFile.exists()) {
             plugin.saveResource("lang/" + language + ".yml", false);
         }
+
+        // Upgrade language file with any missing entries from defaults
+        upgradeLanguageFile(langFile, language);
 
         // Load from file
         YamlConfiguration langConfig;
@@ -133,11 +134,18 @@ public class I18nService {
     }
 
     /**
+     * Gets the message prefix from language file.
+     */
+    public String getPrefix() {
+        return get("prefix");
+    }
+
+    /**
      * Sends a prefixed message to a command sender.
      */
     public void send(CommandSender sender, String key) {
         sender.sendMessage(LEGACY_SERIALIZER.deserialize(
-                configService.getPrefix() + get(key)));
+                getPrefix() + get(key)));
     }
 
     /**
@@ -145,7 +153,7 @@ public class I18nService {
      */
     public void send(CommandSender sender, String key, Object... args) {
         sender.sendMessage(LEGACY_SERIALIZER.deserialize(
-                configService.getPrefix() + get(key, args)));
+                getPrefix() + get(key, args)));
     }
 
     /**
@@ -153,7 +161,7 @@ public class I18nService {
      */
     public void sendClickable(CommandSender sender, String key, String command) {
         Component message = LEGACY_SERIALIZER.deserialize(
-                configService.getPrefix() + get(key));
+                getPrefix() + get(key));
         message = message.clickEvent(ClickEvent.runCommand(command));
         sender.sendMessage(message);
     }
@@ -163,7 +171,7 @@ public class I18nService {
      */
     public void sendClickable(CommandSender sender, String key, String command, Object... args) {
         Component message = LEGACY_SERIALIZER.deserialize(
-                configService.getPrefix() + get(key, args));
+                getPrefix() + get(key, args));
         message = message.clickEvent(ClickEvent.runCommand(command));
         sender.sendMessage(message);
     }
@@ -257,111 +265,30 @@ public class I18nService {
         return messages.containsKey(key);
     }
 
-    // ==================== MessageKey Overloads ====================
+    // ==================== Language File Upgrade ====================
 
     /**
-     * Gets a raw message by MessageKey.
+     * Upgrades a language file with any missing entries from defaults.
      */
-    public String getRaw(MessageKey key) {
-        return getRaw(key.getKey());
-    }
+    private void upgradeLanguageFile(File langFile, String language) {
+        if (!langFile.exists()) {
+            return; // Will be created by saveResource
+        }
 
-    /**
-     * Gets a message with color codes parsed.
-     */
-    public String get(MessageKey key) {
-        return get(key.getKey());
-    }
+        String resourcePath = "lang/" + language + ".yml";
+        ConfigUpgradeService upgradeService = new ConfigUpgradeService(plugin.getLogger());
 
-    /**
-     * Gets a message with placeholders replaced and color codes parsed.
-     */
-    public String get(MessageKey key, Object... args) {
-        return get(key.getKey(), args);
-    }
+        try (InputStream defaultStream = plugin.getResource(resourcePath)) {
+            if (defaultStream == null) {
+                return; // No default resource available
+            }
 
-    /**
-     * Gets a message as a Component.
-     */
-    public Component getComponent(MessageKey key) {
-        return getComponent(key.getKey());
-    }
-
-    /**
-     * Gets a message as a Component with placeholders.
-     */
-    public Component getComponent(MessageKey key, Object... args) {
-        return getComponent(key.getKey(), args);
-    }
-
-    /**
-     * Sends a prefixed message to a command sender.
-     */
-    public void send(CommandSender sender, MessageKey key) {
-        send(sender, key.getKey());
-    }
-
-    /**
-     * Sends a prefixed message with placeholders.
-     */
-    public void send(CommandSender sender, MessageKey key, Object... args) {
-        send(sender, key.getKey(), args);
-    }
-
-    /**
-     * Sends a clickable message.
-     */
-    public void sendClickable(CommandSender sender, MessageKey key, String command) {
-        sendClickable(sender, key.getKey(), command);
-    }
-
-    /**
-     * Sends a clickable message with placeholders.
-     */
-    public void sendClickable(CommandSender sender, MessageKey key, String command, Object... args) {
-        sendClickable(sender, key.getKey(), command, args);
-    }
-
-    /**
-     * Sends an actionbar message.
-     */
-    public void sendActionBar(Player player, MessageKey key) {
-        sendActionBar(player, key.getKey());
-    }
-
-    /**
-     * Sends an actionbar message with placeholders.
-     */
-    public void sendActionBar(Player player, MessageKey key, Object... args) {
-        sendActionBar(player, key.getKey(), args);
-    }
-
-    /**
-     * Sends a title message.
-     */
-    public void sendTitle(Player player, MessageKey titleKey, MessageKey subtitleKey,
-                          int fadeIn, int stay, int fadeOut) {
-        sendTitle(player,
-                titleKey != null ? titleKey.getKey() : null,
-                subtitleKey != null ? subtitleKey.getKey() : null,
-                fadeIn, stay, fadeOut);
-    }
-
-    /**
-     * Sends a title message with placeholders.
-     */
-    public void sendTitle(Player player, MessageKey titleKey, MessageKey subtitleKey,
-                          int fadeIn, int stay, int fadeOut, Object... args) {
-        sendTitle(player,
-                titleKey != null ? titleKey.getKey() : null,
-                subtitleKey != null ? subtitleKey.getKey() : null,
-                fadeIn, stay, fadeOut, args);
-    }
-
-    /**
-     * Checks if a MessageKey exists.
-     */
-    public boolean hasKey(MessageKey key) {
-        return hasKey(key.getKey());
+            int added = upgradeService.upgradeFile(langFile, defaultStream);
+            if (added > 0) {
+                plugin.getLogger().info("Upgraded " + language + ".yml with " + added + " new entries");
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().warning("Failed to upgrade language file: " + e.getMessage());
+        }
     }
 }

@@ -15,7 +15,7 @@
 # 通用
 # ============================================================
 
-prefix: "§8[§6武§e生§8] §7"
+prefix: "§8[§6毛玉幸存者§8] §7"
 
 # ============================================================
 # 信息提示 (低对比度灰色正文)
@@ -132,6 +132,7 @@ error:
 
   # 世界
   no_combat_worlds: "§c没有可用的战斗世界"
+  no_spawn_points: "§c找不到有效的出生点"
   world_not_found: "§c找不到世界 §f{world}"
   world_not_loaded: "§c世界 §f{world} §c未加载"
 
@@ -286,8 +287,12 @@ debug:
 countdown:
   title: "§e{seconds}"
   subtitle: "§7准备进入战斗"
+  actionbar: "§e传送倒计时 §f{seconds}s"
   final_title: "§a开始!"
   final_subtitle: "§7祝你好运"
+  cancelled: "§7倒计时取消: §f{player} §7未准备"
+  cancelled_disconnect: "§7倒计时取消: 玩家断线"
+  starting: "§e倒计时开始"
 
 # ============================================================
 # 动作栏消息

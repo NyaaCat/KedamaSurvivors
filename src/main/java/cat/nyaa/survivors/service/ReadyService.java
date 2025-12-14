@@ -338,8 +338,8 @@ public class ReadyService {
                 }
             }
 
-            // Start the run
-            plugin.getRunService().startRun(team);
+            // Start the run asynchronously (async chunk loading)
+            plugin.getRunService().startRunAsync(team);
         }
     }
 }
