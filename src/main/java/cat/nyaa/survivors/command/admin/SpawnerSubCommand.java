@@ -50,6 +50,8 @@ public class SpawnerSubCommand implements SubCommand {
         i18n.send(sender, "admin.spawner.help.archetype_addcmd");
         i18n.send(sender, "admin.spawner.help.archetype_removecmd");
         i18n.send(sender, "admin.spawner.help.archetype_reward");
+        i18n.send(sender, "admin.spawner.help.archetype_set_weight");
+        i18n.send(sender, "admin.spawner.help.archetype_set_entitytype");
     }
 
     // ==================== Archetype Commands ====================
@@ -69,6 +71,50 @@ public class SpawnerSubCommand implements SubCommand {
             case "addcommand" -> handleArchetypeAddCommand(sender, args);
             case "removecommand" -> handleArchetypeRemoveCommand(sender, args);
             case "reward" -> handleArchetypeReward(sender, args);
+            case "set" -> handleArchetypeSet(sender, args);
+            default -> showHelp(sender);
+        }
+    }
+
+    private void handleArchetypeSet(CommandSender sender, String[] args) {
+        // /vrs admin spawner archetype set <property> <id> <value>
+        if (args.length < 5) {
+            showHelp(sender);
+            return;
+        }
+
+        String property = args[2].toLowerCase();
+        String id = args[3];
+
+        Optional<EnemyArchetypeConfig> configOpt = adminConfig.getArchetype(id);
+        if (configOpt.isEmpty()) {
+            i18n.send(sender, "admin.spawner.archetype_not_found", "id", id);
+            return;
+        }
+
+        switch (property) {
+            case "weight" -> {
+                try {
+                    double weight = Double.parseDouble(args[4]);
+                    if (weight <= 0) throw new NumberFormatException();
+                    boolean success = adminConfig.setArchetypeWeight(id, weight);
+                    if (success) {
+                        i18n.send(sender, "admin.spawner.weight_set", "id", id, "weight", weight);
+                    }
+                } catch (NumberFormatException e) {
+                    i18n.send(sender, "admin.spawner.invalid_weight");
+                }
+            }
+            case "entitytype" -> {
+                String entityType = args[4];
+                if (!entityType.contains(":")) {
+                    entityType = "minecraft:" + entityType.toLowerCase();
+                }
+                boolean success = adminConfig.setArchetypeEntityType(id, entityType);
+                if (success) {
+                    i18n.send(sender, "admin.spawner.entitytype_set", "id", id, "entityType", entityType);
+                }
+            }
             default -> showHelp(sender);
         }
     }
@@ -242,7 +288,7 @@ public class SpawnerSubCommand implements SubCommand {
             }
         } else if (args.length == 2) {
             String partial = args[1].toLowerCase();
-            for (String sub : List.of("create", "delete", "list", "addcommand", "removecommand", "reward")) {
+            for (String sub : List.of("create", "delete", "list", "addcommand", "removecommand", "reward", "set")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
@@ -251,8 +297,15 @@ public class SpawnerSubCommand implements SubCommand {
             String subAction = args[1].toLowerCase();
             String partial = args[2].toLowerCase();
 
-            // For most subcommands, suggest archetype IDs
-            if (List.of("delete", "addcommand", "removecommand", "reward").contains(subAction)) {
+            if (subAction.equals("set")) {
+                // Property names for set
+                for (String prop : List.of("weight", "entitytype")) {
+                    if (prop.startsWith(partial)) {
+                        completions.add(prop);
+                    }
+                }
+            } else if (List.of("delete", "addcommand", "removecommand", "reward").contains(subAction)) {
+                // For most subcommands, suggest archetype IDs
                 for (EnemyArchetypeConfig config : adminConfig.getArchetypes()) {
                     if (config.archetypeId.toLowerCase().startsWith(partial)) {
                         completions.add(config.archetypeId);
@@ -261,10 +314,10 @@ public class SpawnerSubCommand implements SubCommand {
             }
         } else if (args.length == 4) {
             String subAction = args[1].toLowerCase();
+            String partial = args[3].toLowerCase();
 
             if (subAction.equals("create")) {
                 // Suggest common entity types
-                String partial = args[3].toLowerCase();
                 for (String entity : List.of("zombie", "skeleton", "spider", "creeper", "enderman", "witch", "phantom", "blaze", "wither_skeleton")) {
                     if (entity.startsWith(partial)) {
                         completions.add(entity);
@@ -275,12 +328,31 @@ public class SpawnerSubCommand implements SubCommand {
                 String archetypeId = args[2];
                 Optional<EnemyArchetypeConfig> configOpt = adminConfig.getArchetype(archetypeId);
                 if (configOpt.isPresent() && configOpt.get().spawnCommands != null) {
-                    String partial = args[3].toLowerCase();
                     for (int i = 0; i < configOpt.get().spawnCommands.size(); i++) {
                         String idx = String.valueOf(i);
                         if (idx.startsWith(partial)) {
                             completions.add(idx);
                         }
+                    }
+                }
+            } else if (subAction.equals("set")) {
+                // Suggest archetype IDs for set command
+                for (EnemyArchetypeConfig config : adminConfig.getArchetypes()) {
+                    if (config.archetypeId.toLowerCase().startsWith(partial)) {
+                        completions.add(config.archetypeId);
+                    }
+                }
+            }
+        } else if (args.length == 5) {
+            String subAction = args[1].toLowerCase();
+            String property = args[2].toLowerCase();
+            String partial = args[4].toLowerCase();
+
+            if (subAction.equals("set") && property.equals("entitytype")) {
+                // Suggest common entity types
+                for (String entity : List.of("zombie", "skeleton", "spider", "creeper", "enderman", "witch", "phantom", "blaze", "wither_skeleton")) {
+                    if (entity.startsWith(partial)) {
+                        completions.add(entity);
                     }
                 }
             }

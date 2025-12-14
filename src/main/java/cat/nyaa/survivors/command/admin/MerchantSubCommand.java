@@ -52,6 +52,7 @@ public class MerchantSubCommand implements SubCommand {
         i18n.send(sender, "admin.merchant.help.template_create");
         i18n.send(sender, "admin.merchant.help.template_delete");
         i18n.send(sender, "admin.merchant.help.template_list");
+        i18n.send(sender, "admin.merchant.help.template_set_displayname");
         i18n.send(sender, "admin.merchant.help.trade_add");
         i18n.send(sender, "admin.merchant.help.trade_remove");
         i18n.send(sender, "admin.merchant.help.trade_list");
@@ -71,7 +72,38 @@ public class MerchantSubCommand implements SubCommand {
             case "create" -> handleTemplateCreate(sender, args);
             case "delete" -> handleTemplateDelete(sender, args);
             case "list" -> handleTemplateList(sender);
+            case "set" -> handleTemplateSet(sender, args);
             default -> showHelp(sender);
+        }
+    }
+
+    private void handleTemplateSet(CommandSender sender, String[] args) {
+        // /vrs admin merchant template set <property> <templateId> <value...>
+        if (args.length < 5) {
+            i18n.send(sender, "admin.merchant.help.template_set_displayname");
+            return;
+        }
+
+        String property = args[2].toLowerCase();
+        String templateId = args[3];
+
+        Optional<MerchantTemplateConfig> templateOpt = adminConfig.getMerchantTemplate(templateId);
+        if (templateOpt.isEmpty()) {
+            i18n.send(sender, "admin.merchant.template_not_found", "templateId", templateId);
+            return;
+        }
+
+        switch (property) {
+            case "displayname" -> {
+                String displayName = String.join(" ", java.util.Arrays.copyOfRange(args, 4, args.length));
+                boolean success = adminConfig.setMerchantTemplateDisplayName(templateId, displayName);
+                if (success) {
+                    i18n.send(sender, "admin.merchant.displayname_set",
+                            "templateId", templateId,
+                            "displayName", displayName);
+                }
+            }
+            default -> i18n.send(sender, "admin.merchant.help.template_set_displayname");
         }
     }
 
@@ -324,7 +356,7 @@ public class MerchantSubCommand implements SubCommand {
             String partial = args[1].toLowerCase();
 
             if (action.equals("template")) {
-                for (String sub : List.of("create", "delete", "list")) {
+                for (String sub : List.of("create", "delete", "list", "set")) {
                     if (sub.startsWith(partial)) {
                         completions.add(sub);
                     }
@@ -341,9 +373,14 @@ public class MerchantSubCommand implements SubCommand {
             String subAction = args[1].toLowerCase();
             String partial = args[2].toLowerCase();
 
-            // Template ID completion for relevant commands
-            if ((action.equals("template") && List.of("delete").contains(subAction)) ||
+            if (action.equals("template") && subAction.equals("set")) {
+                // Property names for set
+                if ("displayname".startsWith(partial)) {
+                    completions.add("displayname");
+                }
+            } else if ((action.equals("template") && List.of("delete").contains(subAction)) ||
                     (action.equals("trade") && List.of("add", "remove", "list").contains(subAction))) {
+                // Template ID completion for relevant commands
                 for (MerchantTemplateConfig template : adminConfig.getMerchantTemplates()) {
                     if (template.templateId.toLowerCase().startsWith(partial)) {
                         completions.add(template.templateId);
@@ -353,7 +390,16 @@ public class MerchantSubCommand implements SubCommand {
         } else if (args.length == 4) {
             String action = args[0].toLowerCase();
             String subAction = args[1].toLowerCase();
+            String partial = args[3].toLowerCase();
 
+            // Template ID for template set
+            if (action.equals("template") && subAction.equals("set")) {
+                for (MerchantTemplateConfig template : adminConfig.getMerchantTemplates()) {
+                    if (template.templateId.toLowerCase().startsWith(partial)) {
+                        completions.add(template.templateId);
+                    }
+                }
+            }
             // Cost amount suggestions for trade add
             if (action.equals("trade") && subAction.equals("add")) {
                 completions.addAll(List.of("10", "25", "50", "100"));

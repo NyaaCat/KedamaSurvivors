@@ -4,6 +4,8 @@ import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.command.admin.EquipmentSubCommand;
 import cat.nyaa.survivors.command.admin.MerchantSubCommand;
 import cat.nyaa.survivors.command.admin.SpawnerSubCommand;
+import cat.nyaa.survivors.command.admin.StarterSubCommand;
+import cat.nyaa.survivors.command.admin.WorldSubCommand;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
@@ -43,6 +45,8 @@ public class AdminSubCommand implements SubCommand {
     private EquipmentSubCommand equipmentSubCommand;
     private SpawnerSubCommand spawnerSubCommand;
     private MerchantSubCommand merchantSubCommand;
+    private StarterSubCommand starterSubCommand;
+    private WorldSubCommand worldSubCommand;
 
     public AdminSubCommand(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -68,6 +72,12 @@ public class AdminSubCommand implements SubCommand {
         if (merchantSubCommand == null) {
             merchantSubCommand = new MerchantSubCommand(plugin);
         }
+        if (starterSubCommand == null) {
+            starterSubCommand = new StarterSubCommand(plugin);
+        }
+        if (worldSubCommand == null) {
+            worldSubCommand = new WorldSubCommand(plugin);
+        }
     }
 
     @Override
@@ -87,7 +97,10 @@ public class AdminSubCommand implements SubCommand {
             case "reset" -> handleReset(sender, args);
             case "setperma" -> handleSetPerma(sender, args);
             case "join" -> handleJoin(sender, args);
-            case "world" -> handleWorld(sender, args);
+            case "world" -> {
+                initSubCommands();
+                worldSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
             case "debug" -> handleDebug(sender, args);
             case "equipment" -> {
                 initSubCommands();
@@ -100,6 +113,10 @@ public class AdminSubCommand implements SubCommand {
             case "merchant" -> {
                 initSubCommands();
                 merchantSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
+            case "starter" -> {
+                initSubCommands();
+                starterSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
             }
             default -> i18n.send(sender, "error.unknown_command", "command", action);
         }
@@ -115,6 +132,7 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.help.setperma");
         i18n.send(sender, "admin.help.join");
         i18n.send(sender, "admin.help.world");
+        i18n.send(sender, "admin.help.starter");
         i18n.send(sender, "admin.help.debug");
         i18n.send(sender, "admin.help.equipment");
         i18n.send(sender, "admin.help.spawner");
@@ -311,60 +329,6 @@ public class AdminSubCommand implements SubCommand {
         }
     }
 
-    // ==================== World Management ====================
-
-    private void handleWorld(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            // Show world list
-            showWorldList(sender);
-            return;
-        }
-
-        String subAction = args[1].toLowerCase();
-        switch (subAction) {
-            case "list" -> showWorldList(sender);
-            case "enable" -> {
-                if (args.length < 3) {
-                    i18n.send(sender, "error.world_not_found", "world", "");
-                    return;
-                }
-                String worldName = args[2];
-                if (!worldService.getWorldConfig(worldName).isPresent()) {
-                    i18n.send(sender, "admin.world_not_found", "world", worldName);
-                    return;
-                }
-                worldService.enableWorld(worldName);
-                i18n.send(sender, "admin.world_enabled", "world", worldName);
-            }
-            case "disable" -> {
-                if (args.length < 3) {
-                    i18n.send(sender, "error.world_not_found", "world", "");
-                    return;
-                }
-                String worldName = args[2];
-                if (!worldService.getWorldConfig(worldName).isPresent()) {
-                    i18n.send(sender, "admin.world_not_found", "world", worldName);
-                    return;
-                }
-                worldService.disableWorld(worldName);
-                i18n.send(sender, "admin.world_disabled", "world", worldName);
-            }
-            default -> i18n.send(sender, "error.invalid_argument", "arg", subAction);
-        }
-    }
-
-    private void showWorldList(CommandSender sender) {
-        i18n.send(sender, "admin.world_list_header");
-        for (var worldConfig : config.getCombatWorlds()) {
-            boolean enabled = worldService.isWorldEnabled(worldConfig.name);
-            String status = i18n.get(enabled ? "admin.world_status_enabled" : "admin.world_status_disabled");
-            i18n.send(sender, "admin.world_list_item",
-                    "name", worldConfig.name,
-                    "status", status,
-                    "weight", worldConfig.weight);
-        }
-    }
-
     // ==================== Debug Commands ====================
 
     private void handleDebug(CommandSender sender, String[] args) {
@@ -514,14 +478,14 @@ public class AdminSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "debug", "equipment", "spawner", "merchant")) {
+            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "starter", "debug", "equipment", "spawner", "merchant")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
             }
         } else if (args.length >= 2) {
             String action = args[0].toLowerCase();
-            // Delegate to nested subcommands for equipment, spawner, and merchant
+            // Delegate to nested subcommands
             if (action.equals("equipment")) {
                 initSubCommands();
                 return equipmentSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
@@ -531,6 +495,12 @@ public class AdminSubCommand implements SubCommand {
             } else if (action.equals("merchant")) {
                 initSubCommands();
                 return merchantSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("starter")) {
+                initSubCommands();
+                return starterSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("world")) {
+                initSubCommands();
+                return worldSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
             }
         }
 
@@ -556,12 +526,6 @@ public class AdminSubCommand implements SubCommand {
                         completions.add(sub);
                     }
                 }
-            } else if (action.equals("world")) {
-                for (String sub : List.of("enable", "disable", "list")) {
-                    if (sub.startsWith(partial)) {
-                        completions.add(sub);
-                    }
-                }
             } else if (action.equals("debug")) {
                 for (String sub : List.of("player", "perf", "templates", "run")) {
                     if (sub.startsWith(partial)) {
@@ -574,13 +538,7 @@ public class AdminSubCommand implements SubCommand {
             String subAction = args[1].toLowerCase();
             String partial = args[2].toLowerCase();
 
-            if (action.equals("world") && List.of("enable", "disable").contains(subAction)) {
-                for (var worldConfig : config.getCombatWorlds()) {
-                    if (worldConfig.name.toLowerCase().startsWith(partial)) {
-                        completions.add(worldConfig.name);
-                    }
-                }
-            } else if (action.equals("debug") && subAction.equals("player")) {
+            if (action.equals("debug") && subAction.equals("player")) {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (p.getName().toLowerCase().startsWith(partial)) {
                         completions.add(p.getName());

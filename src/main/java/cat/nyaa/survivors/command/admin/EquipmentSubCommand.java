@@ -53,6 +53,7 @@ public class EquipmentSubCommand implements SubCommand {
         i18n.send(sender, "admin.equipment.help.group_create");
         i18n.send(sender, "admin.equipment.help.group_delete");
         i18n.send(sender, "admin.equipment.help.group_list");
+        i18n.send(sender, "admin.equipment.help.group_set_displayname");
         i18n.send(sender, "admin.equipment.help.item_add");
         i18n.send(sender, "admin.equipment.help.item_remove");
         i18n.send(sender, "admin.equipment.help.item_list");
@@ -72,7 +73,46 @@ public class EquipmentSubCommand implements SubCommand {
             case "create" -> handleGroupCreate(sender, args);
             case "delete" -> handleGroupDelete(sender, args);
             case "list" -> handleGroupList(sender, args);
+            case "set" -> handleGroupSet(sender, args);
             default -> showHelp(sender);
+        }
+    }
+
+    private void handleGroupSet(CommandSender sender, String[] args) {
+        // /vrs admin equipment group set <property> <type> <groupId> <value...>
+        if (args.length < 6) {
+            i18n.send(sender, "admin.equipment.help.group_set_displayname");
+            return;
+        }
+
+        String property = args[2].toLowerCase();
+        String typeStr = args[3].toLowerCase();
+        String groupId = args[4];
+
+        EquipmentType type = parseEquipmentType(typeStr);
+        if (type == null) {
+            i18n.send(sender, "admin.equipment.invalid_type");
+            return;
+        }
+
+        Optional<EquipmentGroupConfig> groupOpt = adminConfig.getEquipmentGroup(type, groupId);
+        if (groupOpt.isEmpty()) {
+            i18n.send(sender, "admin.equipment.group_not_found", "groupId", groupId);
+            return;
+        }
+
+        switch (property) {
+            case "displayname" -> {
+                String displayName = String.join(" ", java.util.Arrays.copyOfRange(args, 5, args.length));
+                boolean success = adminConfig.setEquipmentGroupDisplayName(type, groupId, displayName);
+                if (success) {
+                    i18n.send(sender, "admin.equipment.displayname_set",
+                            "type", typeStr,
+                            "groupId", groupId,
+                            "displayName", displayName);
+                }
+            }
+            default -> i18n.send(sender, "admin.equipment.help.group_set_displayname");
         }
     }
 
@@ -364,7 +404,7 @@ public class EquipmentSubCommand implements SubCommand {
             String partial = args[1].toLowerCase();
 
             if (action.equals("group")) {
-                for (String sub : List.of("create", "delete", "list")) {
+                for (String sub : List.of("create", "delete", "list", "set")) {
                     if (sub.startsWith(partial)) {
                         completions.add(sub);
                     }
@@ -377,29 +417,64 @@ public class EquipmentSubCommand implements SubCommand {
                 }
             }
         } else if (args.length == 3) {
+            String action = args[0].toLowerCase();
+            String subAction = args[1].toLowerCase();
             String partial = args[2].toLowerCase();
-            for (String type : List.of("weapon", "helmet")) {
-                if (type.startsWith(partial)) {
-                    completions.add(type);
+
+            if (action.equals("group") && subAction.equals("set")) {
+                // Property names for set
+                if ("displayname".startsWith(partial)) {
+                    completions.add("displayname");
+                }
+            } else {
+                for (String type : List.of("weapon", "helmet")) {
+                    if (type.startsWith(partial)) {
+                        completions.add(type);
+                    }
                 }
             }
         } else if (args.length == 4) {
-            String typeStr = args[2].toLowerCase();
+            String action = args[0].toLowerCase();
+            String subAction = args[1].toLowerCase();
             String partial = args[3].toLowerCase();
-            EquipmentType type = parseEquipmentType(typeStr);
 
-            if (type != null) {
-                for (EquipmentGroupConfig group : adminConfig.getEquipmentGroups(type)) {
-                    if (group.groupId.toLowerCase().startsWith(partial)) {
-                        completions.add(group.groupId);
+            if (action.equals("group") && subAction.equals("set")) {
+                // Type for group set
+                for (String type : List.of("weapon", "helmet")) {
+                    if (type.startsWith(partial)) {
+                        completions.add(type);
+                    }
+                }
+            } else {
+                String typeStr = args[2].toLowerCase();
+                EquipmentType type = parseEquipmentType(typeStr);
+
+                if (type != null) {
+                    for (EquipmentGroupConfig group : adminConfig.getEquipmentGroups(type)) {
+                        if (group.groupId.toLowerCase().startsWith(partial)) {
+                            completions.add(group.groupId);
+                        }
                     }
                 }
             }
         } else if (args.length == 5) {
             String action = args[0].toLowerCase();
             String subAction = args[1].toLowerCase();
+            String partial = args[4].toLowerCase();
 
-            if ((action.equals("item") && List.of("add", "remove", "list").contains(subAction)) ||
+            if (action.equals("group") && subAction.equals("set")) {
+                // Group IDs for group set
+                String typeStr = args[3].toLowerCase();
+                EquipmentType type = parseEquipmentType(typeStr);
+
+                if (type != null) {
+                    for (EquipmentGroupConfig group : adminConfig.getEquipmentGroups(type)) {
+                        if (group.groupId.toLowerCase().startsWith(partial)) {
+                            completions.add(group.groupId);
+                        }
+                    }
+                }
+            } else if ((action.equals("item") && List.of("add", "remove", "list").contains(subAction)) ||
                     (action.equals("group") && subAction.equals("delete"))) {
                 // Level numbers
                 String typeStr = args[2].toLowerCase();
@@ -409,7 +484,6 @@ public class EquipmentSubCommand implements SubCommand {
                 if (type != null) {
                     Optional<EquipmentGroupConfig> groupOpt = adminConfig.getEquipmentGroup(type, groupId);
                     if (groupOpt.isPresent() && groupOpt.get().levelItems != null) {
-                        String partial = args[4].toLowerCase();
                         for (int level : groupOpt.get().levelItems.keySet()) {
                             String levelStr = String.valueOf(level);
                             if (levelStr.startsWith(partial)) {

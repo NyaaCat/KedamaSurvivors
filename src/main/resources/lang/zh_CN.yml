@@ -405,7 +405,8 @@ admin:
     reset: "§f/vrs admin reset <player> §8- §7重置玩家"
     setperma: "§f/vrs admin setperma <player> <amount> §8- §7设置积分"
     join: "§f/vrs admin join <enable|disable> §8- §7游戏入口开关"
-    world: "§f/vrs admin world <enable|disable|list> [world] §8- §7世界管理"
+    world: "§f/vrs admin world §8- §7世界管理"
+    starter: "§f/vrs admin starter §8- §7初始装备选项管理"
     debug: "§f/vrs admin debug <player|perf|templates|run> §8- §7调试命令"
     equipment: "§f/vrs admin equipment §8- §7装备组管理"
     spawner: "§f/vrs admin spawner §8- §7刷怪器原型管理"
@@ -450,6 +451,33 @@ admin:
   force_stopped: "§a已强制停止 §f{target} §a的游戏"
 
   # 世界管理
+  world:
+    help:
+      header: "§8========== §6世界管理命令 §8=========="
+      create: "§f/vrs admin world create <name> [displayName] §8- §7创建世界配置"
+      delete: "§f/vrs admin world delete <name> §8- §7删除世界配置"
+      list: "§f/vrs admin world list §8- §7列出所有世界"
+      set_displayname: "§f/vrs admin world set displayname <name> <displayName> §8- §7设置显示名称"
+      set_weight: "§f/vrs admin world set weight <name> <weight> §8- §7设置权重"
+      set_bounds: "§f/vrs admin world set bounds <name> <minX> <maxX> <minZ> <maxZ> §8- §7设置边界"
+      enable: "§f/vrs admin world enable <name> §8- §7启用世界"
+      disable: "§f/vrs admin world disable <name> §8- §7禁用世界"
+    created: "§a世界配置 §f{name} §a创建成功 (显示名: §f{displayName}§a)"
+    exists: "§c世界配置 §f{name} §c已存在"
+    deleted: "§a世界配置 §f{name} §a已删除"
+    not_found: "§c找不到世界配置: §f{name}"
+    world_not_loaded: "§c世界 §f{name} §c未在服务器加载"
+    enabled: "§a世界 §f{name} §a已启用"
+    disabled: "§a世界 §f{name} §a已禁用"
+    displayname_set: "§a世界 §f{name} §a显示名称已设置为: §f{displayName}"
+    weight_set: "§a世界 §f{name} §a权重已设置为: §f{weight}"
+    bounds_set: "§a世界 §f{name} §a边界已设置: X[§f{minX}§a~§f{maxX}§a] Z[§f{minZ}§a~§f{maxZ}§a]"
+    list_header: "§8========== §6战斗世界列表 §8=========="
+    list_empty: "§7无世界配置"
+    list_entry: "§7- §f{name} §8(§7{displayName}§8) §7[{status}] 权重: §f{weight} §7边界: X[§f{minX}§7~§f{maxX}§7] Z[§f{minZ}§7~§f{maxZ}§7]"
+    status_enabled: "§a启用"
+    status_disabled: "§c禁用"
+  # 旧版世界管理消息（保留兼容）
   world_enabled: "§a世界 §f{world} §a已启用"
   world_disabled: "§a世界 §f{world} §a已禁用"
   world_not_found: "§c找不到世界: §f{world}"
@@ -476,6 +504,7 @@ admin:
       group_create: "§f/vrs admin equipment group create <weapon|helmet> <groupId> [displayName] §8- §7创建装备组"
       group_delete: "§f/vrs admin equipment group delete <weapon|helmet> <groupId> §8- §7删除装备组"
       group_list: "§f/vrs admin equipment group list [weapon|helmet] §8- §7列出装备组"
+      group_set_displayname: "§f/vrs admin equipment group set displayname <weapon|helmet> <groupId> <displayName> §8- §7设置显示名称"
       item_add: "§f/vrs admin equipment item add <weapon|helmet> <groupId> <level> §8- §7添加手持物品到组"
       item_remove: "§f/vrs admin equipment item remove <weapon|helmet> <groupId> <level> <index> §8- §7移除物品"
       item_list: "§f/vrs admin equipment item list <weapon|helmet> <groupId> [level] §8- §7列出物品"
@@ -496,6 +525,7 @@ admin:
     item_list_header: "§8========== §6{groupId} 等级{level} 物品 §8=========="
     item_list_empty: "§7无物品"
     item_list_entry: "§7[{index}] §f{templateId} §8- §7{material}"
+    displayname_set: "§a装备组 §f{type}/{groupId} §a显示名称已设置为: §f{displayName}"
 
   # 刷怪器管理
   spawner:
@@ -507,6 +537,8 @@ admin:
       archetype_addcmd: "§f/vrs admin spawner archetype addcommand <id> <command...> §8- §7添加生成命令"
       archetype_removecmd: "§f/vrs admin spawner archetype removecommand <id> <index> §8- §7移除生成命令"
       archetype_reward: "§f/vrs admin spawner archetype reward <id> <xpBase> <xpPerLevel> <coinBase> <coinPerLevel> <permaChance> §8- §7设置奖励"
+      archetype_set_weight: "§f/vrs admin spawner archetype set weight <id> <weight> §8- §7设置权重"
+      archetype_set_entitytype: "§f/vrs admin spawner archetype set entitytype <id> <entityType> §8- §7设置实体类型"
     invalid_weight: "§c无效的权重，必须大于0"
     archetype_created: "§a原型 §f{id} §a创建成功 (实体: §f{entityType}§a, 权重: §f{weight}§a)"
     archetype_exists: "§c原型 §f{id} §c已存在"
@@ -520,6 +552,32 @@ admin:
     command_invalid_index: "§c无效的命令索引 §f{index}"
     rewards_set: "§a已设置原型 §f{id} §a的奖励"
     rewards_info: "§7  经验: §f{xpBase} + {xpPerLevel}/级 §8| §7金币: §f{coinBase} + {coinPerLevel}/级 §8| §7积分概率: §f{permaChance}"
+    weight_set: "§a原型 §f{id} §a权重已设置为: §f{weight}"
+    entitytype_set: "§a原型 §f{id} §a实体类型已设置为: §f{entityType}"
+
+  # 初始装备管理
+  starter:
+    help:
+      header: "§8========== §6初始装备管理命令 §8=========="
+      create: "§f/vrs admin starter create <weapon|helmet> <optionId> <templateId> <group> <level> [displayName] §8- §7创建初始装备选项"
+      delete: "§f/vrs admin starter delete <weapon|helmet> <optionId> §8- §7删除初始装备选项"
+      list: "§f/vrs admin starter list [weapon|helmet] §8- §7列出初始装备选项"
+      set_displayname: "§f/vrs admin starter set displayname <weapon|helmet> <optionId> <displayName> §8- §7设置显示名称"
+      set_template: "§f/vrs admin starter set template <weapon|helmet> <optionId> <templateId> §8- §7设置模板"
+      set_group: "§f/vrs admin starter set group <weapon|helmet> <optionId> <group> §8- §7设置装备组"
+      set_level: "§f/vrs admin starter set level <weapon|helmet> <optionId> <level> §8- §7设置等级"
+    created: "§a初始装备选项创建成功 (类型: §f{type}§a, ID: §f{optionId}§a, 显示名: §f{displayName}§a, 模板: §f{templateId}§a, 组: §f{group}§a, 等级: §f{level}§a)"
+    exists: "§c初始装备选项 §f{optionId} §c已存在"
+    deleted: "§a初始装备选项 §f{type}/{optionId} §a已删除"
+    not_found: "§c找不到初始装备选项 §f{optionId}"
+    template_not_found: "§c找不到物品模板 §f{templateId}"
+    displayname_set: "§a初始装备选项 §f{optionId} §a显示名称已设置为: §f{displayName}"
+    template_set: "§a初始装备选项 §f{optionId} §a模板已设置为: §f{templateId}"
+    group_set: "§a初始装备选项 §f{optionId} §a装备组已设置为: §f{group}"
+    level_set: "§a初始装备选项 §f{optionId} §a等级已设置为: §f{level}"
+    list_header: "§8========== §6初始装备选项 ({type}) §8=========="
+    list_empty: "§7无初始装备选项"
+    list_entry: "§7- §f{optionId} §8(§7{displayName}§8) §7模板: §f{templateId} §7组: §f{group} §7等级: §f{level}"
 
   # 商人管理
   merchant:
@@ -528,6 +586,7 @@ admin:
       template_create: "§f/vrs admin merchant template create <templateId> [displayName] §8- §7创建商人模板"
       template_delete: "§f/vrs admin merchant template delete <templateId> §8- §7删除商人模板"
       template_list: "§f/vrs admin merchant template list §8- §7列出所有商人模板"
+      template_set_displayname: "§f/vrs admin merchant template set displayname <templateId> <displayName> §8- §7设置显示名称"
       trade_add: "§f/vrs admin merchant trade add <templateId> <cost> [maxUses] §8- §7添加手持物品为交易"
       trade_remove: "§f/vrs admin merchant trade remove <templateId> <index> §8- §7移除交易"
       trade_list: "§f/vrs admin merchant trade list <templateId> §8- §7列出交易"
@@ -546,6 +605,7 @@ admin:
     trade_list_header: "§8========== §6{templateId} 交易列表 §8=========="
     trade_list_empty: "§7无交易"
     trade_list_entry: "§7[{index}] §f{resultItem} §7x{resultAmount} §8- §7价格: §e{costAmount} §7金币 §8(§7最大 §f{maxUses} §7次§8)"
+    displayname_set: "§a商人模板 §f{templateId} §a显示名称已设置为: §f{displayName}"
 
 # ============================================================
 # 调试信息

@@ -623,6 +623,24 @@ public class ConfigService {
         this.enemyArchetypes.putAll(archetypes);
     }
 
+    /**
+     * Updates combat worlds from AdminConfigService. Called when admin commands modify data.
+     */
+    public void updateCombatWorlds(List<CombatWorldConfig> worlds) {
+        this.combatWorlds.clear();
+        this.combatWorlds.addAll(worlds);
+    }
+
+    /**
+     * Updates starter options from AdminConfigService. Called when admin commands modify data.
+     */
+    public void updateStarters(List<StarterOptionConfig> weapons, List<StarterOptionConfig> helmets) {
+        this.starterWeapons.clear();
+        this.starterWeapons.addAll(weapons);
+        this.starterHelmets.clear();
+        this.starterHelmets.addAll(helmets);
+    }
+
     // ==================== Config Data Classes ====================
 
     public static class CombatWorldConfig {

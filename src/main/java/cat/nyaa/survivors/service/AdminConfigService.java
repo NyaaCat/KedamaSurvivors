@@ -770,6 +770,292 @@ public class AdminConfigService {
         configService.updateEnemyArchetypes(archetypes);
     }
 
+    // ==================== Equipment Group Set Operations ====================
+
+    /**
+     * Sets the display name for an equipment group.
+     */
+    public boolean setEquipmentGroupDisplayName(EquipmentType type, String groupId, String displayName) {
+        Map<String, EquipmentGroupConfig> groups = type == EquipmentType.WEAPON ? weaponGroups : helmetGroups;
+        EquipmentGroupConfig group = groups.get(groupId);
+        if (group == null) {
+            return false;
+        }
+        group.displayName = displayName;
+        saveEquipmentGroups();
+        updateConfigService();
+        return true;
+    }
+
+    // ==================== Archetype Set Operations ====================
+
+    /**
+     * Sets the weight for an archetype.
+     */
+    public boolean setArchetypeWeight(String id, double weight) {
+        EnemyArchetypeConfig config = archetypes.get(id);
+        if (config == null) {
+            return false;
+        }
+        config.weight = weight;
+        saveArchetypes();
+        updateConfigService();
+        return true;
+    }
+
+    /**
+     * Sets the entity type for an archetype.
+     */
+    public boolean setArchetypeEntityType(String id, String entityType) {
+        EnemyArchetypeConfig config = archetypes.get(id);
+        if (config == null) {
+            return false;
+        }
+        config.enemyType = entityType;
+        saveArchetypes();
+        updateConfigService();
+        return true;
+    }
+
+    // ==================== World Operations ====================
+
+    /**
+     * Creates a new combat world configuration.
+     */
+    public boolean createWorld(String name, String displayName, double weight, double minX, double maxX, double minZ, double maxZ) {
+        // Check if world already exists
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                return false;
+            }
+        }
+
+        CombatWorldConfig config = new CombatWorldConfig();
+        config.name = name;
+        config.displayName = displayName != null ? displayName : name;
+        config.enabled = true;
+        config.weight = weight;
+        config.minX = minX;
+        config.maxX = maxX;
+        config.minZ = minZ;
+        config.maxZ = maxZ;
+
+        combatWorlds.add(config);
+        saveWorlds();
+        configService.updateCombatWorlds(combatWorlds);
+        return true;
+    }
+
+    /**
+     * Deletes a combat world configuration.
+     */
+    public boolean deleteWorld(String name) {
+        boolean removed = combatWorlds.removeIf(w -> w.name.equals(name));
+        if (removed) {
+            saveWorlds();
+            configService.updateCombatWorlds(combatWorlds);
+        }
+        return removed;
+    }
+
+    /**
+     * Sets the display name for a world.
+     */
+    public boolean setWorldDisplayName(String name, String displayName) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.displayName = displayName;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the weight for a world.
+     */
+    public boolean setWorldWeight(String name, double weight) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.weight = weight;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the spawn bounds for a world.
+     */
+    public boolean setWorldBounds(String name, double minX, double maxX, double minZ, double maxZ) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.minX = minX;
+                world.maxX = maxX;
+                world.minZ = minZ;
+                world.maxZ = maxZ;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the enabled status for a world.
+     */
+    public boolean setWorldEnabled(String name, boolean enabled) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.enabled = enabled;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets a world configuration by name.
+     */
+    public Optional<CombatWorldConfig> getWorld(String name) {
+        return combatWorlds.stream().filter(w -> w.name.equals(name)).findFirst();
+    }
+
+    // ==================== Starter Operations ====================
+
+    /**
+     * Creates a new starter option.
+     */
+    public boolean createStarterOption(EquipmentType type, String optionId, String displayName, String templateId, String group, int level) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+
+        // Check if option already exists
+        for (StarterOptionConfig opt : starters) {
+            if (opt.optionId.equals(optionId)) {
+                return false;
+            }
+        }
+
+        StarterOptionConfig config = new StarterOptionConfig();
+        config.optionId = optionId;
+        config.displayName = displayName != null ? displayName : optionId;
+        config.templateId = templateId;
+        config.group = group;
+        config.level = level;
+
+        starters.add(config);
+        saveStarters();
+        configService.updateStarters(starterWeapons, starterHelmets);
+        return true;
+    }
+
+    /**
+     * Deletes a starter option.
+     */
+    public boolean deleteStarterOption(EquipmentType type, String optionId) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+        boolean removed = starters.removeIf(opt -> opt.optionId.equals(optionId));
+        if (removed) {
+            saveStarters();
+            configService.updateStarters(starterWeapons, starterHelmets);
+        }
+        return removed;
+    }
+
+    /**
+     * Gets a starter option by ID.
+     */
+    public Optional<StarterOptionConfig> getStarterOption(EquipmentType type, String optionId) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+        return starters.stream().filter(opt -> opt.optionId.equals(optionId)).findFirst();
+    }
+
+    /**
+     * Sets the display name for a starter option.
+     */
+    public boolean setStarterDisplayName(EquipmentType type, String optionId, String displayName) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+        for (StarterOptionConfig opt : starters) {
+            if (opt.optionId.equals(optionId)) {
+                opt.displayName = displayName;
+                saveStarters();
+                configService.updateStarters(starterWeapons, starterHelmets);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the template for a starter option.
+     */
+    public boolean setStarterTemplate(EquipmentType type, String optionId, String templateId) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+        for (StarterOptionConfig opt : starters) {
+            if (opt.optionId.equals(optionId)) {
+                opt.templateId = templateId;
+                saveStarters();
+                configService.updateStarters(starterWeapons, starterHelmets);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the group for a starter option.
+     */
+    public boolean setStarterGroup(EquipmentType type, String optionId, String group) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+        for (StarterOptionConfig opt : starters) {
+            if (opt.optionId.equals(optionId)) {
+                opt.group = group;
+                saveStarters();
+                configService.updateStarters(starterWeapons, starterHelmets);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the level for a starter option.
+     */
+    public boolean setStarterLevel(EquipmentType type, String optionId, int level) {
+        List<StarterOptionConfig> starters = type == EquipmentType.WEAPON ? starterWeapons : starterHelmets;
+        for (StarterOptionConfig opt : starters) {
+            if (opt.optionId.equals(optionId)) {
+                opt.level = level;
+                saveStarters();
+                configService.updateStarters(starterWeapons, starterHelmets);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ==================== Merchant Set Operations ====================
+
+    /**
+     * Sets the display name for a merchant template.
+     */
+    public boolean setMerchantTemplateDisplayName(String templateId, String displayName) {
+        MerchantTemplateConfig config = merchantTemplates.get(templateId);
+        if (config == null) {
+            return false;
+        }
+        config.displayName = displayName;
+        saveMerchants();
+        return true;
+    }
+
     // ==================== Getters for read access ====================
 
     public Map<String, EquipmentGroupConfig> getWeaponGroups() {
