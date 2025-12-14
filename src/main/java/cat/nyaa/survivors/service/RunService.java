@@ -144,11 +144,21 @@ public class RunService {
 
         PlayerState playerState = playerStateOpt.get();
 
-        // Reset run-related state (sets runLevel to 1)
-        playerState.resetRunState();
-
-        // Explicitly set run level to 1 for clarity
+        // Reset run-related state BUT preserve starter selections (they were just made!)
+        // Note: We don't call resetRunState() here because it clears starterWeaponOptionId/starterHelmetOptionId
+        // which we need to look up the weapon/helmet group. This mirrors initializePlayerForRejoin().
+        playerState.setXpProgress(0);
+        playerState.setXpHeld(0);
+        playerState.setUpgradePending(false);
+        playerState.setUpgradeDeadlineMillis(0);
+        playerState.setSuggestedUpgrade(null);
+        playerState.setOverflowXpAccumulated(0);
+        playerState.setWeaponAtMax(false);
+        playerState.setHelmetAtMax(false);
         playerState.setRunLevel(1);
+        // Note: coinsEarned is not reset here as there's no setter (will be reset via resetRunState on run end)
+        playerState.setRunId(null);
+        playerState.setReady(false);
 
         // Set initial XP required
         playerState.setXpRequired(config.getBaseXpRequired());
@@ -158,20 +168,48 @@ public class RunService {
         String helmetOptionId = playerState.getStarterHelmetOptionId();
 
         // Find starter configs
+        boolean foundWeapon = false;
         for (var weapon : config.getStarterWeapons()) {
             if (weapon.optionId.equals(weaponOptionId)) {
+                foundWeapon = true;
+                if (weapon.group == null || weapon.group.isEmpty()) {
+                    plugin.getLogger().warning("Starter weapon '" + weapon.optionId +
+                        "' has no group configured! Upgrades will fail.");
+                } else {
+                    plugin.getLogger().info("Found starter weapon: optionId=" + weapon.optionId +
+                        ", group=" + weapon.group + ", level=" + weapon.level);
+                }
                 playerState.setWeaponGroup(weapon.group);
                 playerState.setWeaponLevel(weapon.level);
                 break;
             }
         }
+        if (!foundWeapon && weaponOptionId != null) {
+            plugin.getLogger().warning("Could not find starter weapon config for optionId=" + weaponOptionId +
+                ". Available: " + config.getStarterWeapons().stream()
+                    .map(w -> w.optionId).toList());
+        }
 
+        boolean foundHelmet = false;
         for (var helmet : config.getStarterHelmets()) {
             if (helmet.optionId.equals(helmetOptionId)) {
+                foundHelmet = true;
+                if (helmet.group == null || helmet.group.isEmpty()) {
+                    plugin.getLogger().warning("Starter helmet '" + helmet.optionId +
+                        "' has no group configured! Upgrades will fail.");
+                } else {
+                    plugin.getLogger().info("Found starter helmet: optionId=" + helmet.optionId +
+                        ", group=" + helmet.group + ", level=" + helmet.level);
+                }
                 playerState.setHelmetGroup(helmet.group);
                 playerState.setHelmetLevel(helmet.level);
                 break;
             }
+        }
+        if (!foundHelmet && helmetOptionId != null) {
+            plugin.getLogger().warning("Could not find starter helmet config for optionId=" + helmetOptionId +
+                ". Available: " + config.getStarterHelmets().stream()
+                    .map(h -> h.optionId).toList());
         }
 
         // Set mode
@@ -232,6 +270,180 @@ public class RunService {
                 });
             });
         }
+    }
+
+    /**
+     * Rejoins a player to an existing run after death/respawn.
+     * Teleports them to a living teammate.
+     */
+    public void rejoinPlayerToRun(Player player, PlayerState playerState, RunState run) {
+        UUID playerId = player.getUniqueId();
+
+        // Find a living teammate to spawn near
+        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
+        if (teamOpt.isEmpty()) {
+            i18n.send(player, "error.not_in_team");
+            return;
+        }
+
+        TeamState team = teamOpt.get();
+        Optional<PlayerState> anchorOpt = plugin.getDeathService().findRespawnAnchor(team, playerState, run);
+
+        if (anchorOpt.isEmpty()) {
+            // No living teammates - can't rejoin
+            i18n.send(player, "error.no_teammates_alive");
+            return;
+        }
+
+        PlayerState anchor = anchorOpt.get();
+        Player anchorPlayer = Bukkit.getPlayer(anchor.getUuid());
+
+        if (anchorPlayer == null || !anchorPlayer.isOnline()) {
+            i18n.send(player, "error.no_teammates_alive");
+            return;
+        }
+
+        // Clear cooldown since they're rejoining
+        playerState.setCooldownUntilMillis(0);
+        playerState.setReady(false);
+
+        // Reinitialize player for run (resets xp/level but keeps starter selections)
+        initializePlayerForRejoin(playerId, run);
+
+        // Add player back to run
+        run.addParticipant(playerId);
+        run.markAlive(playerId);
+
+        // Teleport to anchor location
+        Location anchorLoc = anchorPlayer.getLocation();
+        Location spawnLoc = findSafeLocationNear(anchorLoc);
+
+        player.teleportAsync(spawnLoc).thenAccept(success -> {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (!success) {
+                    player.teleport(spawnLoc);
+                }
+
+                // Grant starter equipment
+                plugin.getStarterService().grantStarterEquipment(player, playerState);
+
+                // Setup scoreboard
+                plugin.getScoreboardService().setupSidebar(player);
+
+                // Apply respawn invulnerability
+                plugin.getDeathService().applyRespawnInvulnerability(player, playerState);
+
+                // Notify
+                i18n.send(player, "info.rejoined_run", "player", anchorPlayer.getName());
+
+                // Notify teammates
+                for (UUID memberId : team.getMembers()) {
+                    if (!memberId.equals(playerId)) {
+                        Player member = Bukkit.getPlayer(memberId);
+                        if (member != null && member.isOnline()) {
+                            i18n.send(member, "info.teammate_rejoined", "player", player.getName());
+                        }
+                    }
+                }
+
+                // Play teleport sound
+                if (config.getTeleportSound() != null) {
+                    player.playSound(player.getLocation(), config.getTeleportSound(), 1.0f, 1.0f);
+                }
+
+                plugin.getLogger().info("Player " + player.getName() + " rejoined run " + run.getRunId());
+            });
+        });
+    }
+
+    /**
+     * Initializes a player's state for rejoining a run (after death).
+     * Similar to initializePlayerForRun but preserves some state.
+     */
+    private void initializePlayerForRejoin(UUID playerId, RunState run) {
+        Optional<PlayerState> playerStateOpt = state.getPlayer(playerId);
+        if (playerStateOpt.isEmpty()) return;
+
+        PlayerState playerState = playerStateOpt.get();
+
+        // Reset run-related state (XP, levels, etc.)
+        playerState.setXpProgress(0);
+        playerState.setXpHeld(0);
+        playerState.setUpgradePending(false);
+        playerState.setUpgradeDeadlineMillis(0);
+        playerState.setSuggestedUpgrade(null);
+        playerState.setOverflowXpAccumulated(0);
+        playerState.setWeaponAtMax(false);
+        playerState.setHelmetAtMax(false);
+        playerState.setRunLevel(1);
+        // Note: coinsEarned is not reset here as there's no setter
+
+        // Set initial XP required
+        playerState.setXpRequired(config.getBaseXpRequired());
+
+        // Restore equipment from starters (these were selected before rejoining)
+        String weaponOptionId = playerState.getStarterWeaponOptionId();
+        String helmetOptionId = playerState.getStarterHelmetOptionId();
+
+        for (var weapon : config.getStarterWeapons()) {
+            if (weapon.optionId.equals(weaponOptionId)) {
+                playerState.setWeaponGroup(weapon.group);
+                playerState.setWeaponLevel(weapon.level);
+                break;
+            }
+        }
+
+        for (var helmet : config.getStarterHelmets()) {
+            if (helmet.optionId.equals(helmetOptionId)) {
+                playerState.setHelmetGroup(helmet.group);
+                playerState.setHelmetLevel(helmet.level);
+                break;
+            }
+        }
+
+        // Set mode
+        playerState.setMode(PlayerMode.IN_RUN);
+        playerState.setRunId(run.getRunId());
+
+        // Apply invulnerability
+        long invulEnd = System.currentTimeMillis() + config.getRespawnInvulnerabilityMs();
+        playerState.setInvulnerableUntilMillis(invulEnd);
+    }
+
+    /**
+     * Finds a safe location near a center point.
+     */
+    private Location findSafeLocationNear(Location center) {
+        if (center.getWorld() == null) return center;
+
+        for (int attempts = 0; attempts < 10; attempts++) {
+            double offsetX = java.util.concurrent.ThreadLocalRandom.current().nextDouble(-3, 3);
+            double offsetZ = java.util.concurrent.ThreadLocalRandom.current().nextDouble(-3, 3);
+
+            Location candidate = center.clone().add(offsetX, 0, offsetZ);
+            candidate.setY(center.getWorld().getHighestBlockYAt(candidate) + 1);
+
+            if (isSafeLocation(candidate)) {
+                return candidate;
+            }
+        }
+
+        return center.clone().add(0, 1, 0);
+    }
+
+    /**
+     * Checks if a location is safe for teleportation.
+     */
+    private boolean isSafeLocation(Location loc) {
+        if (loc.getWorld() == null) return false;
+
+        Location below = loc.clone().subtract(0, 1, 0);
+        if (!below.getBlock().getType().isSolid()) return false;
+
+        if (!loc.getBlock().isPassable()) return false;
+        if (!loc.clone().add(0, 1, 0).getBlock().isPassable()) return false;
+
+        return true;
     }
 
     /**
