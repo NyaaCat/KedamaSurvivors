@@ -7,8 +7,10 @@ import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.WorldService;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +49,8 @@ public class WorldSubCommand implements SubCommand {
             case "set" -> handleSet(sender, args);
             case "enable" -> handleEnable(sender, args);
             case "disable" -> handleDisable(sender, args);
+            case "setfallback" -> handleSetFallback(sender, args);
+            case "clearfallback" -> handleClearFallback(sender, args);
             default -> showHelp(sender);
         }
     }
@@ -59,6 +63,8 @@ public class WorldSubCommand implements SubCommand {
         i18n.send(sender, "admin.world.help.set_displayname");
         i18n.send(sender, "admin.world.help.set_weight");
         i18n.send(sender, "admin.world.help.set_bounds");
+        i18n.send(sender, "admin.world.help.setfallback");
+        i18n.send(sender, "admin.world.help.clearfallback");
         i18n.send(sender, "admin.world.help.enable");
         i18n.send(sender, "admin.world.help.disable");
     }
@@ -123,6 +129,9 @@ public class WorldSubCommand implements SubCommand {
         for (CombatWorldConfig world : worlds) {
             boolean enabled = worldService.isWorldEnabled(world.name);
             String status = i18n.get(enabled ? "admin.world.status_enabled" : "admin.world.status_disabled");
+            String fallbackInfo = world.hasFallbackSpawn()
+                    ? String.format("%.1f, %.1f, %.1f", world.fallbackX, world.fallbackY, world.fallbackZ)
+                    : i18n.get("admin.world.no_fallback");
             i18n.send(sender, "admin.world.list_entry",
                     "name", world.name,
                     "displayName", world.displayName,
@@ -131,7 +140,8 @@ public class WorldSubCommand implements SubCommand {
                     "minX", world.minX,
                     "maxX", world.maxX,
                     "minZ", world.minZ,
-                    "maxZ", world.maxZ);
+                    "maxZ", world.maxZ,
+                    "fallback", fallbackInfo);
         }
     }
 
@@ -239,13 +249,89 @@ public class WorldSubCommand implements SubCommand {
         i18n.send(sender, "admin.world.disabled", "name", name);
     }
 
+    private void handleSetFallback(CommandSender sender, String[] args) {
+        // /vrs admin world setfallback <name> - uses player's current location
+        // /vrs admin world setfallback <name> <x> <y> <z> [yaw] [pitch]
+        if (args.length < 2) {
+            i18n.send(sender, "admin.world.help.setfallback");
+            return;
+        }
+
+        String name = args[1];
+        Optional<CombatWorldConfig> worldOpt = adminConfig.getWorld(name);
+        if (worldOpt.isEmpty()) {
+            i18n.send(sender, "admin.world.not_found", "name", name);
+            return;
+        }
+
+        double x, y, z;
+        float yaw = 0, pitch = 0;
+
+        if (args.length == 2) {
+            // Use player's current location
+            if (!(sender instanceof Player player)) {
+                i18n.send(sender, "error.player_only");
+                return;
+            }
+            Location loc = player.getLocation();
+            x = loc.getX();
+            y = loc.getY();
+            z = loc.getZ();
+            yaw = loc.getYaw();
+            pitch = loc.getPitch();
+        } else if (args.length >= 5) {
+            // Use provided coordinates
+            try {
+                x = Double.parseDouble(args[2]);
+                y = Double.parseDouble(args[3]);
+                z = Double.parseDouble(args[4]);
+                if (args.length >= 6) yaw = Float.parseFloat(args[5]);
+                if (args.length >= 7) pitch = Float.parseFloat(args[6]);
+            } catch (NumberFormatException e) {
+                i18n.send(sender, "error.invalid_number", "value", "coordinates");
+                return;
+            }
+        } else {
+            i18n.send(sender, "admin.world.help.setfallback");
+            return;
+        }
+
+        boolean success = adminConfig.setWorldFallbackSpawn(name, x, y, z, yaw, pitch);
+        if (success) {
+            i18n.send(sender, "admin.world.fallback_set", "name", name,
+                    "x", String.format("%.1f", x),
+                    "y", String.format("%.1f", y),
+                    "z", String.format("%.1f", z));
+        }
+    }
+
+    private void handleClearFallback(CommandSender sender, String[] args) {
+        // /vrs admin world clearfallback <name>
+        if (args.length < 2) {
+            i18n.send(sender, "admin.world.help.clearfallback");
+            return;
+        }
+
+        String name = args[1];
+        Optional<CombatWorldConfig> worldOpt = adminConfig.getWorld(name);
+        if (worldOpt.isEmpty()) {
+            i18n.send(sender, "admin.world.not_found", "name", name);
+            return;
+        }
+
+        boolean success = adminConfig.clearWorldFallbackSpawn(name);
+        if (success) {
+            i18n.send(sender, "admin.world.fallback_cleared", "name", name);
+        }
+    }
+
     @Override
     public List<String> tabComplete(CommandSender sender, String[] args) {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("create", "delete", "list", "set", "enable", "disable")) {
+            for (String sub : List.of("create", "delete", "list", "set", "enable", "disable", "setfallback", "clearfallback")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
@@ -268,7 +354,7 @@ public class WorldSubCommand implements SubCommand {
                         completions.add(world.getName());
                     }
                 }
-            } else if (List.of("delete", "enable", "disable").contains(action)) {
+            } else if (List.of("delete", "enable", "disable", "setfallback", "clearfallback").contains(action)) {
                 // Suggest configured worlds
                 for (CombatWorldConfig world : adminConfig.getCombatWorlds()) {
                     if (world.name.toLowerCase().startsWith(partial)) {

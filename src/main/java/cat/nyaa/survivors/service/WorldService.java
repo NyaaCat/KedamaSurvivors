@@ -165,8 +165,37 @@ public class WorldService {
                         }
                     }
 
+                    // If no spawn points found and fallback is configured, use fallback
+                    if (spawnPoints.isEmpty() && worldConfig.hasFallbackSpawn()) {
+                        Location fallback = getFallbackLocation(worldConfig);
+                        if (fallback != null) {
+                            spawnPoints.add(fallback);
+                            plugin.getLogger().info("Using fallback spawn point for world " + worldConfig.name);
+                        }
+                    }
+
                     return spawnPoints;
                 }, runnable -> Bukkit.getScheduler().runTask(plugin, runnable));
+    }
+
+    /**
+     * Gets the fallback location for a world configuration.
+     */
+    private Location getFallbackLocation(ConfigService.CombatWorldConfig worldConfig) {
+        if (!worldConfig.hasFallbackSpawn()) {
+            return null;
+        }
+        World world = Bukkit.getWorld(worldConfig.name);
+        if (world == null) {
+            return null;
+        }
+        Location loc = new Location(world,
+                worldConfig.fallbackX,
+                worldConfig.fallbackY,
+                worldConfig.fallbackZ);
+        if (worldConfig.fallbackYaw != null) loc.setYaw(worldConfig.fallbackYaw);
+        if (worldConfig.fallbackPitch != null) loc.setPitch(worldConfig.fallbackPitch);
+        return loc;
     }
 
     /**
@@ -197,6 +226,15 @@ public class WorldService {
                     spawnPoints.add(loc);
                     break;
                 }
+            }
+        }
+
+        // If no spawn points found and fallback is configured, use fallback
+        if (spawnPoints.isEmpty() && worldConfig.hasFallbackSpawn()) {
+            Location fallback = getFallbackLocation(worldConfig);
+            if (fallback != null) {
+                spawnPoints.add(fallback);
+                plugin.getLogger().info("Using fallback spawn point for world " + worldConfig.name);
             }
         }
 

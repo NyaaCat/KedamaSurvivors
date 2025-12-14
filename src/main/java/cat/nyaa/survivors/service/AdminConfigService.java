@@ -739,6 +739,22 @@ public class AdminConfigService {
                 world.maxZ = bounds.getOrDefault("maxZ", 500).doubleValue();
             }
 
+            // Load fallback spawn point
+            @SuppressWarnings("unchecked")
+            Map<String, Number> fallback = (Map<String, Number>) map.get("fallbackSpawn");
+            if (fallback != null) {
+                Number x = fallback.get("x");
+                Number y = fallback.get("y");
+                Number z = fallback.get("z");
+                Number yaw = fallback.get("yaw");
+                Number pitch = fallback.get("pitch");
+                if (x != null) world.fallbackX = x.doubleValue();
+                if (y != null) world.fallbackY = y.doubleValue();
+                if (z != null) world.fallbackZ = z.doubleValue();
+                if (yaw != null) world.fallbackYaw = yaw.floatValue();
+                if (pitch != null) world.fallbackPitch = pitch.floatValue();
+            }
+
             combatWorlds.add(world);
         }
     }
@@ -763,6 +779,17 @@ public class AdminConfigService {
             bounds.put("minZ", world.minZ);
             bounds.put("maxZ", world.maxZ);
             map.put("spawnBounds", bounds);
+
+            // Save fallback spawn if configured
+            if (world.hasFallbackSpawn()) {
+                Map<String, Number> fallback = new LinkedHashMap<>();
+                fallback.put("x", world.fallbackX);
+                fallback.put("y", world.fallbackY);
+                fallback.put("z", world.fallbackZ);
+                if (world.fallbackYaw != null) fallback.put("yaw", world.fallbackYaw);
+                if (world.fallbackPitch != null) fallback.put("pitch", world.fallbackPitch);
+                map.put("fallbackSpawn", fallback);
+            }
 
             list.add(map);
         }
@@ -928,6 +955,44 @@ public class AdminConfigService {
         for (CombatWorldConfig world : combatWorlds) {
             if (world.name.equals(name)) {
                 world.enabled = enabled;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the fallback spawn point for a world.
+     */
+    public boolean setWorldFallbackSpawn(String name, double x, double y, double z, float yaw, float pitch) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.fallbackX = x;
+                world.fallbackY = y;
+                world.fallbackZ = z;
+                world.fallbackYaw = yaw;
+                world.fallbackPitch = pitch;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Clears the fallback spawn point for a world.
+     */
+    public boolean clearWorldFallbackSpawn(String name) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.fallbackX = null;
+                world.fallbackY = null;
+                world.fallbackZ = null;
+                world.fallbackYaw = null;
+                world.fallbackPitch = null;
                 saveWorlds();
                 configService.updateCombatWorlds(combatWorlds);
                 return true;

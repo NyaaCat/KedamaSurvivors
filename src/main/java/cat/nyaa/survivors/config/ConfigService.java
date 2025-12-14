@@ -725,6 +725,19 @@ public class ConfigService {
         public boolean enabled;
         public double weight;
         public double minX, maxX, minZ, maxZ;
+        // Fallback spawn point used when random sampling fails
+        public Double fallbackX;
+        public Double fallbackY;
+        public Double fallbackZ;
+        public Float fallbackYaw;
+        public Float fallbackPitch;
+
+        /**
+         * Checks if a fallback spawn point is configured.
+         */
+        public boolean hasFallbackSpawn() {
+            return fallbackX != null && fallbackY != null && fallbackZ != null;
+        }
     }
 
     public static class StarterOptionConfig {
