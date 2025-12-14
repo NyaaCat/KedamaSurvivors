@@ -494,6 +494,24 @@ public class AdminConfigService {
         }
     }
 
+    /**
+     * Recursively converts a ConfigurationSection to a Map.
+     * This is needed because Bukkit's YamlConfiguration returns MemorySection
+     * objects for nested structures, which cannot be cast to Map directly.
+     */
+    private Map<String, Object> convertSectionToMap(ConfigurationSection section) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (String key : section.getKeys(false)) {
+            Object value = section.get(key);
+            if (value instanceof ConfigurationSection) {
+                result.put(key, convertSectionToMap((ConfigurationSection) value));
+            } else {
+                result.put(key, value);
+            }
+        }
+        return result;
+    }
+
     private void loadItemTemplates() {
         itemTemplates.clear();
 
@@ -512,10 +530,7 @@ public class AdminConfigService {
     private void loadItemTemplateFile(Path path) {
         try {
             YamlConfiguration yaml = YamlConfiguration.loadConfiguration(path.toFile());
-            Map<String, Object> map = new LinkedHashMap<>();
-            for (String key : yaml.getKeys(false)) {
-                map.put(key, yaml.get(key));
-            }
+            Map<String, Object> map = convertSectionToMap(yaml);
 
             ItemTemplateConfig config = ItemTemplateConfig.fromMap(map);
             if (config.getTemplateId() != null) {
