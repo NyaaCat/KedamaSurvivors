@@ -285,17 +285,17 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [ ] Template loading on startup/reload
 
 ### 8.2 Runtime Persistence
-- [ ] Player state JSON serialization
-- [ ] Team state JSON serialization
-- [ ] Periodic auto-save task
-- [ ] Save on player quit
+- [x] Player state JSON serialization
+- [x] Team state JSON serialization
+- [x] Periodic auto-save task
+- [x] Save on player quit
 - [ ] Save on run end
-- [ ] Load on startup
+- [x] Load on startup
 
 ### 8.3 Backup System
-- [ ] Backup task scheduling
-- [ ] Backup file rotation
-- [ ] Max backups limit
+- [x] Backup task scheduling
+- [x] Backup file rotation
+- [x] Max backups limit
 
 ---
 
@@ -329,6 +329,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] `StateServiceTest` - state management
 - [x] `EquipmentGroupTest` - level lookup, random selection
 - [x] `RunStateTest` - run state management
+- [x] `PersistenceServiceTest` - player/team data serialization
 - [ ] `ConfigServiceTest` - config loading, validation (requires Bukkit mocking)
 - [ ] `I18nServiceTest` - message loading, placeholders (requires Bukkit mocking)
 
@@ -380,12 +381,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 | 5. Gameplay Systems | Complete | 100% |
 | 6. UI & Display | Complete | 100% |
 | 7. Event Listeners | Complete | 100% |
-| 8. Persistence | Not Started | 0% |
+| 8. Persistence | In Progress | 70% |
 | 9. Global Systems | Complete | 100% |
-| 10. Testing | In Progress | 70% |
+| 10. Testing | In Progress | 75% |
 | 11. Polish | Not Started | 0% |
 
-**Overall: ~85%**
+**Overall: ~88%**
 
 ---
 

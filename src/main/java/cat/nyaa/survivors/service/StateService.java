@@ -36,6 +36,14 @@ public class StateService {
     }
 
     /**
+     * Registers an existing player state (used when loading from persistence).
+     * If a player with this UUID already exists, it is replaced.
+     */
+    public void registerPlayer(PlayerState player) {
+        playerStates.put(player.getUuid(), player);
+    }
+
+    /**
      * Gets a player state if it exists.
      */
     public Optional<PlayerState> getPlayer(UUID playerId) {
@@ -96,6 +104,18 @@ public class StateService {
         }
 
         return team;
+    }
+
+    /**
+     * Registers an existing team state (used when loading from persistence).
+     * Does not update player teamId - use linkTeamMembers() after all loads complete.
+     */
+    public void registerTeam(TeamState team) {
+        teamStates.put(team.getTeamId(), team);
+        // Update playerToTeam index
+        for (UUID memberId : team.getMembers()) {
+            playerToTeam.put(memberId, team.getTeamId());
+        }
     }
 
     /**

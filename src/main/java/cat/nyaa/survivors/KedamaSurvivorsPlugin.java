@@ -8,6 +8,7 @@ import cat.nyaa.survivors.listener.InventoryListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
 import cat.nyaa.survivors.service.DeathService;
+import cat.nyaa.survivors.service.PersistenceService;
 import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.RunService;
@@ -51,6 +52,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private DisconnectChecker disconnectChecker;
     private CooldownDisplay cooldownDisplay;
     private MerchantService merchantService;
+    private PersistenceService persistenceService;
 
     @Override
     public void onEnable() {
@@ -92,6 +94,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // State service manages all game state
         stateService = new StateService();
+
+        // Persistence service for saving/loading state (must be after stateService)
+        persistenceService = new PersistenceService(this);
+        persistenceService.initialize();
 
         // Scoreboard service for sidebar display
         scoreboardService = new ScoreboardService(this);
@@ -151,6 +157,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     }
 
     private void startTasks() {
+        // Start persistence service (auto-save and backup tasks)
+        if (persistenceService != null) {
+            persistenceService.start();
+        }
+
         // Start scoreboard updates
         if (scoreboardService != null) {
             scoreboardService.start();
@@ -181,6 +192,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Clear ready service countdowns
         if (readyService != null) {
             readyService.clearAll();
+        }
+
+        // Stop persistence service (saves all data)
+        if (persistenceService != null) {
+            persistenceService.stop();
         }
 
         // Stop scoreboard service
@@ -218,7 +234,8 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     }
 
     private void saveData() {
-        // TODO: Implement persistence when needed
+        // Final save is handled by persistenceService.stop() in stopTasks()
+        // Clear runtime state after save
         if (stateService != null) {
             stateService.clearAll();
         }
@@ -297,5 +314,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public MerchantService getMerchantService() {
         return merchantService;
+    }
+
+    public PersistenceService getPersistenceService() {
+        return persistenceService;
     }
 }
