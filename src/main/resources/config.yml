@@ -60,6 +60,7 @@ respawn:
   invulnerabilitySeconds: 3
   canDealDamageDuringInvul: false
   invulEffect: GLOWING
+  pvp: false  # Whether players can damage each other (false = PVP disabled, damage set to 0)
 
 # ============================================================
 # Combat Worlds

@@ -62,6 +62,7 @@ public class ConfigService {
     // Respawn
     private int respawnInvulnerabilitySeconds;
     private boolean canDealDamageDuringInvul;
+    private boolean pvpEnabled;
 
     // Spawning limits
     private int spawnTickInterval;
@@ -245,6 +246,7 @@ public class ConfigService {
     private void loadRespawn() {
         respawnInvulnerabilitySeconds = config.getInt("respawn.invulnerabilitySeconds", 3);
         canDealDamageDuringInvul = config.getBoolean("respawn.canDealDamageDuringInvul", false);
+        pvpEnabled = config.getBoolean("respawn.pvp", false);
     }
 
     private void loadSpawning() {
@@ -552,6 +554,7 @@ public class ConfigService {
     public int getRespawnInvulnerabilitySeconds() { return respawnInvulnerabilitySeconds; }
     public long getRespawnInvulnerabilityMs() { return respawnInvulnerabilitySeconds * 1000L; }
     public boolean isCanDealDamageDuringInvul() { return canDealDamageDuringInvul; }
+    public boolean isPvpEnabled() { return pvpEnabled; }
 
     public int getSpawnTickInterval() { return spawnTickInterval; }
     public boolean isSpawningEnabled() { return spawningEnabled; }

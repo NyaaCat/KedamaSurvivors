@@ -7,6 +7,7 @@ import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.StateService;
+import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -43,10 +44,35 @@ public class CombatListener implements Listener {
     }
 
     /**
-     * Prevents invulnerable players from dealing damage if configured.
+     * Handles damage prevention for PVP and invulnerability.
+     * PVP damage is set to 0 (not cancelled) to allow other plugins to process the event.
      */
     @EventHandler(priority = EventPriority.HIGH)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // Handle PVP damage prevention when victim is a player
+        if (event.getEntity() instanceof Player victim) {
+            if (!config.isPvpEnabled()) {
+                // Check for player damager (direct or via projectile)
+                Player damager = getDamagerPlayer(event);
+                if (damager != null && !damager.equals(victim)) {
+                    // Set damage to 0 instead of cancelling (allows other plugins to process)
+                    event.setDamage(0);
+                    return;
+                }
+
+                // Check for AreaEffectCloud (lingering potions)
+                Entity damagerEntity = event.getDamager();
+                if (damagerEntity instanceof AreaEffectCloud cloud) {
+                    ProjectileSource source = cloud.getSource();
+                    if (source instanceof Player thrower && !thrower.equals(victim)) {
+                        event.setDamage(0);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Handle invulnerability - prevent invulnerable players from dealing damage
         Player damager = getDamagerPlayer(event);
         if (damager == null) return;
 

@@ -282,6 +282,7 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Invulnerability damage cancellation
 - [x] Optional: prevent damage dealing during invul
 - [x] VRS mob death handling - reward distribution
+- [x] PVP damage prevention (configurable via `respawn.pvp`, default false)
 
 ### 7.4 Entity Listener
 - [x] VRS mob identification (`vrs_mob` tag)
