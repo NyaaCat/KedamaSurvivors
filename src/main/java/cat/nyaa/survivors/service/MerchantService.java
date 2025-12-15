@@ -45,6 +45,7 @@ public class MerchantService {
     // Global tasks
     private int despawnCheckerTaskId = -1;
     private int headItemCycleTaskId = -1;
+    private int animationTaskId = -1;
 
     public MerchantService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -75,6 +76,11 @@ public class MerchantService {
             ).getTaskId();
         }
 
+        // Start centralized animation loop every 2 ticks (10 FPS)
+        animationTaskId = Bukkit.getScheduler().runTaskTimer(
+                plugin, this::animateAllMerchants, 2, 2
+        ).getTaskId();
+
         plugin.getLogger().info("Merchant service started");
     }
 
@@ -90,6 +96,10 @@ public class MerchantService {
         if (headItemCycleTaskId != -1) {
             Bukkit.getScheduler().cancelTask(headItemCycleTaskId);
             headItemCycleTaskId = -1;
+        }
+        if (animationTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(animationTaskId);
+            animationTaskId = -1;
         }
 
         // Cancel all spawn tasks
@@ -148,6 +158,17 @@ public class MerchantService {
      */
     private void trySpawnWanderingMerchant(RunState run) {
         if (!run.isActive()) return;
+
+        // Check global wandering merchant limit
+        int maxCount = config.getWanderingMerchantMaxCount();
+        if (maxCount > 0) {
+            long currentWandering = activeMerchants.values().stream()
+                    .filter(m -> m.getBehavior() == MerchantBehavior.WANDERING)
+                    .count();
+            if (currentWandering >= maxCount) {
+                return;  // Limit reached, skip spawn
+            }
+        }
 
         // Check spawn chance
         double spawnChance = config.getMerchantSpawnChance();
@@ -248,11 +269,16 @@ public class MerchantService {
             singleItem = pool.selectSingle();
             if (singleItem != null) {
                 headItem = resolveItemStack(singleItem.getItemTemplateId());
+                if (headItem == null) {
+                    plugin.getLogger().warning("Failed to resolve item template: " + singleItem.getItemTemplateId());
+                }
                 // Update display name to show item name and price
                 String itemName = getItemDisplayName(singleItem.getItemTemplateId());
                 displayName = i18n.get("merchant.single_nametag",
                         "item_name", itemName,
                         "price", singleItem.getPrice());
+            } else {
+                plugin.getLogger().warning("Pool '" + pool.getPoolId() + "' returned null single item");
             }
         } else {
             // Multi type - select all items or random selection based on showAllItems
@@ -265,12 +291,17 @@ public class MerchantService {
             }
             if (!stock.isEmpty()) {
                 headItem = resolveItemStack(stock.get(0).getItemTemplateId());
+                if (headItem == null) {
+                    plugin.getLogger().warning("Failed to resolve item template: " + stock.get(0).getItemTemplateId());
+                }
+            } else {
+                plugin.getLogger().warning("Pool '" + pool.getPoolId() + "' returned empty stock");
             }
         }
 
         // Spawn the entity
         entity.spawn(location, headItem, displayName);
-        entity.startAnimation(plugin);
+        // Animation is handled centrally by animateAllMerchants()
 
         // Create instance
         MerchantInstance instance = new MerchantInstance(
@@ -459,6 +490,20 @@ public class MerchantService {
                 if (entity.getScoreboardTags().contains(MerchantEntity.MERCHANT_TAG)) {
                     entity.remove();
                 }
+            }
+        }
+    }
+
+    // ==================== Animation ====================
+
+    /**
+     * Animates all active merchants (centralized animation loop).
+     * Runs every 2 ticks for smooth 10 FPS animation.
+     */
+    private void animateAllMerchants() {
+        for (MerchantInstance merchant : activeMerchants.values()) {
+            if (merchant.isValid()) {
+                merchant.getEntity().updateAnimation();
             }
         }
     }

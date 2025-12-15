@@ -25,7 +25,6 @@ public class MerchantEntity {
     private final UUID entityId;
     private ArmorStand armorStand;
     private Location baseLocation;
-    private int animationTaskId = -1;
 
     // Animation state
     private float rotation = 0;
@@ -88,46 +87,49 @@ public class MerchantEntity {
      * Starts the animation task (spinning and floating).
      *
      * @param plugin the plugin to schedule the task
+     * @deprecated Animation is now handled centrally by MerchantService
      */
+    @Deprecated
     public void startAnimation(Plugin plugin) {
-        if (animationTaskId != -1) {
-            return;  // Already running
-        }
-
-        animationTaskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (armorStand == null || armorStand.isDead()) {
-                stopAnimation();
-                return;
-            }
-
-            // Update rotation
-            rotation = (rotation + rotationSpeed) % 360;
-
-            // Update bob offset
-            bobOffset += bobDirection * bobSpeed;
-            if (bobOffset >= bobHeight) {
-                bobDirection = -1;
-            } else if (bobOffset <= -bobHeight) {
-                bobDirection = 1;
-            }
-
-            // Apply to armor stand
-            Location newLoc = baseLocation.clone();
-            newLoc.setY(baseLocation.getY() + bobOffset);
-            newLoc.setYaw(rotation);
-
-            armorStand.teleport(newLoc);
-        }, 0L, 1L).getTaskId();
+        // Animation now handled centrally by MerchantService.animateAllMerchants()
     }
 
     /**
      * Stops the animation task.
+     *
+     * @deprecated Animation is now handled centrally by MerchantService
      */
+    @Deprecated
     public void stopAnimation() {
-        if (animationTaskId != -1) {
-            Bukkit.getScheduler().cancelTask(animationTaskId);
-            animationTaskId = -1;
+        // Animation now handled centrally by MerchantService
+    }
+
+    /**
+     * Updates the animation state for a single frame.
+     * Called by MerchantService's centralized animation loop.
+     */
+    public void updateAnimation() {
+        if (armorStand == null || armorStand.isDead()) {
+            return;
         }
+
+        // Update rotation
+        rotation = (rotation + rotationSpeed) % 360;
+
+        // Update bob offset
+        bobOffset += bobDirection * bobSpeed;
+        if (bobOffset >= bobHeight) {
+            bobDirection = -1;
+        } else if (bobOffset <= -bobHeight) {
+            bobDirection = 1;
+        }
+
+        // Apply to armor stand
+        Location newLoc = baseLocation.clone();
+        newLoc.setY(baseLocation.getY() + bobOffset);
+        newLoc.setYaw(rotation);
+
+        armorStand.teleport(newLoc);
     }
 
     /**

@@ -68,8 +68,14 @@ public class DisconnectChecker implements Runnable {
         long now = System.currentTimeMillis();
         long graceMs = config.getDisconnectGraceMs();
 
-        // Check all players in DISCONNECTED mode
-        for (PlayerState playerState : state.getAllPlayers()) {
+        // Check only tracked disconnected players (more efficient than iterating all)
+        for (UUID playerId : state.getDisconnectedPlayers()) {
+            Optional<PlayerState> playerStateOpt = state.getPlayer(playerId);
+            if (playerStateOpt.isEmpty()) continue;
+
+            PlayerState playerState = playerStateOpt.get();
+
+            // Verify still in DISCONNECTED mode
             if (playerState.getMode() != PlayerMode.DISCONNECTED) {
                 continue;
             }
@@ -112,6 +118,7 @@ public class DisconnectChecker implements Runnable {
 
         // Clear disconnect tracking
         playerState.setDisconnectedAtMillis(0);
+        state.markReconnected(playerId);  // Remove from disconnected set
 
         // Remove from team disconnect tracking
         UUID teamId = playerState.getTeamId();

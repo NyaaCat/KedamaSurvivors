@@ -5,6 +5,7 @@ import cat.nyaa.survivors.model.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 /**
  * Central service for managing all game state.
@@ -25,6 +26,9 @@ public class StateService {
     private final Map<UUID, UUID> playerToTeam = new ConcurrentHashMap<>();  // player UUID -> team UUID
     private final Map<UUID, UUID> playerToRun = new ConcurrentHashMap<>();   // player UUID -> run UUID
     private final Map<UUID, UUID> teamToRun = new ConcurrentHashMap<>();     // team UUID -> run UUID
+
+    // Disconnected player tracking for efficient grace period checking
+    private final Set<UUID> disconnectedPlayers = ConcurrentHashMap.newKeySet();
 
     // ==================== Player State Management ====================
 
@@ -84,6 +88,29 @@ public class StateService {
         return playerStates.values().stream()
                 .filter(p -> p.getMode() == mode)
                 .collect(Collectors.toList());
+    }
+
+    // ==================== Disconnect Tracking ====================
+
+    /**
+     * Marks a player as disconnected for grace period tracking.
+     */
+    public void markDisconnected(UUID playerId) {
+        disconnectedPlayers.add(playerId);
+    }
+
+    /**
+     * Marks a player as reconnected (removes from disconnect tracking).
+     */
+    public void markReconnected(UUID playerId) {
+        disconnectedPlayers.remove(playerId);
+    }
+
+    /**
+     * Gets all currently disconnected players (for efficient grace period checking).
+     */
+    public Set<UUID> getDisconnectedPlayers() {
+        return Collections.unmodifiableSet(disconnectedPlayers);
     }
 
     // ==================== Team State Management ====================

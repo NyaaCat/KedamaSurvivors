@@ -12,6 +12,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.*;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Manages scoreboard display for players in runs.
@@ -26,6 +29,16 @@ public class ScoreboardService {
 
     private final ScoreboardManager scoreboardManager;
     private final Map<UUID, Scoreboard> playerScoreboards = new HashMap<>();
+
+    // Dirty-flag tracking for incremental updates
+    private final Map<UUID, Map<Integer, String>> previousLines = new ConcurrentHashMap<>();
+
+    // Async executor for building scoreboard lines
+    private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "VRS-ScoreboardBuilder");
+        t.setDaemon(true);
+        return t;
+    });
 
     private int taskId = -1;
 
@@ -62,6 +75,9 @@ public class ScoreboardService {
             taskId = -1;
         }
 
+        // Shutdown async executor
+        asyncExecutor.shutdown();
+
         // Clear all player scoreboards
         for (UUID playerId : playerScoreboards.keySet()) {
             Player player = Bukkit.getPlayer(playerId);
@@ -70,6 +86,7 @@ public class ScoreboardService {
             }
         }
         playerScoreboards.clear();
+        previousLines.clear();
     }
 
     /**
@@ -141,6 +158,7 @@ public class ScoreboardService {
     public void removeSidebar(Player player) {
         UUID playerId = player.getUniqueId();
         Scoreboard board = playerScoreboards.remove(playerId);
+        previousLines.remove(playerId);
 
         if (board != null) {
             player.setScoreboard(scoreboardManager.getMainScoreboard());
@@ -148,134 +166,128 @@ public class ScoreboardService {
     }
 
     /**
-     * Updates all player scoreboards.
+     * Updates all player scoreboards asynchronously.
+     * Builds scoreboard lines on async thread, applies changes on main thread.
      */
     private void updateAllScoreboards() {
-        for (UUID playerId : new HashSet<>(playerScoreboards.keySet())) {
-            Player player = Bukkit.getPlayer(playerId);
-            if (player != null && player.isOnline()) {
-                updatePlayerSidebar(player);
-            } else {
-                playerScoreboards.remove(playerId);
+        Set<UUID> playerIds = new HashSet<>(playerScoreboards.keySet());
+
+        asyncExecutor.submit(() -> {
+            Map<UUID, Map<Integer, String>> newLinesMap = new HashMap<>();
+
+            for (UUID playerId : playerIds) {
+                Map<Integer, String> lines = buildSidebarLines(playerId);
+                if (lines != null) {
+                    newLinesMap.put(playerId, lines);
+                }
             }
-        }
+
+            // Apply changes on main thread
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                for (Map.Entry<UUID, Map<Integer, String>> entry : newLinesMap.entrySet()) {
+                    UUID playerId = entry.getKey();
+                    Player player = Bukkit.getPlayer(playerId);
+                    if (player != null && player.isOnline()) {
+                        applyLineChanges(playerId, entry.getValue());
+                    } else {
+                        playerScoreboards.remove(playerId);
+                        previousLines.remove(playerId);
+                    }
+                }
+            });
+        });
     }
 
     /**
-     * Updates the sidebar for a specific player.
-     * Content varies based on player mode (lobby vs in-run).
+     * Builds sidebar lines for a player (can run on async thread).
+     * Returns map of score -> line text.
      */
-    public void updatePlayerSidebar(Player player) {
-        UUID playerId = player.getUniqueId();
-        Scoreboard board = playerScoreboards.get(playerId);
-        if (board == null) return;
-
+    private Map<Integer, String> buildSidebarLines(UUID playerId) {
         Optional<PlayerState> playerStateOpt = state.getPlayer(playerId);
-        if (playerStateOpt.isEmpty()) return;
+        if (playerStateOpt.isEmpty()) return null;
 
         PlayerState playerState = playerStateOpt.get();
-
         Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
         Optional<RunState> runOpt = state.getPlayerRun(playerId);
 
-        Objective sidebar = board.getObjective("vrs_sidebar");
-        if (sidebar == null) return;
-
-        // Clear old entries
-        for (String entry : board.getEntries()) {
-            board.resetScores(entry);
-        }
-
-        // Build sidebar lines (scores are used for ordering, higher = top)
+        Map<Integer, String> lines = new LinkedHashMap<>();
         int score = 15;
 
         boolean inRun = runOpt.isPresent() && runOpt.get().isActive();
 
         if (inRun) {
             // =============== IN-RUN SCOREBOARD ===============
+            RunState run = runOpt.get();
 
             // Player level (run progression level)
-            String levelLine = i18n.get("scoreboard.player_level", "level", playerState.getRunLevel());
-            sidebar.getScore(levelLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.player_level", "level", playerState.getRunLevel()));
 
             // Weapon level
-            String weaponLine = i18n.get("scoreboard.weapon_level", "level", playerState.getWeaponLevel());
-            sidebar.getScore(weaponLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.weapon_level", "level", playerState.getWeaponLevel()));
 
             // Helmet level
-            String helmetLine = i18n.get("scoreboard.helmet_level", "level", playerState.getHelmetLevel());
-            sidebar.getScore(helmetLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.helmet_level", "level", playerState.getHelmetLevel()));
 
             // Empty line
-            sidebar.getScore(" ").setScore(score--);
+            lines.put(score--, " ");
 
             // XP bar
             String xpBar = buildXpBar(playerState);
-            String xpLine = i18n.get("scoreboard.xp", "bar", xpBar, "percent", getXpPercent(playerState));
-            sidebar.getScore(xpLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.xp", "bar", xpBar, "percent", getXpPercent(playerState)));
 
             // Upgrade countdown (only when pending and not both at max)
             if (playerState.isUpgradePending() &&
                     !(playerState.isWeaponAtMax() && playerState.isHelmetAtMax())) {
                 int remainingSeconds = playerState.getUpgradeRemainingSeconds();
                 if (remainingSeconds > 0) {
-                    String upgradeLine = i18n.get("scoreboard.upgrade_countdown", "seconds", remainingSeconds);
-                    sidebar.getScore(upgradeLine).setScore(score--);
+                    lines.put(score--, i18n.get("scoreboard.upgrade_countdown", "seconds", remainingSeconds));
                 }
             }
 
             // Coins earned this run
-            RunState run = runOpt.get();
-            String coinsLine = i18n.get("scoreboard.coins", "amount", run.getTotalCoinsCollected());
-            sidebar.getScore(coinsLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.coins", "amount", run.getTotalCoinsCollected()));
 
             // Empty line
-            sidebar.getScore("  ").setScore(score--);
+            lines.put(score--, "  ");
 
             // Perma score
-            String permaLine = i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore()));
-            sidebar.getScore(permaLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore())));
 
             // Team info
             if (teamOpt.isPresent()) {
                 TeamState team = teamOpt.get();
-                String teamLine = i18n.get("scoreboard.team",
+                lines.put(score--, i18n.get("scoreboard.team",
                         "name", team.getName(),
                         "count", team.getMemberCount(),
-                        "max", config.getMaxTeamSize());
-                sidebar.getScore(teamLine).setScore(score--);
+                        "max", config.getMaxTeamSize()));
             }
 
             // Run time
-            String timeLine = i18n.get("scoreboard.time", "time", run.getElapsedFormatted());
-            sidebar.getScore(timeLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.time", "time", run.getElapsedFormatted()));
 
         } else {
             // =============== LOBBY SCOREBOARD ===============
 
             // Perma score
-            String permaLine = i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore()));
-            sidebar.getScore(permaLine).setScore(score--);
+            lines.put(score--, i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore())));
 
             // Empty line
-            sidebar.getScore(" ").setScore(score--);
+            lines.put(score--, " ");
 
             // Team info
             if (teamOpt.isPresent()) {
                 TeamState team = teamOpt.get();
-                String teamLine = i18n.get("scoreboard.team",
+                lines.put(score--, i18n.get("scoreboard.team",
                         "name", team.getName(),
                         "count", team.getMemberCount(),
-                        "max", config.getMaxTeamSize());
-                sidebar.getScore(teamLine).setScore(score--);
+                        "max", config.getMaxTeamSize()));
             } else {
                 // No team - show hint
-                String noTeamLine = i18n.get("scoreboard.no_team");
-                sidebar.getScore(noTeamLine).setScore(score--);
+                lines.put(score--, i18n.get("scoreboard.no_team"));
             }
 
             // Empty line
-            sidebar.getScore("  ").setScore(score--);
+            lines.put(score--, "  ");
 
             // Player mode/status
             String statusKey = switch (playerState.getMode()) {
@@ -285,18 +297,61 @@ public class ScoreboardService {
                 case COOLDOWN -> "scoreboard.status_cooldown";
                 default -> "scoreboard.status_lobby";
             };
-            String statusLine = i18n.get(statusKey);
-            sidebar.getScore(statusLine).setScore(score--);
+            lines.put(score--, i18n.get(statusKey));
 
             // Selected starters (if any)
             if (playerState.getStarterWeaponOptionId() != null) {
-                String weaponSelected = i18n.get("scoreboard.starter_weapon_selected");
-                sidebar.getScore(weaponSelected).setScore(score--);
+                lines.put(score--, i18n.get("scoreboard.starter_weapon_selected"));
             }
             if (playerState.getStarterHelmetOptionId() != null) {
-                String helmetSelected = i18n.get("scoreboard.starter_helmet_selected");
-                sidebar.getScore(helmetSelected).setScore(score--);
+                lines.put(score--, i18n.get("scoreboard.starter_helmet_selected"));
             }
+        }
+
+        return lines;
+    }
+
+    /**
+     * Applies line changes to a player's scoreboard (must run on main thread).
+     * Only updates lines that have changed for efficiency.
+     */
+    private void applyLineChanges(UUID playerId, Map<Integer, String> newLines) {
+        Scoreboard board = playerScoreboards.get(playerId);
+        if (board == null) return;
+
+        Objective sidebar = board.getObjective("vrs_sidebar");
+        if (sidebar == null) return;
+
+        Map<Integer, String> oldLines = previousLines.getOrDefault(playerId, Map.of());
+
+        // Remove lines that changed or were removed
+        for (Map.Entry<Integer, String> old : oldLines.entrySet()) {
+            String newLine = newLines.get(old.getKey());
+            if (!old.getValue().equals(newLine)) {
+                board.resetScores(old.getValue());
+            }
+        }
+
+        // Add/update changed lines
+        for (Map.Entry<Integer, String> entry : newLines.entrySet()) {
+            String oldLine = oldLines.get(entry.getKey());
+            if (!entry.getValue().equals(oldLine)) {
+                sidebar.getScore(entry.getValue()).setScore(entry.getKey());
+            }
+        }
+
+        previousLines.put(playerId, newLines);
+    }
+
+    /**
+     * Updates the sidebar for a specific player (synchronous, for immediate updates).
+     * Content varies based on player mode (lobby vs in-run).
+     */
+    public void updatePlayerSidebar(Player player) {
+        UUID playerId = player.getUniqueId();
+        Map<Integer, String> lines = buildSidebarLines(playerId);
+        if (lines != null) {
+            applyLineChanges(playerId, lines);
         }
     }
 

@@ -183,6 +183,7 @@ public class PlayerListener implements Listener {
             // Grace period expired
             playerState.setMode(PlayerMode.LOBBY);
             playerState.resetRunState();
+            state.markReconnected(playerId);  // Remove from disconnected tracking
             i18n.send(player, "disconnect.grace_expired");
             return;
         }
@@ -200,6 +201,9 @@ public class PlayerListener implements Listener {
                 // Restore to run
                 playerState.setMode(PlayerMode.IN_RUN);
                 playerState.setDisconnectedAtMillis(0);
+
+                // Remove from disconnected tracking
+                state.markReconnected(playerId);
 
                 // Apply invulnerability
                 long invulEnd = System.currentTimeMillis() + config.getRespawnInvulnerabilityMs();
@@ -233,6 +237,7 @@ public class PlayerListener implements Listener {
         // No active run to return to
         playerState.setMode(PlayerMode.LOBBY);
         playerState.resetRunState();
+        state.markReconnected(playerId);  // Remove from disconnected tracking
     }
 
     private void handleDisconnectInRun(Player player, PlayerState playerState) {
@@ -241,6 +246,9 @@ public class PlayerListener implements Listener {
         // Mark as disconnected
         playerState.setMode(PlayerMode.DISCONNECTED);
         playerState.setDisconnectedAtMillis(System.currentTimeMillis());
+
+        // Track in disconnected set for efficient grace period checking
+        state.markDisconnected(playerId);
 
         // Update team tracking
         Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);

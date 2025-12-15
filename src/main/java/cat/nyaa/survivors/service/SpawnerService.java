@@ -40,8 +40,16 @@ public class SpawnerService {
     // Per-world spawner state
     private final Map<String, WorldSpawnerState> worldStates = new ConcurrentHashMap<>();
 
+    // Cache for nearby mob counts (cleared each spawn tick)
+    private final Map<MobCountCacheKey, Integer> mobCountCache = new HashMap<>();
+
     // Async executor for Phase B
     private final ExecutorService asyncExecutor;
+
+    /**
+     * Cache key for mob count queries, based on chunk coordinates.
+     */
+    private record MobCountCacheKey(String worldName, int chunkX, int chunkZ) {}
 
     // Main loop task ID
     private int taskId = -1;
@@ -139,15 +147,33 @@ public class SpawnerService {
 
     /**
      * Gets the count of VRS mobs near a location.
+     * Uses chunk-based caching to avoid repeated expensive getNearbyEntities calls.
      */
     public int getMobCountNear(Location location, double radius) {
         if (location.getWorld() == null) return 0;
 
-        return (int) location.getWorld()
+        // Create cache key based on chunk coordinates
+        String worldName = location.getWorld().getName();
+        int chunkX = location.getBlockX() >> 4;
+        int chunkZ = location.getBlockZ() >> 4;
+        MobCountCacheKey key = new MobCountCacheKey(worldName, chunkX, chunkZ);
+
+        // Check cache first
+        Integer cached = mobCountCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        // Cache miss - perform actual query
+        int count = (int) location.getWorld()
                 .getNearbyEntities(location, radius, radius, radius)
                 .stream()
                 .filter(e -> e.getScoreboardTags().contains(VRS_MOB_TAG))
                 .count();
+
+        // Store in cache
+        mobCountCache.put(key, count);
+        return count;
     }
 
     /**
@@ -181,6 +207,9 @@ public class SpawnerService {
      * Must run on main thread.
      */
     private List<SpawnContext> collectSpawnContexts() {
+        // Clear mob count cache for this tick
+        mobCountCache.clear();
+
         List<SpawnContext> contexts = new ArrayList<>();
 
         for (RunState run : state.getActiveRuns()) {
