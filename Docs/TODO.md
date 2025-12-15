@@ -441,6 +441,14 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Prevents item duplication exploits
   - Files modified: `RunService.java`
 
+### Scoreboard Coin Display Update
+- [x] Update scoreboard to show "Total (+current run)" format for coins
+  - In-run display: Shows total balance with current run earnings, e.g., "20 (+3)"
+  - Lobby display: Shows total balance only
+  - Added balance caching for thread-safe async scoreboard updates
+  - Files modified: `ScoreboardService.java`, `lang/zh_CN.yml`
+  - Tests added: `ScoreboardServiceTest.java`
+
 ---
 
 ## Notes

@@ -2,6 +2,7 @@ package cat.nyaa.survivors.scoreboard;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.economy.EconomyService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.RunState;
@@ -26,12 +27,16 @@ public class ScoreboardService {
     private final ConfigService config;
     private final I18nService i18n;
     private final StateService state;
+    private final EconomyService economy;
 
     private final ScoreboardManager scoreboardManager;
     private final Map<UUID, Scoreboard> playerScoreboards = new HashMap<>();
 
     // Dirty-flag tracking for incremental updates
     private final Map<UUID, Map<Integer, String>> previousLines = new ConcurrentHashMap<>();
+
+    // Cached player balances (updated on main thread before async scoreboard build)
+    private final Map<UUID, Integer> cachedBalances = new ConcurrentHashMap<>();
 
     // Async executor for building scoreboard lines
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -47,6 +52,7 @@ public class ScoreboardService {
         this.config = plugin.getConfigService();
         this.i18n = plugin.getI18nService();
         this.state = plugin.getStateService();
+        this.economy = plugin.getEconomyService();
         this.scoreboardManager = Bukkit.getScoreboardManager();
     }
 
@@ -87,6 +93,7 @@ public class ScoreboardService {
         }
         playerScoreboards.clear();
         previousLines.clear();
+        cachedBalances.clear();
     }
 
     /**
@@ -159,6 +166,7 @@ public class ScoreboardService {
         UUID playerId = player.getUniqueId();
         Scoreboard board = playerScoreboards.remove(playerId);
         previousLines.remove(playerId);
+        cachedBalances.remove(playerId);
 
         if (board != null) {
             player.setScoreboard(scoreboardManager.getMainScoreboard());
@@ -171,6 +179,14 @@ public class ScoreboardService {
      */
     private void updateAllScoreboards() {
         Set<UUID> playerIds = new HashSet<>(playerScoreboards.keySet());
+
+        // Cache balances on main thread (EconomyService.getBalance() may access Bukkit API)
+        for (UUID playerId : playerIds) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) {
+                cachedBalances.put(playerId, economy.getBalance(player));
+            }
+        }
 
         asyncExecutor.submit(() -> {
             Map<UUID, Map<Integer, String>> newLinesMap = new HashMap<>();
@@ -244,8 +260,10 @@ public class ScoreboardService {
                 }
             }
 
-            // Coins earned this run
-            lines.put(score--, i18n.get("scoreboard.coins", "amount", run.getTotalCoinsCollected()));
+            // Coins: Total (+current run)
+            int totalBalance = cachedBalances.getOrDefault(playerId, 0);
+            int runCoins = run.getTotalCoinsCollected();
+            lines.put(score--, i18n.get("scoreboard.coins", "total", totalBalance, "run", runCoins));
 
             // Empty line
             lines.put(score--, "  ");
@@ -267,6 +285,10 @@ public class ScoreboardService {
 
         } else {
             // =============== LOBBY SCOREBOARD ===============
+
+            // Coins: Total only (no run in lobby)
+            int totalBalance = cachedBalances.getOrDefault(playerId, 0);
+            lines.put(score--, i18n.get("scoreboard.coins_lobby", "total", totalBalance));
 
             // Perma score
             lines.put(score--, i18n.get("scoreboard.perma_score", "amount", formatNumber(playerState.getPermaScore())));
