@@ -166,6 +166,7 @@ public class MerchantService {
                     .filter(m -> m.getBehavior() == MerchantBehavior.WANDERING)
                     .count();
             if (currentWandering >= maxCount) {
+                plugin.getLogger().fine("Wandering merchant limit reached (" + currentWandering + "/" + maxCount + "), skipping spawn");
                 return;  // Limit reached, skip spawn
             }
         }

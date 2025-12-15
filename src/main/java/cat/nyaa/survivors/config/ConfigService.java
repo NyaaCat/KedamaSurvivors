@@ -186,6 +186,7 @@ public class ConfigService {
     private double merchantBobSpeed;
     private String wanderingMerchantPoolId;
     private String wanderingMerchantType;
+    private int wanderingMerchantMaxCount;
 
     public ConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -545,6 +546,7 @@ public class ConfigService {
         merchantBobSpeed = config.getDouble("merchants.display.bobSpeed", 0.01);
         wanderingMerchantPoolId = config.getString("merchants.wandering.poolId", "");
         wanderingMerchantType = config.getString("merchants.wandering.type", "single");
+        wanderingMerchantMaxCount = config.getInt("merchants.wandering.maxCount", 3);
     }
 
     // ==================== Utility Methods ====================
@@ -713,6 +715,7 @@ public class ConfigService {
     public double getMerchantBobSpeed() { return merchantBobSpeed; }
     public String getWanderingMerchantPoolId() { return wanderingMerchantPoolId; }
     public String getWanderingMerchantType() { return wanderingMerchantType; }
+    public int getWanderingMerchantMaxCount() { return wanderingMerchantMaxCount; }
 
     // ==================== Runtime Update Methods ====================
 
@@ -820,6 +823,7 @@ public class ConfigService {
     public void setMerchantBobSpeed(double speed) { this.merchantBobSpeed = speed; }
     public void setWanderingMerchantPoolId(String poolId) { this.wanderingMerchantPoolId = poolId; }
     public void setWanderingMerchantType(String type) { this.wanderingMerchantType = type; }
+    public void setWanderingMerchantMaxCount(int maxCount) { this.wanderingMerchantMaxCount = maxCount; }
 
     // Upgrade
     public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
@@ -896,6 +900,7 @@ public class ConfigService {
         config.set("merchants.display.bobSpeed", merchantBobSpeed);
         config.set("merchants.wandering.poolId", wanderingMerchantPoolId);
         config.set("merchants.wandering.type", wanderingMerchantType);
+        config.set("merchants.wandering.maxCount", wanderingMerchantMaxCount);
 
         // Upgrade
         config.set("upgrade.timeoutSeconds", upgradeTimeoutSeconds);

@@ -59,7 +59,6 @@ public class MerchantEntity {
         armorStand = world.spawn(location, ArmorStand.class, stand -> {
             // Make invisible but with visible name
             stand.setVisible(false);
-            stand.setSmall(true);
             stand.setGravity(false);
             stand.setInvulnerable(true);
             stand.setCanPickupItems(false);

@@ -210,6 +210,7 @@ merchants:
   wandering:
     spawnIntervalSeconds: 120    # How often to attempt spawning
     spawnChance: 0.5             # Probability of spawn per interval (0-1)
+    maxCount: 3                  # Maximum wandering merchants at once (0 = unlimited)
     stayTime:
       minSeconds: 60             # Minimum stay duration
       maxSeconds: 120            # Maximum stay duration

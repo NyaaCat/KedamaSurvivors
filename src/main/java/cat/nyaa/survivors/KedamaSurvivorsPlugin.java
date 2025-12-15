@@ -131,6 +131,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Starter service for equipment selection and granting
         starterService = new StarterService(this);
 
+        // Merchant service for villager traders (must be before RunService)
+        merchantService = new MerchantService(this);
+
         // Ready service for ready/countdown logic
         readyService = new ReadyService(this);
 
@@ -160,9 +163,6 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Upgrade reminder task for chat-based upgrades
         upgradeReminderTask = new UpgradeReminderTask(this);
-
-        // Merchant service for villager traders
-        merchantService = new MerchantService(this);
     }
 
     private void registerCommands() {

@@ -53,6 +53,11 @@ public class SpawnListener implements Listener {
             return;
         }
 
+        // Allow VRS merchants (armor stands with vrs_merchant tag)
+        if (entity.getScoreboardTags().contains("vrs_merchant")) {
+            return;
+        }
+
         // Allow players (should never happen but just in case)
         if (entity instanceof Player) {
             return;

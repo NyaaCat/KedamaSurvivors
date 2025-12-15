@@ -90,6 +90,7 @@ public class ConfigSubCommand implements SubCommand {
                 entry("merchantHeadItemCycleInterval", new IntProperty(config::getMerchantHeadItemCycleInterval, config::setMerchantHeadItemCycleInterval)),
                 entry("wanderingMerchantPoolId", new StringProperty(config::getWanderingMerchantPoolId, config::setWanderingMerchantPoolId)),
                 entry("wanderingMerchantType", new StringProperty(config::getWanderingMerchantType, config::setWanderingMerchantType)),
+                entry("wanderingMerchantMaxCount", new IntProperty(config::getWanderingMerchantMaxCount, config::setWanderingMerchantMaxCount)),
 
                 // Upgrade
                 entry("upgradeTimeoutSeconds", new IntProperty(config::getUpgradeTimeoutSeconds, config::setUpgradeTimeoutSeconds)),
@@ -210,7 +211,7 @@ public class ConfigSubCommand implements SubCommand {
                         "merchantMinItems", "merchantMaxItems", "merchantShowAllItems",
                         "merchantRotationSpeed", "merchantBobHeight", "merchantBobSpeed",
                         "merchantHeadItemCycleInterval",
-                        "wanderingMerchantPoolId", "wanderingMerchantType"),
+                        "wanderingMerchantPoolId", "wanderingMerchantType", "wanderingMerchantMaxCount"),
                 "upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"),
                 "scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval")
         );
