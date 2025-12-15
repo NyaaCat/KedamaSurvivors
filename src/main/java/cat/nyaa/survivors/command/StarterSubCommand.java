@@ -41,8 +41,8 @@ public class StarterSubCommand implements SubCommand {
         }
 
         if (args.length == 0) {
-            // Show starter selection help
-            i18n.send(sender, "starter.help");
+            // No args: open weapon GUI directly (helmet will auto-open if configured)
+            handleWeaponSelection(player, playerState, args);
             return;
         }
 

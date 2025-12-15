@@ -457,6 +457,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `ScoreboardService.java`, `lang/zh_CN.yml`
   - Tests added: `ScoreboardServiceTest.java`
 
+### /vrs starter Command Simplification
+- [x] Change `/vrs starter` (no args) to open weapon GUI directly
+  - Previously showed help message, now opens weapon GUI
+  - Helmet GUI auto-opens after weapon selection if `autoOpenHelmetGui` is enabled
+  - Files modified: `StarterSubCommand.java`
+
 ---
 
 ## Notes
