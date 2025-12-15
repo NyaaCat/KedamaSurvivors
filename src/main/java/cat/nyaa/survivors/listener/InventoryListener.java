@@ -10,9 +10,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -63,9 +65,15 @@ public class InventoryListener implements Listener {
             return;
         }
 
-        // Protect VRS equipment during restricted modes
+        // Protect specific slots during restricted modes (allow moving VRS items freely within player inventory)
         if (isInRestrictedMode(player)) {
-            if (isProtectedSlot(event, player) || isVrsItemClick(event)) {
+            if (isProtectedSlot(event, player)) {
+                event.setCancelled(true);
+                return;
+            }
+
+            // Prevent shift-clicking VRS items into external inventories (shops, chests, etc.)
+            if (isVrsItemTransferToExternal(event)) {
                 event.setCancelled(true);
             }
         }
@@ -200,5 +208,42 @@ public class InventoryListener implements Listener {
         ItemStack cursorItem = event.getCursor();
 
         return starter.isVrsItem(currentItem) || starter.isVrsItem(cursorItem);
+    }
+
+    /**
+     * Checks if a VRS item is being transferred to an external inventory.
+     * This catches shift-click and number key transfers to non-player inventories.
+     */
+    private boolean isVrsItemTransferToExternal(InventoryClickEvent event) {
+        // Only check if there's a non-player inventory open
+        if (event.getView().getTopInventory().getType() == InventoryType.CRAFTING) {
+            // Player's own crafting grid (no external inventory open)
+            return false;
+        }
+
+        // Check shift-click from player inventory with VRS item
+        if (event.isShiftClick() && event.getClickedInventory() instanceof PlayerInventory) {
+            ItemStack clickedItem = event.getCurrentItem();
+            if (starter.isVrsItem(clickedItem)) {
+                return true;
+            }
+        }
+
+        // Check number key swap that would move VRS item to external inventory
+        if (event.getClick() == ClickType.NUMBER_KEY) {
+            // Number key pressed while clicking in top inventory - would swap with hotbar
+            if (!(event.getClickedInventory() instanceof PlayerInventory)) {
+                int hotbarSlot = event.getHotbarButton();
+                if (hotbarSlot >= 0) {
+                    Player player = (Player) event.getWhoClicked();
+                    ItemStack hotbarItem = player.getInventory().getItem(hotbarSlot);
+                    if (starter.isVrsItem(hotbarItem)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 }

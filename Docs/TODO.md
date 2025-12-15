@@ -441,6 +441,14 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Prevents item duplication exploits
   - Files modified: `RunService.java`
 
+### Allow Moving VRS Items in Inventory
+- [x] Allow players to move VRS items within inventory during run
+  - Removed `isVrsItemClick` check from inventory click handler
+  - Players can now reorganize VRS items freely within their own inventory
+  - Added protection against shift-click/number-key transfers to external inventories
+  - Drops/pickups still blocked, slot 0 and 39 still protected
+  - Files modified: `InventoryListener.java`
+
 ### Scoreboard Coin Display Update
 - [x] Update scoreboard to show "Total (+current run)" format for coins
   - In-run display: Shows total balance with current run earnings, e.g., "20 (+3)"
