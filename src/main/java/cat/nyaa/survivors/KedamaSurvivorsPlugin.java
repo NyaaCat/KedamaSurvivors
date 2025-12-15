@@ -218,6 +218,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Start merchant service
         if (merchantService != null) {
             merchantService.start();
+            // Load fixed merchants after service is started
+            if (persistenceService != null) {
+                persistenceService.loadFixedMerchants();
+            }
         }
 
         // Start command queue

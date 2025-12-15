@@ -31,6 +31,7 @@ public class PersistenceService {
 
     private static final String PLAYERS_DIR = "players";
     private static final String TEAMS_FILE = "teams.json";
+    private static final String FIXED_MERCHANTS_FILE = "fixed_merchants.json";
     private static final DateTimeFormatter BACKUP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
     private final KedamaSurvivorsPlugin plugin;
@@ -118,12 +119,38 @@ public class PersistenceService {
     // ==================== Load Operations ====================
 
     /**
-     * Loads all persisted data (players and teams).
+     * Loads all persisted data (players, teams, and fixed merchants).
      */
     public void loadAll() {
         loadPlayers();
         loadTeams();
         linkTeamMembers();
+        // Note: Fixed merchants are loaded separately after MerchantService starts
+    }
+
+    /**
+     * Loads fixed merchants. Called after MerchantService is started.
+     */
+    public void loadFixedMerchants() {
+        Path file = runtimePath.resolve(FIXED_MERCHANTS_FILE);
+        if (!Files.exists(file)) {
+            return;
+        }
+
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            Type type = new TypeToken<List<MerchantService.FixedMerchantData>>() {}.getType();
+            List<MerchantService.FixedMerchantData> dataList = gson.fromJson(reader, type);
+
+            if (dataList != null && !dataList.isEmpty()) {
+                MerchantService merchantService = plugin.getMerchantService();
+                if (merchantService != null) {
+                    merchantService.loadFixedMerchants(dataList);
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to load fixed merchants", e);
+            handleCorruptFile(file);
+        }
     }
 
     private void loadPlayers() {
@@ -258,6 +285,7 @@ public class PersistenceService {
     public void saveAllSync() {
         savePlayers();
         saveTeams();
+        saveFixedMerchants();
         if (config.isVerbose()) {
             plugin.getLogger().info("All data saved to disk");
         }
@@ -302,6 +330,26 @@ public class PersistenceService {
                 .collect(Collectors.toList());
 
         Path file = runtimePath.resolve(TEAMS_FILE);
+        writeJsonFile(file, dataList);
+    }
+
+    private void saveFixedMerchants() {
+        MerchantService merchantService = plugin.getMerchantService();
+        if (merchantService == null) {
+            return;
+        }
+
+        List<MerchantService.FixedMerchantData> dataList = merchantService.getFixedMerchantsData();
+
+        Path file = runtimePath.resolve(FIXED_MERCHANTS_FILE);
+        if (dataList.isEmpty()) {
+            // Delete the file if no fixed merchants exist
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException ignored) {}
+            return;
+        }
+
         writeJsonFile(file, dataList);
     }
 

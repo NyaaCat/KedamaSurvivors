@@ -583,4 +583,104 @@ public class MerchantService {
     public Optional<MerchantInstance> getMerchant(UUID instanceId) {
         return Optional.ofNullable(activeMerchants.get(instanceId));
     }
+
+    // ==================== Persistence ====================
+
+    /**
+     * Data class for persisting fixed merchants.
+     */
+    public static class FixedMerchantData {
+        public String worldName;
+        public double x;
+        public double y;
+        public double z;
+        public float yaw;
+        public float pitch;
+        public String type;
+        public String poolId;
+        public boolean limited;
+        public String displayName;
+
+        public FixedMerchantData() {}
+
+        public static FixedMerchantData fromMerchant(MerchantInstance merchant) {
+            FixedMerchantData data = new FixedMerchantData();
+            Location loc = merchant.getLocation();
+            if (loc != null && loc.getWorld() != null) {
+                data.worldName = loc.getWorld().getName();
+                data.x = loc.getX();
+                data.y = loc.getY();
+                data.z = loc.getZ();
+                data.yaw = loc.getYaw();
+                data.pitch = loc.getPitch();
+            }
+            data.type = merchant.getType().name();
+            data.poolId = merchant.getPoolId();
+            data.limited = merchant.isLimited();
+            data.displayName = merchant.getDisplayName();
+            return data;
+        }
+
+        public Location toLocation() {
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) return null;
+            return new Location(world, x, y, z, yaw, pitch);
+        }
+    }
+
+    /**
+     * Gets all fixed merchants for persistence.
+     */
+    public List<FixedMerchantData> getFixedMerchantsData() {
+        List<FixedMerchantData> data = new ArrayList<>();
+        for (MerchantInstance merchant : activeMerchants.values()) {
+            if (merchant.getBehavior() == MerchantBehavior.FIXED && merchant.isValid()) {
+                data.add(FixedMerchantData.fromMerchant(merchant));
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Loads fixed merchants from persisted data.
+     * Should be called after the service starts.
+     */
+    public void loadFixedMerchants(List<FixedMerchantData> dataList) {
+        if (dataList == null || dataList.isEmpty()) {
+            return;
+        }
+
+        int loaded = 0;
+        int failed = 0;
+
+        for (FixedMerchantData data : dataList) {
+            Location loc = data.toLocation();
+            if (loc == null) {
+                plugin.getLogger().warning("Failed to load merchant: world '" + data.worldName + "' not found");
+                failed++;
+                continue;
+            }
+
+            MerchantType type;
+            try {
+                type = MerchantType.valueOf(data.type);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Failed to load merchant: invalid type '" + data.type + "'");
+                failed++;
+                continue;
+            }
+
+            MerchantInstance merchant = spawnFixedMerchant(loc, type, data.poolId, data.limited, data.displayName);
+            if (merchant != null) {
+                loaded++;
+            } else {
+                plugin.getLogger().warning("Failed to spawn merchant at " + formatLocation(loc) +
+                        " - pool '" + data.poolId + "' may not exist");
+                failed++;
+            }
+        }
+
+        plugin.getLogger().info("Loaded " + loaded + " fixed merchants" +
+                (failed > 0 ? " (" + failed + " failed)" : ""));
+    }
 }
