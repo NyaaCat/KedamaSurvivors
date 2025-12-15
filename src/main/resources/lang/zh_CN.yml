@@ -151,8 +151,8 @@ success:
   trade_captured: "§a已捕获交易模板: §f{id}"
   spawner_paused: "§a刷怪已暂停"
   spawner_resumed: "§a刷怪已恢复"
-  merchant_spawned: "§a商人已生成"
-  merchants_cleared: "§a已清除 §f{count} §a个商人"
+  merchant_spawned: "§a商店已生成"
+  merchants_cleared: "§a已清除 §f{count} §a个商店"
   solo_team_created: "§a已创建单人队伍: §f{name}"
 
 # ============================================================
@@ -432,7 +432,7 @@ admin:
     debug: "§f/vrs admin debug <player|perf|templates|run> §8- §7调试命令"
     equipment: "§f/vrs admin equipment §8- §7装备组管理"
     spawner: "§f/vrs admin spawner §8- §7刷怪器原型管理"
-    merchant: "§f/vrs admin merchant §8- §7商人模板管理"
+    merchant: "§f/vrs admin merchant §8- §7商店模板管理"
     config: "§f/vrs admin config §8- §7配置管理"
 
   # 状态
@@ -618,13 +618,13 @@ admin:
     list_empty: "§7无初始装备选项"
     list_entry: "§7- §f{optionId} §8(§7{displayName}§8) §7模板: §f{templateId} §7组: §f{group} §7等级: §f{level}"
 
-  # 商人管理
+  # 商店管理
   merchant:
     help:
-      header: "§8========== §6商人管理命令 §8=========="
-      template_create: "§f/vrs admin merchant template create <templateId> [displayName] §8- §7创建商人模板"
-      template_delete: "§f/vrs admin merchant template delete <templateId> §8- §7删除商人模板"
-      template_list: "§f/vrs admin merchant template list §8- §7列出所有商人模板"
+      header: "§8========== §6商店管理命令 §8=========="
+      template_create: "§f/vrs admin merchant template create <templateId> [displayName] §8- §7创建商店模板"
+      template_delete: "§f/vrs admin merchant template delete <templateId> §8- §7删除商店模板"
+      template_list: "§f/vrs admin merchant template list §8- §7列出所有商店模板"
       template_set_displayname: "§f/vrs admin merchant template set displayname <templateId> <displayName> §8- §7设置显示名称"
       trade_add: "§f/vrs admin merchant trade add <templateId> <cost> [maxUses] §8- §7添加手持物品为交易"
       trade_remove: "§f/vrs admin merchant trade remove <templateId> <index> §8- §7移除交易"
@@ -634,16 +634,16 @@ admin:
       pool_additem: "§f/vrs admin merchant pool additem <poolId> <price> [weight] §8- §7添加手持物品到池"
       pool_removeitem: "§f/vrs admin merchant pool removeitem <poolId> <index> §8- §7移除物品"
       pool_list: "§f/vrs admin merchant pool list [poolId] §8- §7列出物品池"
-      spawn: "§f/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] §8- §7在当前位置生成商人"
-      despawn: "§f/vrs admin merchant despawn [radius] §8- §7移除附近商人"
-      active: "§f/vrs admin merchant active §8- §7列出活动商人"
-    template_created: "§a商人模板 §f{templateId} §a创建成功 (显示名: §f{displayName}§a)"
-    template_exists: "§c商人模板 §f{templateId} §c已存在"
-    template_deleted: "§a商人模板 §f{templateId} §a已删除"
-    template_not_found: "§c找不到商人模板 §f{templateId}"
+      spawn: "§f/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random] §8- §7在当前位置生成商店"
+      despawn: "§f/vrs admin merchant despawn [radius] §8- §7移除附近商店"
+      active: "§f/vrs admin merchant active §8- §7列出活动商店"
+    template_created: "§a商店模板 §f{templateId} §a创建成功 (显示名: §f{displayName}§a)"
+    template_exists: "§c商店模板 §f{templateId} §c已存在"
+    template_deleted: "§a商店模板 §f{templateId} §a已删除"
+    template_not_found: "§c找不到商店模板 §f{templateId}"
     template_has_trades: "§e警告: 该模板包含 §f{count} §e个交易"
-    template_list_header: "§8========== §6商人模板列表 §8=========="
-    template_list_empty: "§7无商人模板"
+    template_list_header: "§8========== §6商店模板列表 §8=========="
+    template_list_empty: "§7无商店模板"
     template_list_entry: "§7- §f{templateId} §8(§7{displayName}§8) §7交易: §f{tradeCount}"
     no_item_in_hand: "§c请手持要添加的物品"
     trade_added: "§a已添加交易到 §f{templateId} §8(物品: §f{item}§8, 价格: §f{cost}§8, 次数: §f{maxUses}§8)"
@@ -652,7 +652,7 @@ admin:
     trade_list_header: "§8========== §6{templateId} 交易列表 §8=========="
     trade_list_empty: "§7无交易"
     trade_list_entry: "§7[{index}] §f{resultItem} §7x{resultAmount} §8- §7价格: §e{costAmount} §7金币 §8(§7最大 §f{maxUses} §7次§8)"
-    displayname_set: "§a商人模板 §f{templateId} §a显示名称已设置为: §f{displayName}"
+    displayname_set: "§a商店模板 §f{templateId} §a显示名称已设置为: §f{displayName}"
     # 物品池管理
     pool_created: "§a物品池 §f{poolId} §a创建成功"
     pool_deleted: "§a物品池 §f{poolId} §a已删除"
@@ -667,14 +667,14 @@ admin:
     pool_items_entry: "§7[{index}] §f{templateId} §7价格: §e{price} §7权重: §f{weight}"
     pool_items_empty: "§7无物品"
     pool_empty: "§c物品池 §f{poolId} §c是空的"
-    # 商人生成/移除/列表
-    invalid_type: "§c无效的商人类型: §f{type} §8(§7使用 multi 或 single§8)"
-    spawned: "§a已生成 §f{type} §a商人 §f{id} §a使用池 §f{poolId}"
-    despawned: "§a已移除商人 §f{id}"
-    no_nearby_merchant: "§c附近没有找到商人"
-    active_header: "§8========== §6活动商人 ({count}) §8=========="
+    # 商店生成/移除/列表
+    invalid_type: "§c无效的商店类型: §f{type} §8(§7使用 multi 或 single§8)"
+    spawned: "§a已生成 §f{type} §a商店 §f{id} §a使用池 §f{poolId}"
+    despawned: "§a已移除商店 §f{id}"
+    no_nearby_merchant: "§c附近没有找到商店"
+    active_header: "§8========== §6活动商店 ({count}) §8=========="
     active_entry: "§7- §f{id} §8| §7{type}/{behavior} §8| §7池: §f{poolId} §8| §7位置: §f{world} {x},{y},{z}"
-    active_empty: "§7无活动商人"
+    active_empty: "§7无活动商店"
 
   # 配置管理
   config:
@@ -772,7 +772,7 @@ run:
   ended: "§a战斗结束 §8| §7击杀: §f{kills} §8| §7金币: §f{coins} §8| §7时间: §f{time}"
 
 # ============================================================
-# 商人消息
+# 商店消息
 # ============================================================
 
 merchant:

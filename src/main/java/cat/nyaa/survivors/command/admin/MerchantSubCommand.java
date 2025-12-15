@@ -566,7 +566,7 @@ public class MerchantSubCommand implements SubCommand {
     // ==================== Spawn Commands ====================
 
     private void handleSpawn(CommandSender sender, String[] args) {
-        // /vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited]
+        // /vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random]
         if (!(sender instanceof Player player)) {
             i18n.send(sender, "error.player_only");
             return;
@@ -606,12 +606,17 @@ public class MerchantSubCommand implements SubCommand {
 
         // Parse limited flag (optional, defaults to config value)
         boolean limited = configService.isMerchantLimited();
-        if (args.length > 3) {
-            String limitedArg = args[3].toLowerCase();
-            if (limitedArg.equals("limited")) {
-                limited = true;
-            } else if (limitedArg.equals("unlimited")) {
-                limited = false;
+        // Parse showAllItems flag (optional, defaults to false for fixed merchants)
+        boolean showAllItems = false;
+
+        // Parse optional flags (can appear in any order after type)
+        for (int i = 3; i < args.length; i++) {
+            String arg = args[i].toLowerCase();
+            switch (arg) {
+                case "limited" -> limited = true;
+                case "unlimited" -> limited = false;
+                case "all" -> showAllItems = true;
+                case "random" -> showAllItems = false;
             }
         }
 
@@ -622,7 +627,7 @@ public class MerchantSubCommand implements SubCommand {
         String displayName = type == MerchantType.MULTI ? "§6商人" : pool.getItems().get(0).getItemTemplateId();
 
         // Spawn the merchant
-        MerchantInstance merchant = merchantService.spawnFixedMerchant(location, type, poolId, limited, displayName);
+        MerchantInstance merchant = merchantService.spawnFixedMerchant(location, type, poolId, limited, showAllItems, displayName);
 
         if (merchant != null) {
             String shortId = merchant.getInstanceId().toString().substring(0, 8);
@@ -829,9 +834,9 @@ public class MerchantSubCommand implements SubCommand {
                     }
                 }
             }
-            // Limited/unlimited completion for spawn command
+            // Limited/unlimited and all/random completion for spawn command
             if (action.equals("spawn")) {
-                for (String opt : List.of("limited", "unlimited")) {
+                for (String opt : List.of("limited", "unlimited", "all", "random")) {
                     if (opt.startsWith(partial)) {
                         completions.add(opt);
                     }
@@ -840,6 +845,7 @@ public class MerchantSubCommand implements SubCommand {
         } else if (args.length == 5) {
             String action = args[0].toLowerCase();
             String subAction = args[1].toLowerCase();
+            String partial = args[4].toLowerCase();
 
             // Max uses suggestions for trade add
             if (action.equals("trade") && subAction.equals("add")) {
@@ -848,6 +854,14 @@ public class MerchantSubCommand implements SubCommand {
             // Weight suggestions for pool additem
             if (action.equals("pool") && subAction.equals("additem")) {
                 completions.addAll(List.of("0.5", "1.0", "2.0", "5.0"));
+            }
+            // Additional limited/unlimited and all/random completion for spawn command
+            if (action.equals("spawn")) {
+                for (String opt : List.of("limited", "unlimited", "all", "random")) {
+                    if (opt.startsWith(partial)) {
+                        completions.add(opt);
+                    }
+                }
             }
         }
 

@@ -835,16 +835,24 @@ Merchants appear as invisible armor stands with a floating/spinning animation. T
 Commands to spawn, despawn, and list active merchants:
 
 ```
-/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited]
+/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random]
 /vrs admin merchant despawn [radius]
 /vrs admin merchant active
 ```
 
 | Command | Description |
 |---------|-------------|
-| `spawn <poolId> <type> [stock]` | Spawn a fixed merchant at your location using the specified pool |
+| `spawn <poolId> <type> [stock] [items]` | Spawn a fixed merchant at your location using the specified pool |
 | `despawn [radius]` | Remove the nearest merchant within radius (default: 5 blocks) |
 | `active` | List all active merchants with their type, behavior, pool, and location |
+
+**Spawn Arguments:**
+| Argument | Options | Description |
+|----------|---------|-------------|
+| `poolId` | pool name | The item pool to use for this merchant |
+| `type` | `multi` / `single` | `multi` = shop GUI with multiple items, `single` = direct purchase |
+| `stock` | `limited` / `unlimited` | Whether items disappear after purchase (default: config value) |
+| `items` | `all` / `random` | `all` = show all pool items, `random` = use minItems/maxItems config (default: `random`) |
 
 **Spawn Examples:**
 ```
@@ -856,6 +864,15 @@ Commands to spawn, despawn, and list active merchants:
 
 # Spawn with limited stock (items disappear when purchased)
 /vrs admin merchant spawn potions multi limited
+
+# Spawn a full shop showing ALL items from the pool
+/vrs admin merchant spawn weapons_pool multi all
+
+# Spawn with limited stock and random selection
+/vrs admin merchant spawn rare_items multi limited random
+
+# Spawn with unlimited stock and all items
+/vrs admin merchant spawn consumables multi unlimited all
 
 # Remove the nearest merchant
 /vrs admin merchant despawn
@@ -968,8 +985,11 @@ Templates are for fixed-trade merchants with predefined trades:
 
 **Step 3: Spawn the merchant**
 ```
-# Multi-item shop with limited stock
-/vrs admin merchant spawn weapons_shop multi limited
+# Multi-item shop with limited stock and random selection
+/vrs admin merchant spawn weapons_shop multi limited random
+
+# Or spawn a full shop showing all items
+/vrs admin merchant spawn weapons_shop multi limited all
 ```
 
 **Step 4: Manage merchants**

@@ -25,6 +25,7 @@ public class RunService {
     private final StateService state;
     private final WorldService worldService;
     private final TemplateEngine templateEngine;
+    private final MerchantService merchantService;
 
     public RunService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -33,6 +34,7 @@ public class RunService {
         this.state = plugin.getStateService();
         this.worldService = plugin.getWorldService();
         this.templateEngine = plugin.getTemplateEngine();
+        this.merchantService = plugin.getMerchantService();
     }
 
     /**
@@ -75,6 +77,11 @@ public class RunService {
 
         // Teleport players using Paper async teleport
         teleportTeamToRunAsync(team, run, worldConfig, world);
+
+        // Start merchant spawning for this run
+        if (merchantService != null) {
+            merchantService.startForRun(run);
+        }
 
         // Notify start
         notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
@@ -126,6 +133,11 @@ public class RunService {
 
         // Teleport players using Paper async teleport
         teleportTeamToRunAsync(team, run, worldConfig, world);
+
+        // Start merchant spawning for this run
+        if (merchantService != null) {
+            merchantService.startForRun(run);
+        }
 
         // Notify start
         notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
@@ -538,6 +550,11 @@ public class RunService {
 
         // Clean up state
         state.endRun(run.getRunId());
+
+        // Stop merchant spawning for this run
+        if (merchantService != null) {
+            merchantService.stopForRun(run.getRunId());
+        }
 
         // Reset team
         teamOpt.ifPresent(TeamState::resetForNewRun);

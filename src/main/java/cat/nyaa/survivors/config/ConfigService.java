@@ -180,6 +180,7 @@ public class ConfigService {
     private boolean merchantDespawnParticles;
     private int merchantMinItems;
     private int merchantMaxItems;
+    private boolean merchantShowAllItems;
     private float merchantRotationSpeed;
     private double merchantBobHeight;
     private double merchantBobSpeed;
@@ -538,6 +539,7 @@ public class ConfigService {
         merchantDespawnParticles = config.getBoolean("merchants.wandering.particles.despawn", true);
         merchantMinItems = config.getInt("merchants.stock.minItems", 3);
         merchantMaxItems = config.getInt("merchants.stock.maxItems", 6);
+        merchantShowAllItems = config.getBoolean("merchants.stock.showAllItems", false);
         merchantRotationSpeed = (float) config.getDouble("merchants.display.rotationSpeed", 3.0);
         merchantBobHeight = config.getDouble("merchants.display.bobHeight", 0.15);
         merchantBobSpeed = config.getDouble("merchants.display.bobSpeed", 0.01);
@@ -705,6 +707,7 @@ public class ConfigService {
     public boolean isMerchantDespawnParticles() { return merchantDespawnParticles; }
     public int getMerchantMinItems() { return merchantMinItems; }
     public int getMerchantMaxItems() { return merchantMaxItems; }
+    public boolean isMerchantShowAllItems() { return merchantShowAllItems; }
     public float getMerchantRotationSpeed() { return merchantRotationSpeed; }
     public double getMerchantBobHeight() { return merchantBobHeight; }
     public double getMerchantBobSpeed() { return merchantBobSpeed; }
@@ -811,6 +814,7 @@ public class ConfigService {
     public void setMerchantDespawnParticles(boolean despawn) { this.merchantDespawnParticles = despawn; }
     public void setMerchantMinItems(int min) { this.merchantMinItems = min; }
     public void setMerchantMaxItems(int max) { this.merchantMaxItems = max; }
+    public void setMerchantShowAllItems(boolean showAll) { this.merchantShowAllItems = showAll; }
     public void setMerchantRotationSpeed(float speed) { this.merchantRotationSpeed = speed; }
     public void setMerchantBobHeight(double height) { this.merchantBobHeight = height; }
     public void setMerchantBobSpeed(double speed) { this.merchantBobSpeed = speed; }
@@ -886,6 +890,7 @@ public class ConfigService {
         config.set("merchants.wandering.particles.despawn", merchantDespawnParticles);
         config.set("merchants.stock.minItems", merchantMinItems);
         config.set("merchants.stock.maxItems", merchantMaxItems);
+        config.set("merchants.stock.showAllItems", merchantShowAllItems);
         config.set("merchants.display.rotationSpeed", merchantRotationSpeed);
         config.set("merchants.display.bobHeight", merchantBobHeight);
         config.set("merchants.display.bobSpeed", merchantBobSpeed);

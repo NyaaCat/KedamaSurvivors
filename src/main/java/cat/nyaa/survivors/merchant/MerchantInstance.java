@@ -19,6 +19,7 @@ public class MerchantInstance {
     private final MerchantBehavior behavior;
     private final String poolId;
     private final boolean limited;
+    private final boolean showAllItems;
     private final String displayName;
 
     // Current stock (for multi-type merchants)
@@ -39,13 +40,14 @@ public class MerchantInstance {
 
     public MerchantInstance(UUID instanceId, MerchantEntity entity, MerchantType type,
                            MerchantBehavior behavior, String poolId, boolean limited,
-                           String displayName) {
+                           boolean showAllItems, String displayName) {
         this.instanceId = instanceId;
         this.entity = entity;
         this.type = type;
         this.behavior = behavior;
         this.poolId = poolId;
         this.limited = limited;
+        this.showAllItems = showAllItems;
         this.displayName = displayName;
         this.currentStock = new ArrayList<>();
         this.spawnTimeMillis = System.currentTimeMillis();
@@ -91,6 +93,13 @@ public class MerchantInstance {
      */
     public boolean isLimited() {
         return limited;
+    }
+
+    /**
+     * Checks if this merchant shows all items from the pool (vs random selection).
+     */
+    public boolean isShowAllItems() {
+        return showAllItems;
     }
 
     /**

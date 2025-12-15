@@ -814,8 +814,9 @@ merchants:
   # Merchant stock settings
   stock:
     limited: true                # Items disappear when purchased (true) or respawn (false)
-    minItems: 3                  # Min items in MULTI shop
-    maxItems: 6                  # Max items in MULTI shop
+    minItems: 3                  # Min items in MULTI shop (for random selection)
+    maxItems: 6                  # Max items in MULTI shop (for random selection)
+    showAllItems: false          # Wandering merchants: true = show all pool items, false = random selection
 
   # Display settings (armor stand animation)
   display:
@@ -841,8 +842,9 @@ merchants:
 | `wandering.particles.spawn` | Boolean | `true` | Show particles on merchant spawn |
 | `wandering.particles.despawn` | Boolean | `true` | Show particles on merchant despawn |
 | `stock.limited` | Boolean | `true` | Default stock mode (items disappear when purchased) |
-| `stock.minItems` | Integer | `3` | Minimum items in MULTI shop |
-| `stock.maxItems` | Integer | `6` | Maximum items in MULTI shop |
+| `stock.minItems` | Integer | `3` | Minimum items in MULTI shop (for random selection mode) |
+| `stock.maxItems` | Integer | `6` | Maximum items in MULTI shop (for random selection mode) |
+| `stock.showAllItems` | Boolean | `false` | Wandering merchants only: `true` = show all pool items, `false` = random selection using min/max. Fixed merchants use per-spawn `all`/`random` flag. |
 | `display.rotationSpeed` | Float | `3.0` | Armor stand rotation speed (degrees/tick) |
 | `display.bobHeight` | Double | `0.15` | Floating animation amplitude (blocks) |
 | `display.bobSpeed` | Double | `0.01` | Floating animation speed |

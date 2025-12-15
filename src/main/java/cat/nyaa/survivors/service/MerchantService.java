@@ -184,13 +184,14 @@ public class MerchantService {
         String typeStr = config.getWanderingMerchantType();
         MerchantType type = "multi".equalsIgnoreCase(typeStr) ? MerchantType.MULTI : MerchantType.SINGLE;
 
-        // Spawn the merchant
+        // Spawn the merchant (wandering merchants use global showAllItems config)
         MerchantInstance merchant = spawnMerchant(
                 spawnLoc,
                 type,
                 MerchantBehavior.WANDERING,
                 pool,
                 config.isMerchantLimited(),
+                config.isMerchantShowAllItems(),
                 i18n.get("merchant.shop_nametag")
         );
 
@@ -220,9 +221,19 @@ public class MerchantService {
 
     /**
      * Spawns a merchant at the given location.
+     *
+     * @param location    the spawn location
+     * @param type        the merchant type (SINGLE or MULTI)
+     * @param behavior    the merchant behavior (FIXED or WANDERING)
+     * @param pool        the item pool to use
+     * @param limited     whether stock is limited (items removed after purchase)
+     * @param showAllItems whether to show all items from pool (MULTI only), false = random selection
+     * @param displayName the display name
+     * @return the spawned merchant instance
      */
     public MerchantInstance spawnMerchant(Location location, MerchantType type, MerchantBehavior behavior,
-                                          MerchantItemPool pool, boolean limited, String displayName) {
+                                          MerchantItemPool pool, boolean limited, boolean showAllItems,
+                                          String displayName) {
         UUID instanceId = UUID.randomUUID();
 
         // Create entity
@@ -244,12 +255,12 @@ public class MerchantService {
                         "price", singleItem.getPrice());
             }
         } else {
-            // Multi type - select random or all items
-            int minItems = config.getMerchantMinItems();
-            int maxItems = config.getMerchantMaxItems();
-            if (minItems <= 0 || maxItems <= 0) {
+            // Multi type - select all items or random selection based on showAllItems
+            if (showAllItems) {
                 stock = pool.getAllItems();
             } else {
+                int minItems = config.getMerchantMinItems();
+                int maxItems = config.getMerchantMaxItems();
                 stock = pool.selectRandom(minItems, maxItems);
             }
             if (!stock.isEmpty()) {
@@ -264,7 +275,7 @@ public class MerchantService {
         // Create instance
         MerchantInstance instance = new MerchantInstance(
                 instanceId, entity, type, behavior,
-                pool.getPoolId(), limited, displayName
+                pool.getPoolId(), limited, showAllItems, displayName
         );
 
         if (type == MerchantType.SINGLE) {
@@ -283,16 +294,24 @@ public class MerchantService {
 
     /**
      * Spawns a fixed merchant at the given location.
+     *
+     * @param location     the spawn location
+     * @param type         the merchant type (SINGLE or MULTI)
+     * @param poolId       the item pool ID
+     * @param limited      whether stock is limited
+     * @param showAllItems whether to show all items (MULTI only), false = random selection
+     * @param displayName  the display name
+     * @return the spawned merchant instance, or null if pool not found
      */
     public MerchantInstance spawnFixedMerchant(Location location, MerchantType type, String poolId,
-                                                boolean limited, String displayName) {
+                                                boolean limited, boolean showAllItems, String displayName) {
         Optional<MerchantItemPool> poolOpt = adminConfig.getMerchantPool(poolId);
         if (poolOpt.isEmpty()) {
             return null;
         }
 
         MerchantInstance merchant = spawnMerchant(location, type, MerchantBehavior.FIXED,
-                poolOpt.get(), limited, displayName);
+                poolOpt.get(), limited, showAllItems, displayName);
 
         // Fixed merchants don't despawn on time
         if (merchant != null) {
@@ -599,6 +618,7 @@ public class MerchantService {
         public String type;
         public String poolId;
         public boolean limited;
+        public boolean showAllItems;
         public String displayName;
 
         public FixedMerchantData() {}
@@ -617,6 +637,7 @@ public class MerchantService {
             data.type = merchant.getType().name();
             data.poolId = merchant.getPoolId();
             data.limited = merchant.isLimited();
+            data.showAllItems = merchant.isShowAllItems();
             data.displayName = merchant.getDisplayName();
             return data;
         }
@@ -670,7 +691,7 @@ public class MerchantService {
                 continue;
             }
 
-            MerchantInstance merchant = spawnFixedMerchant(loc, type, data.poolId, data.limited, data.displayName);
+            MerchantInstance merchant = spawnFixedMerchant(loc, type, data.poolId, data.limited, data.showAllItems, data.displayName);
             if (merchant != null) {
                 loaded++;
             } else {
