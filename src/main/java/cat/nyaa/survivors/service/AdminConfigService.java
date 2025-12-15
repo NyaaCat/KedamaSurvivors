@@ -10,6 +10,8 @@ import cat.nyaa.survivors.config.ConfigService.SpawnPointConfig;
 import cat.nyaa.survivors.config.ConfigService.MerchantTemplateConfig;
 import cat.nyaa.survivors.config.ConfigService.MerchantTradeConfig;
 import cat.nyaa.survivors.config.ItemTemplateConfig;
+import cat.nyaa.survivors.merchant.MerchantItemPool;
+import cat.nyaa.survivors.merchant.WeightedShopItem;
 import cat.nyaa.survivors.model.EquipmentType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -46,6 +48,7 @@ public class AdminConfigService {
     private final List<StarterOptionConfig> starterHelmets = new ArrayList<>();
     private final List<CombatWorldConfig> combatWorlds = new ArrayList<>();
     private final Map<String, MerchantTemplateConfig> merchantTemplates = new LinkedHashMap<>();
+    private final Map<String, MerchantItemPool> merchantPools = new LinkedHashMap<>();
 
     public AdminConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -96,6 +99,7 @@ public class AdminConfigService {
 
         loadItemTemplates();
         loadMerchants();
+        loadMerchantPools();
 
         // Sync loaded data to ConfigService for runtime use
         updateConfigService();
@@ -107,7 +111,8 @@ public class AdminConfigService {
                 starterWeapons.size() + " starter weapons, " +
                 starterHelmets.size() + " starter helmets, " +
                 combatWorlds.size() + " combat worlds, " +
-                merchantTemplates.size() + " merchant templates");
+                merchantTemplates.size() + " merchant templates, " +
+                merchantPools.size() + " merchant pools");
     }
 
     /**
@@ -1537,6 +1542,195 @@ public class AdminConfigService {
             yaml.save(file);
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to save merchants.yml", e);
+        }
+    }
+
+    // ==================== Merchant Pool Operations ====================
+
+    /**
+     * Creates a new merchant item pool.
+     */
+    public boolean createMerchantPool(String poolId) {
+        if (merchantPools.containsKey(poolId)) {
+            return false;
+        }
+
+        merchantPools.put(poolId, new MerchantItemPool(poolId));
+        saveMerchantPools();
+        return true;
+    }
+
+    /**
+     * Deletes a merchant item pool.
+     */
+    public boolean deleteMerchantPool(String poolId) {
+        if (!merchantPools.containsKey(poolId)) {
+            return false;
+        }
+
+        merchantPools.remove(poolId);
+        saveMerchantPools();
+        return true;
+    }
+
+    /**
+     * Gets a merchant pool by ID.
+     */
+    public Optional<MerchantItemPool> getMerchantPool(String poolId) {
+        return Optional.ofNullable(merchantPools.get(poolId));
+    }
+
+    /**
+     * Gets a random merchant pool.
+     */
+    public Optional<MerchantItemPool> getRandomMerchantPool() {
+        if (merchantPools.isEmpty()) {
+            return Optional.empty();
+        }
+        List<MerchantItemPool> pools = new ArrayList<>(merchantPools.values());
+        return Optional.of(pools.get(new Random().nextInt(pools.size())));
+    }
+
+    /**
+     * Gets all merchant pools.
+     */
+    public Collection<MerchantItemPool> getMerchantPools() {
+        return Collections.unmodifiableCollection(merchantPools.values());
+    }
+
+    /**
+     * Adds an item to a merchant pool.
+     *
+     * @param poolId the pool ID
+     * @param templateId the item template ID
+     * @param price the price in coins
+     * @param weight the weight for selection
+     * @return true if added successfully
+     */
+    public boolean addItemToPool(String poolId, String templateId, int price, double weight) {
+        MerchantItemPool pool = merchantPools.get(poolId);
+        if (pool == null) {
+            return false;
+        }
+
+        WeightedShopItem item = new WeightedShopItem(templateId, weight, price);
+        pool.addItem(item);
+        saveMerchantPools();
+        return true;
+    }
+
+    /**
+     * Removes an item from a merchant pool by index.
+     *
+     * @param poolId the pool ID
+     * @param index the item index
+     * @return the removed item, or null if not found
+     */
+    public WeightedShopItem removeItemFromPool(String poolId, int index) {
+        MerchantItemPool pool = merchantPools.get(poolId);
+        if (pool == null) {
+            return null;
+        }
+
+        WeightedShopItem removed = pool.removeItem(index);
+        if (removed != null) {
+            saveMerchantPools();
+        }
+        return removed;
+    }
+
+    /**
+     * Captures an item from player hand and adds it to a merchant pool.
+     *
+     * @param item the item to capture
+     * @param poolId the pool to add to
+     * @param price the price
+     * @param weight the weight
+     * @return the generated template ID, or null if failed
+     */
+    public String captureItemToPool(ItemStack item, String poolId, int price, double weight) {
+        MerchantItemPool pool = merchantPools.get(poolId);
+        if (pool == null) {
+            return null;
+        }
+
+        // Generate unique template ID
+        String templateId = "pool_" + poolId + "_" + item.getType().name().toLowerCase() + "_" + System.currentTimeMillis();
+
+        // Create item template (without equipment group association)
+        ItemTemplateConfig template = ItemTemplateConfig.fromItemStack(item, templateId, null, 0);
+        itemTemplates.put(templateId, template);
+
+        // Save the template
+        saveItemTemplate(template);
+
+        // Add to pool
+        WeightedShopItem shopItem = new WeightedShopItem(templateId, weight, price);
+        pool.addItem(shopItem);
+        saveMerchantPools();
+
+        return templateId;
+    }
+
+    private void loadMerchantPools() {
+        merchantPools.clear();
+
+        File file = dataPath.resolve("merchant_pools.yml").toFile();
+        if (!file.exists()) {
+            return;
+        }
+
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection poolsSection = yaml.getConfigurationSection("pools");
+        if (poolsSection == null) {
+            return;
+        }
+
+        for (String poolId : poolsSection.getKeys(false)) {
+            ConfigurationSection section = poolsSection.getConfigurationSection(poolId);
+            if (section == null) continue;
+
+            MerchantItemPool pool = new MerchantItemPool(poolId);
+
+            List<Map<?, ?>> itemsList = section.getMapList("items");
+            for (Map<?, ?> itemMap : itemsList) {
+                String templateId = (String) itemMap.get("templateId");
+                Object weightObj = itemMap.get("weight");
+                double weight = weightObj instanceof Number ? ((Number) weightObj).doubleValue() : 1.0;
+                Object priceObj = itemMap.get("price");
+                int price = priceObj instanceof Number ? ((Number) priceObj).intValue() : 10;
+
+                pool.addItem(new WeightedShopItem(templateId, weight, price));
+            }
+
+            merchantPools.put(poolId, pool);
+        }
+    }
+
+    private void saveMerchantPools() {
+        File file = dataPath.resolve("merchant_pools.yml").toFile();
+        YamlConfiguration yaml = new YamlConfiguration();
+
+        yaml.options().header("Auto-generated by KedamaSurvivors\nMerchant item pools for weighted selection\nUse in-game commands: /vrs admin merchant pool ...\n");
+
+        for (MerchantItemPool pool : merchantPools.values()) {
+            String prefix = "pools." + pool.getPoolId();
+
+            List<Map<String, Object>> itemsList = new ArrayList<>();
+            for (WeightedShopItem item : pool.getItems()) {
+                Map<String, Object> itemMap = new LinkedHashMap<>();
+                itemMap.put("templateId", item.getItemTemplateId());
+                itemMap.put("weight", item.getWeight());
+                itemMap.put("price", item.getPrice());
+                itemsList.add(itemMap);
+            }
+            yaml.set(prefix + ".items", itemsList);
+        }
+
+        try {
+            yaml.save(file);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to save merchant_pools.yml", e);
         }
     }
 }

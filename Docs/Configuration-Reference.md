@@ -763,79 +763,82 @@ rewards:
 
 ## 15. Merchants
 
-Wandering merchant configuration.
+Wandering merchant configuration. Merchants appear as animated armor stands with floating/spinning effects.
 
 ```yaml
 merchants:
   # Enable merchant system
   enabled: true
 
-  # Spawn settings
-  spawn:
-    # Interval between merchant spawns (seconds)
-    intervalSeconds: 120
+  # Wandering merchant spawning behavior
+  wandering:
+    spawnIntervalSeconds: 120    # How often to attempt spawning
+    spawnChance: 0.5             # Probability of spawn per interval (0-1)
+    stayTime:
+      minSeconds: 60             # Minimum stay duration
+      maxSeconds: 120            # Maximum stay duration
+    distance:
+      min: 20.0                  # Min distance from players
+      max: 50.0                  # Max distance from players
+    particles:
+      spawn: true                # Show particles when merchant appears
+      despawn: true              # Show particles when merchant leaves
 
-    # Merchant lifetime before despawn/relocation (seconds)
-    lifetimeSeconds: 60
+  # Merchant stock settings
+  stock:
+    limited: true                # Items disappear when purchased (true) or respawn (false)
+    minItems: 3                  # Min items in shop (for multi-type)
+    maxItems: 6                  # Max items in shop (for multi-type)
 
-    # Minimum distance from players
-    minDistanceFromPlayers: 20.0
-
-    # Maximum distance from players (for spawn selection)
-    maxDistanceFromPlayers: 50.0
-
-  # Entity settings
-  entity:
-    # Entity type for merchants
-    type: VILLAGER
-
-    # Custom name
-    name: "§6流浪商人"
-
-    # Make invulnerable
-    invulnerable: true
-
-    # Disable AI (stay in place)
-    noAi: true
-
-    # Glowing effect
-    glowing: false
-
-  # Merchant templates
-  templates:
-    basic:
-      displayName: "§e基础商人"
-      trades:
-        - buyATemplate: "trade_buy_10_coins"
-          sellTemplate: "trade_sell_health_potion"
-          maxUses: 5
-
-        - buyATemplate: "trade_buy_20_coins"
-          sellTemplate: "trade_sell_speed_potion"
-          maxUses: 3
-
-    advanced:
-      displayName: "§d高级商人"
-      weight: 0.3  # Less common
-      trades:
-        - buyATemplate: "trade_buy_50_coins"
-          sellTemplate: "trade_sell_golden_apple"
-          maxUses: 2
-
-        - buyATemplate: "trade_buy_100_coins"
-          buyBTemplate: "trade_buy_perma_item"  # Optional second ingredient
-          sellTemplate: "trade_sell_enchanted_apple"
-          maxUses: 1
+  # Display settings (armor stand animation)
+  display:
+    rotationSpeed: 3.0           # Degrees per tick (spinning)
+    bobHeight: 0.15              # Floating bob amplitude (blocks)
+    bobSpeed: 0.01               # Floating bob speed
+    headItemCycleIntervalTicks: 200  # How often head item changes (for multi-type)
 ```
+
+**Merchant Settings:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | Boolean | `true` | Enable merchant system |
+| `wandering.spawnIntervalSeconds` | Integer | `120` | Seconds between spawn attempts |
+| `wandering.spawnChance` | Double | `0.5` | Probability of spawn per interval |
+| `wandering.stayTime.minSeconds` | Integer | `60` | Minimum merchant stay duration |
+| `wandering.stayTime.maxSeconds` | Integer | `120` | Maximum merchant stay duration |
+| `wandering.distance.min` | Double | `20.0` | Minimum distance from players to spawn |
+| `wandering.distance.max` | Double | `50.0` | Maximum distance from players to spawn |
+| `wandering.particles.spawn` | Boolean | `true` | Show particles on merchant spawn |
+| `wandering.particles.despawn` | Boolean | `true` | Show particles on merchant despawn |
+| `stock.limited` | Boolean | `true` | Whether items disappear when purchased |
+| `stock.minItems` | Integer | `3` | Minimum items in shop |
+| `stock.maxItems` | Integer | `6` | Maximum items in shop |
+| `display.rotationSpeed` | Float | `3.0` | Armor stand rotation speed (degrees/tick) |
+| `display.bobHeight` | Double | `0.15` | Floating animation amplitude |
+| `display.bobSpeed` | Double | `0.01` | Floating animation speed |
+| `display.headItemCycleIntervalTicks` | Integer | `200` | Head item cycle interval |
+
+**Note:** Merchant item pools are stored in `data/merchant_pools.yml`. See [Quick Start Guide](Quick-Start.md) for pool configuration.
 
 ---
 
 ## 16. Economy
 
-Virtual economy settings.
+Virtual economy settings supporting multiple modes.
 
 ```yaml
 economy:
+  # Mode: VAULT (external economy), INTERNAL (plugin-managed per-player), ITEM (physical items)
+  mode: INTERNAL
+
+  # Coin item settings (used for ITEM mode and visual display)
+  coin:
+    material: EMERALD
+    customModelData: 0
+    displayName: "§e金币"
+    nbtTag: "vrs_coin"           # NBT tag to identify VRS coins
+
   # Perma-score settings
   permaScore:
     # Scoreboard objective name (for cross-server compatibility)
@@ -844,6 +847,28 @@ economy:
     # Display name for scoreboard
     displayName: "永久积分"
 ```
+
+**Economy Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `VAULT` | Uses external Vault-compatible economy plugin (e.g., EssentialsX Economy). Falls back to INTERNAL if Vault is not installed. |
+| `INTERNAL` | Plugin stores coin balance per-player internally. Balance persists across sessions in `players.json`. Default mode. |
+| `ITEM` | Physical coin items in player inventory. Coins are identified by the NBT tag specified in `coin.nbtTag`. |
+
+**Economy Settings:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `mode` | String | `INTERNAL` | Economy mode: VAULT, INTERNAL, or ITEM |
+| `coin.material` | Material | `EMERALD` | Material for coin items |
+| `coin.customModelData` | Integer | `0` | Custom model data for resource packs |
+| `coin.displayName` | String | `§e金币` | Display name for coin items |
+| `coin.nbtTag` | String | `vrs_coin` | NBT tag to identify VRS coin items |
+| `permaScore.objectiveName` | String | `vrs_perma` | Scoreboard objective name |
+| `permaScore.displayName` | String | `永久积分` | Display name for perma-score |
+
+**Note:** When using VAULT mode and Vault is not installed, the plugin automatically falls back to INTERNAL mode and logs a warning.
 
 ---
 

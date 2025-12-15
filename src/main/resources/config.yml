@@ -202,27 +202,51 @@ rewards:
 # ============================================================
 # Merchants
 # ============================================================
-# Note: Merchant templates are now stored in data/merchants.yml
+# Note: Merchant pools are now stored in data/merchant_pools.yml
 merchants:
   enabled: true
 
-  spawn:
-    intervalSeconds: 120
-    lifetimeSeconds: 60
-    minDistanceFromPlayers: 20.0
-    maxDistanceFromPlayers: 50.0
+  # Wandering merchant spawning behavior
+  wandering:
+    spawnIntervalSeconds: 120    # How often to attempt spawning
+    spawnChance: 0.5             # Probability of spawn per interval (0-1)
+    stayTime:
+      minSeconds: 60             # Minimum stay duration
+      maxSeconds: 120            # Maximum stay duration
+    distance:
+      min: 20.0                  # Min distance from players
+      max: 50.0                  # Max distance from players
+    particles:
+      spawn: true                # Show particles when merchant appears
+      despawn: true              # Show particles when merchant leaves
 
-  entity:
-    type: VILLAGER
-    name: "§6流浪商人"
-    invulnerable: true
-    noAi: true
-    glowing: false
+  # Merchant stock settings
+  stock:
+    limited: true                # Items disappear when purchased (true) or respawn (false)
+    minItems: 3                  # Min items in shop (for multi-type)
+    maxItems: 6                  # Max items in shop (for multi-type)
+
+  # Display settings (armor stand animation)
+  display:
+    rotationSpeed: 3.0           # Degrees per tick
+    bobHeight: 0.15              # Floating bob amplitude (blocks)
+    bobSpeed: 0.01               # Floating bob speed
+    headItemCycleIntervalTicks: 200  # How often head item changes (for multi-type)
 
 # ============================================================
 # Economy
 # ============================================================
 economy:
+  # Mode: VAULT (external economy), INTERNAL (plugin-managed per-player), ITEM (physical items)
+  mode: INTERNAL
+
+  # Coin item settings (used for ITEM mode and visual display)
+  coin:
+    material: EMERALD
+    customModelData: 0
+    displayName: "§e金币"
+    nbtTag: "vrs_coin"           # NBT tag to identify VRS coins
+
   permaScore:
     objectiveName: "vrs_perma"
     displayName: "永久积分"

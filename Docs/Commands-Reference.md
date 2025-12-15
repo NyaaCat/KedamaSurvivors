@@ -799,7 +799,16 @@ Manages enemy archetypes.
 
 ### `/vrs admin merchant`
 
-Manages merchant templates and trades.
+Manages merchant item pools, templates, and trades.
+
+**Pool Subcommands:**
+```
+/vrs admin merchant pool create <poolId>
+/vrs admin merchant pool delete <poolId>
+/vrs admin merchant pool list [poolId]
+/vrs admin merchant pool additem <poolId> <price> <weight>
+/vrs admin merchant pool removeitem <poolId> <index>
+```
 
 **Template Subcommands:**
 ```
@@ -818,9 +827,43 @@ Manages merchant templates and trades.
 
 **Permission:** `vrs.admin` (default: op)
 
-**Note:** The `trade add` command captures the NBT of the item in your main hand.
+**Pool Management:**
 
-**Examples:**
+Merchant pools define weighted item collections that merchants draw stock from.
+
+| Command | Description |
+|---------|-------------|
+| `pool create <poolId>` | Create a new empty pool |
+| `pool delete <poolId>` | Delete a pool and all its items |
+| `pool list` | List all pools |
+| `pool list <poolId>` | List items in a specific pool |
+| `pool additem <poolId> <price> <weight>` | Add held item to pool with price and selection weight |
+| `pool removeitem <poolId> <index>` | Remove item by index (1-based) |
+
+**Note:** The `pool additem` command captures the NBT of the item in your main hand.
+
+**Pool Examples:**
+```
+# Create a merchant pool
+/vrs admin merchant pool create common_shop
+
+# Hold a golden apple, add with price 25 and weight 1.0
+/vrs admin merchant pool additem common_shop 25 1.0
+
+# Hold a speed potion, add with price 50 and weight 0.5 (less common)
+/vrs admin merchant pool additem common_shop 50 0.5
+
+# List all pools
+/vrs admin merchant pool list
+
+# List items in a pool
+/vrs admin merchant pool list common_shop
+
+# Remove item at index 2
+/vrs admin merchant pool removeitem common_shop 2
+```
+
+**Template Examples:**
 ```
 # Create a merchant template
 /vrs admin merchant template create potions "§dPotion Merchant"

@@ -58,6 +58,7 @@ public class PlayerState {
     // Economy
     private volatile int permaScore;
     private volatile int coinsEarned;  // Track coins earned this run for scoreboard
+    private volatile int balance;  // Internal economy balance (for INTERNAL economy mode)
 
     // Pending Rewards (thread-safe list)
     private final List<ItemStack> pendingRewards = new ArrayList<>();
@@ -294,4 +295,7 @@ public class PlayerState {
 
     public int getRunLevel() { return runLevel; }
     public void setRunLevel(int runLevel) { this.runLevel = runLevel; }
+
+    public int getBalance() { return balance; }
+    public void setBalance(int balance) { this.balance = balance; }
 }

@@ -2,9 +2,11 @@ package cat.nyaa.survivors;
 
 import cat.nyaa.survivors.command.VrsCommand;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.economy.EconomyService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.listener.CombatListener;
 import cat.nyaa.survivors.listener.InventoryListener;
+import cat.nyaa.survivors.listener.MerchantListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.listener.SpawnListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
@@ -42,6 +44,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private ConfigService configService;
     private AdminConfigService adminConfigService;
     private I18nService i18nService;
+    private EconomyService economyService;
     private StateService stateService;
     private TemplateEngine templateEngine;
     private ScoreboardService scoreboardService;
@@ -99,6 +102,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // I18n depends on config for language selection
         i18nService = new I18nService(this, configService);
         i18nService.loadLanguage();
+
+        // Economy service for coin/balance operations
+        economyService = new EconomyService(this);
+        economyService.initialize();
 
         // Command queue for rate-limited command execution
         commandQueue = new CommandQueue(this, configService::getMaxCommandsPerTick);
@@ -174,6 +181,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
         getServer().getPluginManager().registerEvents(new CombatListener(this), this);
         getServer().getPluginManager().registerEvents(new SpawnListener(this), this);
+        getServer().getPluginManager().registerEvents(new MerchantListener(this), this);
     }
 
     private void startTasks() {
@@ -307,6 +315,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public I18nService getI18nService() {
         return i18nService;
+    }
+
+    public EconomyService getEconomyService() {
+        return economyService;
     }
 
     public StateService getStateService() {

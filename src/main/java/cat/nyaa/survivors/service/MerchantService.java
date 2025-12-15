@@ -2,59 +2,60 @@ package cat.nyaa.survivors.service;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
-import cat.nyaa.survivors.config.ConfigService.MerchantTemplateConfig;
-import cat.nyaa.survivors.config.ConfigService.MerchantTradeConfig;
 import cat.nyaa.survivors.config.ItemTemplateConfig;
+import cat.nyaa.survivors.economy.EconomyService;
+import cat.nyaa.survivors.gui.MerchantShopGui;
 import cat.nyaa.survivors.i18n.I18nService;
+import cat.nyaa.survivors.merchant.*;
 import cat.nyaa.survivors.model.RunState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.MerchantRecipe;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Spawns and manages merchant villagers in combat worlds.
- * Merchants spawn periodically and despawn after a configured lifetime.
+ * Manages merchant spawning, interactions, and lifecycle.
+ * Supports both multi-type (shop GUI) and single-type (direct purchase) merchants.
+ * Supports both fixed and wandering merchant behaviors.
  */
 public class MerchantService {
-
-    private static final String MERCHANT_TAG = "vrs_merchant";
 
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService config;
     private final StateService state;
     private final I18nService i18n;
+    private final AdminConfigService adminConfig;
 
-    // Track merchants per run (runId -> set of merchant entity UUIDs)
+    // Active merchants by instance ID
+    private final Map<UUID, MerchantInstance> activeMerchants = new ConcurrentHashMap<>();
+
+    // Per-run merchant tracking
     private final Map<UUID, Set<UUID>> runMerchants = new ConcurrentHashMap<>();
-
-    // Track merchant spawn times for despawn logic
-    private final Map<UUID, Long> merchantSpawnTimes = new ConcurrentHashMap<>();
 
     // Merchant spawn task per run
     private final Map<UUID, Integer> runSpawnTasks = new ConcurrentHashMap<>();
 
-    // Merchant despawn checker task
-    private int despawnTaskId = -1;
+    // Global tasks
+    private int despawnCheckerTaskId = -1;
+    private int headItemCycleTaskId = -1;
 
     public MerchantService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfigService();
         this.state = plugin.getStateService();
         this.i18n = plugin.getI18nService();
+        this.adminConfig = plugin.getAdminConfigService();
     }
 
     /**
-     * Starts the merchant service (despawn checker).
+     * Starts the merchant service.
      */
     public void start() {
         if (!config.isMerchantsEnabled()) {
@@ -62,7 +63,18 @@ public class MerchantService {
         }
 
         // Start despawn checker every second
-        despawnTaskId = Bukkit.getScheduler().runTaskTimer(plugin, this::checkDespawns, 20, 20).getTaskId();
+        despawnCheckerTaskId = Bukkit.getScheduler().runTaskTimer(
+                plugin, this::checkDespawns, 20, 20
+        ).getTaskId();
+
+        // Start head item cycle task (every 10 seconds by default)
+        int cycleInterval = config.getMerchantHeadItemCycleInterval();
+        if (cycleInterval > 0) {
+            headItemCycleTaskId = Bukkit.getScheduler().runTaskTimer(
+                    plugin, this::cycleHeadItems, cycleInterval, cycleInterval
+            ).getTaskId();
+        }
+
         plugin.getLogger().info("Merchant service started");
     }
 
@@ -70,9 +82,14 @@ public class MerchantService {
      * Stops the merchant service.
      */
     public void stop() {
-        if (despawnTaskId != -1) {
-            Bukkit.getScheduler().cancelTask(despawnTaskId);
-            despawnTaskId = -1;
+        // Cancel global tasks
+        if (despawnCheckerTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(despawnCheckerTaskId);
+            despawnCheckerTaskId = -1;
+        }
+        if (headItemCycleTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(headItemCycleTaskId);
+            headItemCycleTaskId = -1;
         }
 
         // Cancel all spawn tasks
@@ -95,17 +112,17 @@ public class MerchantService {
 
         UUID runId = run.getRunId();
         if (runSpawnTasks.containsKey(runId)) {
-            return; // Already started
+            return;
         }
 
         // Initialize merchant set for this run
         runMerchants.put(runId, ConcurrentHashMap.newKeySet());
 
-        // Schedule periodic merchant spawning
+        // Schedule periodic wandering merchant spawning
         int intervalTicks = config.getMerchantSpawnInterval() * 20;
         int taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             Optional<RunState> runOpt = state.getRun(runId);
-            runOpt.ifPresent(this::trySpawnMerchant);
+            runOpt.ifPresent(this::trySpawnWanderingMerchant);
         }, intervalTicks, intervalTicks).getTaskId();
 
         runSpawnTasks.put(runId, taskId);
@@ -115,161 +132,328 @@ public class MerchantService {
      * Stops merchant spawning for a run and clears its merchants.
      */
     public void stopForRun(UUID runId) {
-        // Cancel spawn task
         Integer taskId = runSpawnTasks.remove(runId);
         if (taskId != null) {
             Bukkit.getScheduler().cancelTask(taskId);
         }
 
-        // Clear merchants for this run
-        clearMerchants(runId);
+        clearMerchantsForRun(runId);
         runMerchants.remove(runId);
     }
 
+    // ==================== Merchant Spawning ====================
+
     /**
-     * Attempts to spawn a merchant for a run.
+     * Attempts to spawn a wandering merchant for a run.
      */
-    private void trySpawnMerchant(RunState run) {
+    private void trySpawnWanderingMerchant(RunState run) {
         if (!run.isActive()) return;
 
-        // Find a suitable spawn location
-        Location spawnLoc = sampleMerchantLocation(run);
-        if (spawnLoc == null) {
-            plugin.getLogger().warning("Could not find valid merchant spawn location for run: " + run.getRunId());
+        // Check spawn chance
+        double spawnChance = config.getMerchantSpawnChance();
+        if (ThreadLocalRandom.current().nextDouble() > spawnChance) {
             return;
         }
 
+        // Find spawn location
+        Location spawnLoc = sampleWanderingLocation(run);
+        if (spawnLoc == null) {
+            return;
+        }
+
+        // Get random merchant config from pool
+        Optional<MerchantItemPool> poolOpt = adminConfig.getRandomMerchantPool();
+        if (poolOpt.isEmpty()) {
+            return;
+        }
+
+        MerchantItemPool pool = poolOpt.get();
+
+        // Determine merchant type (random or configured)
+        MerchantType type = ThreadLocalRandom.current().nextBoolean() ? MerchantType.MULTI : MerchantType.SINGLE;
+
         // Spawn the merchant
-        Villager merchant = spawnMerchant(spawnLoc);
-        if (merchant == null) return;
+        MerchantInstance merchant = spawnMerchant(
+                spawnLoc,
+                type,
+                MerchantBehavior.WANDERING,
+                pool,
+                config.isMerchantLimited(),
+                i18n.get("merchant.shop_nametag")
+        );
 
-        // Track the merchant
-        UUID merchantId = merchant.getUniqueId();
-        Set<UUID> merchants = runMerchants.get(run.getRunId());
-        if (merchants != null) {
-            merchants.add(merchantId);
+        if (merchant != null) {
+            // Set despawn time
+            int minStay = config.getMerchantMinStaySeconds();
+            int maxStay = config.getMerchantMaxStaySeconds();
+            int stayTime = minStay + ThreadLocalRandom.current().nextInt(maxStay - minStay + 1);
+            merchant.setDespawnTimeMillis(System.currentTimeMillis() + stayTime * 1000L);
+            merchant.setRunId(run.getRunId());
+
+            // Track per-run
+            Set<UUID> merchants = runMerchants.get(run.getRunId());
+            if (merchants != null) {
+                merchants.add(merchant.getInstanceId());
+            }
+
+            // Spawn particles
+            if (config.isMerchantSpawnParticles()) {
+                spawnLoc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, spawnLoc, 20, 0.5, 0.5, 0.5, 0);
+            }
+
+            // Notify players
+            notifyRunPlayers(run, "merchant.merchant_arrived");
         }
-        merchantSpawnTimes.put(merchantId, System.currentTimeMillis());
-
-        // Notify players
-        notifyRunPlayers(run, "success.merchant_spawned");
-
-        plugin.getLogger().info("Spawned merchant at " + formatLocation(spawnLoc) + " for run " + run.getRunId());
     }
 
     /**
-     * Spawns a merchant villager at the given location.
+     * Spawns a merchant at the given location.
      */
-    private Villager spawnMerchant(Location location) {
-        return spawnMerchant(location, null);
-    }
+    public MerchantInstance spawnMerchant(Location location, MerchantType type, MerchantBehavior behavior,
+                                          MerchantItemPool pool, boolean limited, String displayName) {
+        UUID instanceId = UUID.randomUUID();
 
-    /**
-     * Spawns a merchant villager at the given location with optional template.
-     */
-    private Villager spawnMerchant(Location location, MerchantTemplateConfig template) {
-        World world = location.getWorld();
-        if (world == null) return null;
+        // Create entity
+        MerchantEntity entity = new MerchantEntity(instanceId);
 
-        // Try to get a template if not provided
-        if (template == null) {
-            AdminConfigService adminConfig = plugin.getAdminConfigService();
-            if (adminConfig != null) {
-                template = adminConfig.getRandomMerchantTemplate().orElse(null);
+        // Determine initial head item
+        ItemStack headItem = null;
+        WeightedShopItem singleItem = null;
+        List<WeightedShopItem> stock = new ArrayList<>();
+
+        if (type == MerchantType.SINGLE) {
+            singleItem = pool.selectSingle();
+            if (singleItem != null) {
+                headItem = resolveItemStack(singleItem.getItemTemplateId());
+                // Update display name to show item name and price
+                String itemName = getItemDisplayName(singleItem.getItemTemplateId());
+                displayName = i18n.get("merchant.single_nametag",
+                        "item_name", itemName,
+                        "price", singleItem.getPrice());
+            }
+        } else {
+            // Multi type - select random or all items
+            int minItems = config.getMerchantMinItems();
+            int maxItems = config.getMerchantMaxItems();
+            if (minItems <= 0 || maxItems <= 0) {
+                stock = pool.getAllItems();
+            } else {
+                stock = pool.selectRandom(minItems, maxItems);
+            }
+            if (!stock.isEmpty()) {
+                headItem = resolveItemStack(stock.get(0).getItemTemplateId());
             }
         }
 
-        // Capture template for lambda
-        final MerchantTemplateConfig finalTemplate = template;
+        // Spawn the entity
+        entity.spawn(location, headItem, displayName);
+        entity.startAnimation(plugin);
 
-        Villager villager = world.spawn(location, Villager.class, v -> {
-            // Set display name from template or default
-            String displayName = finalTemplate != null ? finalTemplate.displayName : config.getCoinDisplayName();
-            v.setCustomName(displayName);
-            v.setCustomNameVisible(true);
-            v.setInvulnerable(true);
-            v.setAI(false);
-            v.setProfession(Villager.Profession.NITWIT);
-            v.addScoreboardTag(MERCHANT_TAG);
-        });
+        // Create instance
+        MerchantInstance instance = new MerchantInstance(
+                instanceId, entity, type, behavior,
+                pool.getPoolId(), limited, displayName
+        );
 
-        // Apply trades from template
-        if (template != null && !template.trades.isEmpty()) {
-            List<MerchantRecipe> recipes = buildRecipes(template);
-            if (!recipes.isEmpty()) {
-                villager.setRecipes(recipes);
-            }
+        if (type == MerchantType.SINGLE) {
+            instance.setSingleItem(singleItem);
+        } else {
+            instance.setCurrentStock(stock);
         }
 
-        return villager;
+        // Register
+        activeMerchants.put(instanceId, instance);
+
+        plugin.getLogger().info("Spawned " + type + " merchant at " + formatLocation(location));
+
+        return instance;
     }
 
     /**
-     * Builds merchant recipes from a template configuration.
+     * Spawns a fixed merchant at the given location.
      */
-    private List<MerchantRecipe> buildRecipes(MerchantTemplateConfig template) {
-        List<MerchantRecipe> recipes = new ArrayList<>();
-        AdminConfigService adminConfig = plugin.getAdminConfigService();
-
-        for (MerchantTradeConfig trade : template.trades) {
-            ItemStack result = resolveItem(trade.resultItem, adminConfig);
-            if (result == null) continue;
-            result.setAmount(trade.resultAmount);
-
-            ItemStack cost = resolveItem(trade.costItem, adminConfig);
-            if (cost == null) continue;
-            cost.setAmount(trade.costAmount);
-
-            MerchantRecipe recipe = new MerchantRecipe(result, trade.maxUses);
-            recipe.addIngredient(cost);
-            recipes.add(recipe);
-        }
-
-        return recipes;
-    }
-
-    /**
-     * Resolves an item specification to an ItemStack.
-     * Supports Material names (e.g., "GOLDEN_APPLE") and item template IDs.
-     */
-    private ItemStack resolveItem(String itemSpec, AdminConfigService adminConfig) {
-        if (itemSpec == null || itemSpec.isEmpty()) {
+    public MerchantInstance spawnFixedMerchant(Location location, MerchantType type, String poolId,
+                                                boolean limited, String displayName) {
+        Optional<MerchantItemPool> poolOpt = adminConfig.getMerchantPool(poolId);
+        if (poolOpt.isEmpty()) {
             return null;
         }
 
-        // Check for special "coin" keyword
-        if ("coin".equalsIgnoreCase(itemSpec)) {
-            return new ItemStack(config.getCoinMaterial());
+        MerchantInstance merchant = spawnMerchant(location, type, MerchantBehavior.FIXED,
+                poolOpt.get(), limited, displayName);
+
+        // Fixed merchants don't despawn on time
+        if (merchant != null) {
+            merchant.setDespawnTimeMillis(0);
         }
 
-        // Try as Material first
-        try {
-            Material material = Material.valueOf(itemSpec.toUpperCase());
-            return new ItemStack(material);
-        } catch (IllegalArgumentException ignored) {
-            // Not a material, try as template ID
+        return merchant;
+    }
+
+    // ==================== Merchant Interaction ====================
+
+    /**
+     * Handles player interaction with a merchant.
+     */
+    public void handleInteract(Player player, UUID entityId) {
+        MerchantInstance merchant = findMerchantByEntityId(entityId);
+        if (merchant == null) {
+            return;
         }
 
-        // Try as item template ID
-        if (adminConfig != null) {
-            Optional<ItemTemplateConfig> templateOpt = adminConfig.getItemTemplate(itemSpec);
-            if (templateOpt.isPresent()) {
-                return templateOpt.get().toItemStack();
+        if (merchant.getType() == MerchantType.MULTI) {
+            handleMultiInteract(player, merchant);
+        } else {
+            handleSingleInteract(player, merchant);
+        }
+    }
+
+    private void handleMultiInteract(Player player, MerchantInstance merchant) {
+        // Open shop GUI
+        MerchantShopGui gui = new MerchantShopGui(player, plugin, merchant);
+        gui.open();
+    }
+
+    private void handleSingleInteract(Player player, MerchantInstance merchant) {
+        WeightedShopItem item = merchant.getSingleItem();
+        if (item == null) {
+            return;
+        }
+
+        EconomyService economy = plugin.getEconomyService();
+        int price = item.getPrice();
+
+        // Check balance
+        if (!economy.hasBalance(player, price)) {
+            i18n.send(player, "merchant.not_enough_coins", "price", price);
+            return;
+        }
+
+        // Resolve item
+        ItemStack purchaseItem = resolveItemStack(item.getItemTemplateId());
+        if (purchaseItem == null) {
+            i18n.send(player, "error.generic");
+            return;
+        }
+
+        // Check inventory space
+        if (player.getInventory().firstEmpty() == -1) {
+            i18n.send(player, "info.reward_overflow", "count", 1);
+            return;
+        }
+
+        // Deduct and give
+        if (economy.deduct(player, price, "merchant_purchase")) {
+            player.getInventory().addItem(purchaseItem);
+            i18n.send(player, "merchant.purchase_success", "price", price);
+
+            // Handle limited
+            if (merchant.isLimited()) {
+                despawnMerchant(merchant.getInstanceId());
+                i18n.send(player, "merchant.merchant_left");
+            }
+        }
+    }
+
+    // ==================== Despawn Management ====================
+
+    /**
+     * Checks for merchants that should be despawned.
+     */
+    private void checkDespawns() {
+        List<UUID> toRemove = new ArrayList<>();
+
+        for (MerchantInstance merchant : activeMerchants.values()) {
+            if (!merchant.isValid() || merchant.shouldDespawn()) {
+                toRemove.add(merchant.getInstanceId());
             }
         }
 
-        plugin.getLogger().warning("Could not resolve item: " + itemSpec);
-        return null;
+        for (UUID id : toRemove) {
+            despawnMerchant(id);
+        }
     }
 
     /**
-     * Samples a location for merchant spawning near players.
+     * Despawns a merchant by instance ID.
      */
-    private Location sampleMerchantLocation(RunState run) {
+    public void despawnMerchant(UUID instanceId) {
+        MerchantInstance merchant = activeMerchants.remove(instanceId);
+        if (merchant == null) {
+            return;
+        }
+
+        // Despawn particles
+        Location loc = merchant.getLocation();
+        if (loc != null && config.isMerchantDespawnParticles()) {
+            loc.getWorld().spawnParticle(Particle.SMOKE, loc, 20, 0.5, 0.5, 0.5, 0);
+        }
+
+        // Remove from run tracking
+        if (merchant.getRunId() != null) {
+            Set<UUID> merchants = runMerchants.get(merchant.getRunId());
+            if (merchants != null) {
+                merchants.remove(instanceId);
+            }
+        }
+
+        merchant.despawn();
+    }
+
+    /**
+     * Clears all merchants for a specific run.
+     */
+    public void clearMerchantsForRun(UUID runId) {
+        Set<UUID> merchants = runMerchants.get(runId);
+        if (merchants == null) return;
+
+        for (UUID merchantId : new ArrayList<>(merchants)) {
+            despawnMerchant(merchantId);
+        }
+        merchants.clear();
+    }
+
+    /**
+     * Clears all merchants globally.
+     */
+    public void clearAllMerchants() {
+        for (UUID merchantId : new ArrayList<>(activeMerchants.keySet())) {
+            despawnMerchant(merchantId);
+        }
+        activeMerchants.clear();
+
+        // Also clear any untracked merchants by tag
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (entity.getScoreboardTags().contains(MerchantEntity.MERCHANT_TAG)) {
+                    entity.remove();
+                }
+            }
+        }
+    }
+
+    // ==================== Head Item Cycling ====================
+
+    /**
+     * Cycles head items for all multi-type merchants.
+     */
+    private void cycleHeadItems() {
+        for (MerchantInstance merchant : activeMerchants.values()) {
+            if (merchant.getType() == MerchantType.MULTI && merchant.isValid()) {
+                merchant.cycleHeadItem(this::resolveItemStack);
+            }
+        }
+    }
+
+    // ==================== Location Sampling ====================
+
+    /**
+     * Samples a location for wandering merchant spawning.
+     */
+    private Location sampleWanderingLocation(RunState run) {
         List<UUID> alivePlayers = new ArrayList<>(run.getAlivePlayers());
         if (alivePlayers.isEmpty()) return null;
 
-        // Pick a random alive player
         UUID targetId = alivePlayers.get(ThreadLocalRandom.current().nextInt(alivePlayers.size()));
         Player target = Bukkit.getPlayer(targetId);
         if (target == null || !target.isOnline()) return null;
@@ -281,7 +465,6 @@ public class MerchantService {
         double minDist = config.getMerchantMinDistance();
         double maxDist = config.getMerchantMaxDistance();
 
-        // Try to find a valid location
         for (int attempt = 0; attempt < 10; attempt++) {
             double angle = ThreadLocalRandom.current().nextDouble() * 2 * Math.PI;
             double distance = minDist + ThreadLocalRandom.current().nextDouble() * (maxDist - minDist);
@@ -316,150 +499,34 @@ public class MerchantService {
         return true;
     }
 
-    /**
-     * Checks for merchants that should be despawned.
-     */
-    private void checkDespawns() {
-        long now = System.currentTimeMillis();
-        long lifetimeMs = config.getMerchantLifetime() * 1000L;
+    // ==================== Helper Methods ====================
 
-        List<UUID> toRemove = new ArrayList<>();
-
-        for (Map.Entry<UUID, Long> entry : merchantSpawnTimes.entrySet()) {
-            UUID merchantId = entry.getKey();
-            long spawnTime = entry.getValue();
-
-            if (now - spawnTime >= lifetimeMs) {
-                toRemove.add(merchantId);
+    private MerchantInstance findMerchantByEntityId(UUID entityId) {
+        for (MerchantInstance merchant : activeMerchants.values()) {
+            if (merchant.getEntity().getArmorStand() != null &&
+                    merchant.getEntity().getArmorStand().getUniqueId().equals(entityId)) {
+                return merchant;
             }
         }
-
-        for (UUID merchantId : toRemove) {
-            despawnMerchant(merchantId);
-        }
+        return null;
     }
 
-    /**
-     * Despawns a single merchant.
-     */
-    private void despawnMerchant(UUID merchantId) {
-        merchantSpawnTimes.remove(merchantId);
-
-        // Find and remove from run tracking
-        for (Set<UUID> merchants : runMerchants.values()) {
-            merchants.remove(merchantId);
-        }
-
-        // Remove entity
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity.getUniqueId().equals(merchantId)) {
-                    entity.remove();
-                    return;
-                }
-            }
-        }
+    private ItemStack resolveItemStack(String templateId) {
+        Optional<ItemTemplateConfig> templateOpt = adminConfig.getItemTemplate(templateId);
+        return templateOpt.map(ItemTemplateConfig::toItemStack).orElse(null);
     }
 
-    /**
-     * Clears all merchants for a specific run.
-     */
-    public void clearMerchants(UUID runId) {
-        Set<UUID> merchants = runMerchants.get(runId);
-        if (merchants == null) return;
-
-        int count = 0;
-        for (UUID merchantId : merchants) {
-            merchantSpawnTimes.remove(merchantId);
-            for (World world : Bukkit.getWorlds()) {
-                for (Entity entity : world.getEntities()) {
-                    if (entity.getUniqueId().equals(merchantId)) {
-                        entity.remove();
-                        count++;
-                    }
-                }
-            }
+    private String getItemDisplayName(String templateId) {
+        Optional<ItemTemplateConfig> templateOpt = adminConfig.getItemTemplate(templateId);
+        if (templateOpt.isEmpty()) {
+            return templateId;
         }
-        merchants.clear();
-
-        if (count > 0) {
-            plugin.getLogger().info("Cleared " + count + " merchants for run " + runId);
+        ItemStack item = templateOpt.get().toItemStack();
+        if (item.getItemMeta() != null && item.getItemMeta().hasDisplayName()) {
+            return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                    .serialize(item.getItemMeta().displayName());
         }
-    }
-
-    /**
-     * Clears all merchants globally.
-     */
-    public void clearAllMerchants() {
-        int count = 0;
-
-        // Clear tracked merchants
-        for (UUID merchantId : merchantSpawnTimes.keySet()) {
-            for (World world : Bukkit.getWorlds()) {
-                for (Entity entity : world.getEntities()) {
-                    if (entity.getUniqueId().equals(merchantId)) {
-                        entity.remove();
-                        count++;
-                    }
-                }
-            }
-        }
-        merchantSpawnTimes.clear();
-
-        // Clear from run tracking
-        for (Set<UUID> merchants : runMerchants.values()) {
-            merchants.clear();
-        }
-
-        // Also clear any untracked merchants (by tag)
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity.getScoreboardTags().contains(MERCHANT_TAG)) {
-                    entity.remove();
-                    count++;
-                }
-            }
-        }
-
-        if (count > 0) {
-            plugin.getLogger().info("Cleared " + count + " merchants globally");
-        }
-    }
-
-    /**
-     * Spawns a merchant manually (admin command).
-     */
-    public Villager spawnMerchantAt(Location location) {
-        return spawnMerchant(location, null);
-    }
-
-    /**
-     * Spawns a merchant manually with a specific template (admin command).
-     */
-    public Villager spawnMerchantAt(Location location, String templateId) {
-        MerchantTemplateConfig template = null;
-        if (templateId != null) {
-            AdminConfigService adminConfig = plugin.getAdminConfigService();
-            if (adminConfig != null) {
-                template = adminConfig.getMerchantTemplate(templateId).orElse(null);
-            }
-        }
-        return spawnMerchant(location, template);
-    }
-
-    /**
-     * Gets count of active merchants for a run.
-     */
-    public int getMerchantCount(UUID runId) {
-        Set<UUID> merchants = runMerchants.get(runId);
-        return merchants != null ? merchants.size() : 0;
-    }
-
-    /**
-     * Checks if an entity is a VRS merchant.
-     */
-    public boolean isMerchant(Entity entity) {
-        return entity.getScoreboardTags().contains(MERCHANT_TAG);
+        return item.getType().name();
     }
 
     private void notifyRunPlayers(RunState run, String messageKey) {
@@ -473,5 +540,36 @@ public class MerchantService {
 
     private String formatLocation(Location loc) {
         return String.format("(%.1f, %.1f, %.1f)", loc.getX(), loc.getY(), loc.getZ());
+    }
+
+    // ==================== Public Accessors ====================
+
+    /**
+     * Checks if an entity is a VRS merchant.
+     */
+    public boolean isMerchant(Entity entity) {
+        return entity.getScoreboardTags().contains(MerchantEntity.MERCHANT_TAG);
+    }
+
+    /**
+     * Gets the count of active merchants for a run.
+     */
+    public int getMerchantCount(UUID runId) {
+        Set<UUID> merchants = runMerchants.get(runId);
+        return merchants != null ? merchants.size() : 0;
+    }
+
+    /**
+     * Gets all active merchants.
+     */
+    public Collection<MerchantInstance> getActiveMerchants() {
+        return Collections.unmodifiableCollection(activeMerchants.values());
+    }
+
+    /**
+     * Gets a merchant by instance ID.
+     */
+    public Optional<MerchantInstance> getMerchant(UUID instanceId) {
+        return Optional.ofNullable(activeMerchants.get(instanceId));
     }
 }

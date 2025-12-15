@@ -3,6 +3,7 @@ package cat.nyaa.survivors.service;
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.config.ConfigService.EnemyArchetypeConfig;
+import cat.nyaa.survivors.economy.EconomyService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
@@ -147,24 +148,13 @@ public class RewardService {
     }
 
     /**
-     * Awards coins (vanilla items) to a player.
+     * Awards coins to a player using the configured economy mode.
      */
     public void awardCoin(Player player, int amount) {
         if (amount <= 0) return;
 
-        ItemStack coin = createCoinItem(amount);
-        Map<Integer, ItemStack> overflow = player.getInventory().addItem(coin);
-
-        if (!overflow.isEmpty()) {
-            // Add to pending rewards
-            Optional<PlayerState> stateOpt = state.getPlayer(player.getUniqueId());
-            stateOpt.ifPresent(ps -> {
-                for (ItemStack item : overflow.values()) {
-                    ps.addPendingReward(item);
-                }
-                i18n.send(player, "info.reward_overflow", "count", overflow.size());
-            });
-        }
+        EconomyService economy = plugin.getEconomyService();
+        economy.add(player, amount, "kill_reward");
 
         i18n.send(player, "info.coin_gained", "amount", amount);
     }
@@ -280,19 +270,11 @@ public class RewardService {
     }
 
     /**
-     * Creates a coin ItemStack.
+     * Creates a coin ItemStack using EconomyService.
      */
     private ItemStack createCoinItem(int amount) {
-        ItemStack coin = new ItemStack(config.getCoinMaterial(), amount);
-        ItemMeta meta = coin.getItemMeta();
-        if (meta != null) {
-            meta.displayName(Component.text(config.getCoinDisplayName()));
-            if (config.getCoinCustomModelData() > 0) {
-                meta.setCustomModelData(config.getCoinCustomModelData());
-            }
-            coin.setItemMeta(meta);
-        }
-        return coin;
+        EconomyService economy = plugin.getEconomyService();
+        return economy.createCoinItem(amount);
     }
 
     /**

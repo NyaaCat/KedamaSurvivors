@@ -361,6 +361,7 @@ public class PersistenceService {
         public String starterHelmetOptionId;
         public long cooldownUntilMillis;
         public int permaScore;
+        public int balance;  // Internal economy balance
 
         public static PlayerStateData fromPlayerState(PlayerState player) {
             PlayerStateData data = new PlayerStateData();
@@ -380,6 +381,7 @@ public class PersistenceService {
             data.starterWeaponOptionId = player.getStarterWeaponOptionId();
             data.starterHelmetOptionId = player.getStarterHelmetOptionId();
             data.permaScore = player.getPermaScore();
+            data.balance = player.getBalance();
 
             return data;
         }
@@ -398,6 +400,7 @@ public class PersistenceService {
             player.setStarterWeaponOptionId(starterWeaponOptionId);
             player.setStarterHelmetOptionId(starterHelmetOptionId);
             player.setPermaScore(permaScore);
+            player.setBalance(balance);
 
             return player;
         }

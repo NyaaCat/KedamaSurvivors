@@ -1,6 +1,7 @@
 package cat.nyaa.survivors.config;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
+import cat.nyaa.survivors.economy.EconomyMode;
 import cat.nyaa.survivors.util.ConfigException;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -90,6 +91,10 @@ public class ConfigService {
     private int timeStepSeconds;
     private int levelPerTimeStep;
 
+    // Economy
+    private EconomyMode economyMode;
+    private String coinNbtTag;
+
     // Rewards
     private boolean xpShareEnabled;
     private double xpShareRadius;
@@ -166,6 +171,18 @@ public class ConfigService {
     private int merchantLifetime;
     private double merchantMinDistance;
     private double merchantMaxDistance;
+    private int merchantHeadItemCycleInterval;
+    private double merchantSpawnChance;
+    private boolean merchantLimited;
+    private int merchantMinStaySeconds;
+    private int merchantMaxStaySeconds;
+    private boolean merchantSpawnParticles;
+    private boolean merchantDespawnParticles;
+    private int merchantMinItems;
+    private int merchantMaxItems;
+    private float merchantRotationSpeed;
+    private double merchantBobHeight;
+    private double merchantBobSpeed;
 
     public ConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -191,6 +208,7 @@ public class ConfigService {
         loadTeams();
         loadRespawn();
         loadSpawning();
+        loadEconomy();
         loadRewards();
         loadProgression();
         loadUpgrade();
@@ -276,14 +294,25 @@ public class ConfigService {
         levelPerTimeStep = config.getInt("spawning.levelCalculation.timeScaling.levelPerStep", 1);
     }
 
+    private void loadEconomy() {
+        String modeStr = config.getString("economy.mode", "INTERNAL").toUpperCase();
+        try {
+            economyMode = EconomyMode.valueOf(modeStr);
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Invalid economy mode: " + modeStr + ", defaulting to INTERNAL");
+            economyMode = EconomyMode.INTERNAL;
+        }
+        coinNbtTag = config.getString("economy.coin.nbtTag", "vrs_coin");
+    }
+
     private void loadRewards() {
         xpShareEnabled = config.getBoolean("rewards.xpShare.enabled", true);
         xpShareRadius = config.getDouble("rewards.xpShare.radius", 20.0);
         xpSharePercent = config.getDouble("rewards.xpShare.sharePercent", 0.25);
 
-        coinMaterial = parseMaterial(config.getString("rewards.coin.material", "EMERALD"));
-        coinCustomModelData = config.getInt("rewards.coin.customModelData", 0);
-        coinDisplayName = config.getString("rewards.coin.displayName", "§e金币");
+        coinMaterial = parseMaterial(config.getString("economy.coin.material", "EMERALD"));
+        coinCustomModelData = config.getInt("economy.coin.customModelData", 0);
+        coinDisplayName = config.getString("economy.coin.displayName", "§e金币");
     }
 
     private void loadProgression() {
@@ -494,10 +523,22 @@ public class ConfigService {
 
     private void loadMerchants() {
         merchantsEnabled = config.getBoolean("merchants.enabled", true);
-        merchantSpawnInterval = config.getInt("merchants.spawn.intervalSeconds", 120);
-        merchantLifetime = config.getInt("merchants.spawn.lifetimeSeconds", 60);
-        merchantMinDistance = config.getDouble("merchants.spawn.minDistanceFromPlayers", 20.0);
-        merchantMaxDistance = config.getDouble("merchants.spawn.maxDistanceFromPlayers", 50.0);
+        merchantSpawnInterval = config.getInt("merchants.wandering.spawnIntervalSeconds", 120);
+        merchantLifetime = config.getInt("merchants.wandering.stayTime.maxSeconds", 120);
+        merchantMinDistance = config.getDouble("merchants.wandering.distance.min", 20.0);
+        merchantMaxDistance = config.getDouble("merchants.wandering.distance.max", 50.0);
+        merchantHeadItemCycleInterval = config.getInt("merchants.display.headItemCycleIntervalTicks", 200);
+        merchantSpawnChance = config.getDouble("merchants.wandering.spawnChance", 0.5);
+        merchantLimited = config.getBoolean("merchants.stock.limited", true);
+        merchantMinStaySeconds = config.getInt("merchants.wandering.stayTime.minSeconds", 60);
+        merchantMaxStaySeconds = config.getInt("merchants.wandering.stayTime.maxSeconds", 120);
+        merchantSpawnParticles = config.getBoolean("merchants.wandering.particles.spawn", true);
+        merchantDespawnParticles = config.getBoolean("merchants.wandering.particles.despawn", true);
+        merchantMinItems = config.getInt("merchants.stock.minItems", 3);
+        merchantMaxItems = config.getInt("merchants.stock.maxItems", 6);
+        merchantRotationSpeed = (float) config.getDouble("merchants.display.rotationSpeed", 3.0);
+        merchantBobHeight = config.getDouble("merchants.display.bobHeight", 0.15);
+        merchantBobSpeed = config.getDouble("merchants.display.bobSpeed", 0.01);
     }
 
     // ==================== Utility Methods ====================
@@ -581,6 +622,9 @@ public class ConfigService {
     public int getTimeStepSeconds() { return timeStepSeconds; }
     public int getLevelPerTimeStep() { return levelPerTimeStep; }
 
+    public EconomyMode getEconomyMode() { return economyMode; }
+    public String getCoinNbtTag() { return coinNbtTag; }
+
     public boolean isXpShareEnabled() { return xpShareEnabled; }
     public double getXpShareRadius() { return xpShareRadius; }
     public double getXpSharePercent() { return xpSharePercent; }
@@ -648,6 +692,18 @@ public class ConfigService {
     public int getMerchantLifetime() { return merchantLifetime; }
     public double getMerchantMinDistance() { return merchantMinDistance; }
     public double getMerchantMaxDistance() { return merchantMaxDistance; }
+    public int getMerchantHeadItemCycleInterval() { return merchantHeadItemCycleInterval; }
+    public double getMerchantSpawnChance() { return merchantSpawnChance; }
+    public boolean isMerchantLimited() { return merchantLimited; }
+    public int getMerchantMinStaySeconds() { return merchantMinStaySeconds; }
+    public int getMerchantMaxStaySeconds() { return merchantMaxStaySeconds; }
+    public boolean isMerchantSpawnParticles() { return merchantSpawnParticles; }
+    public boolean isMerchantDespawnParticles() { return merchantDespawnParticles; }
+    public int getMerchantMinItems() { return merchantMinItems; }
+    public int getMerchantMaxItems() { return merchantMaxItems; }
+    public float getMerchantRotationSpeed() { return merchantRotationSpeed; }
+    public double getMerchantBobHeight() { return merchantBobHeight; }
+    public double getMerchantBobSpeed() { return merchantBobSpeed; }
 
     // ==================== Runtime Update Methods ====================
 
@@ -740,6 +796,18 @@ public class ConfigService {
     public void setMerchantLifetime(int lifetime) { this.merchantLifetime = lifetime; }
     public void setMerchantMinDistance(double distance) { this.merchantMinDistance = distance; }
     public void setMerchantMaxDistance(double distance) { this.merchantMaxDistance = distance; }
+    public void setMerchantHeadItemCycleInterval(int interval) { this.merchantHeadItemCycleInterval = interval; }
+    public void setMerchantSpawnChance(double chance) { this.merchantSpawnChance = chance; }
+    public void setMerchantLimited(boolean limited) { this.merchantLimited = limited; }
+    public void setMerchantMinStaySeconds(int seconds) { this.merchantMinStaySeconds = seconds; }
+    public void setMerchantMaxStaySeconds(int seconds) { this.merchantMaxStaySeconds = seconds; }
+    public void setMerchantSpawnParticles(boolean spawn) { this.merchantSpawnParticles = spawn; }
+    public void setMerchantDespawnParticles(boolean despawn) { this.merchantDespawnParticles = despawn; }
+    public void setMerchantMinItems(int min) { this.merchantMinItems = min; }
+    public void setMerchantMaxItems(int max) { this.merchantMaxItems = max; }
+    public void setMerchantRotationSpeed(float speed) { this.merchantRotationSpeed = speed; }
+    public void setMerchantBobHeight(double height) { this.merchantBobHeight = height; }
+    public void setMerchantBobSpeed(double speed) { this.merchantBobSpeed = speed; }
 
     // Upgrade
     public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
@@ -798,10 +866,21 @@ public class ConfigService {
 
         // Merchants
         config.set("merchants.enabled", merchantsEnabled);
-        config.set("merchants.spawn.intervalSeconds", merchantSpawnInterval);
-        config.set("merchants.spawn.lifetimeSeconds", merchantLifetime);
-        config.set("merchants.spawn.minDistanceFromPlayers", merchantMinDistance);
-        config.set("merchants.spawn.maxDistanceFromPlayers", merchantMaxDistance);
+        config.set("merchants.wandering.spawnIntervalSeconds", merchantSpawnInterval);
+        config.set("merchants.wandering.stayTime.maxSeconds", merchantLifetime);
+        config.set("merchants.wandering.distance.min", merchantMinDistance);
+        config.set("merchants.wandering.distance.max", merchantMaxDistance);
+        config.set("merchants.display.headItemCycleIntervalTicks", merchantHeadItemCycleInterval);
+        config.set("merchants.wandering.spawnChance", merchantSpawnChance);
+        config.set("merchants.stock.limited", merchantLimited);
+        config.set("merchants.wandering.stayTime.minSeconds", merchantMinStaySeconds);
+        config.set("merchants.wandering.particles.spawn", merchantSpawnParticles);
+        config.set("merchants.wandering.particles.despawn", merchantDespawnParticles);
+        config.set("merchants.stock.minItems", merchantMinItems);
+        config.set("merchants.stock.maxItems", merchantMaxItems);
+        config.set("merchants.display.rotationSpeed", merchantRotationSpeed);
+        config.set("merchants.display.bobHeight", merchantBobHeight);
+        config.set("merchants.display.bobSpeed", merchantBobSpeed);
 
         // Upgrade
         config.set("upgrade.timeoutSeconds", upgradeTimeoutSeconds);

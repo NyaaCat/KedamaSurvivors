@@ -16,6 +16,7 @@ This guide walks you through setting up KedamaSurvivors from scratch and startin
 | **Multiverse-Core** | Manage multiple combat worlds easily |
 | **RPGItems-reloaded** | Create custom weapons and armor with special abilities |
 | **EssentialsX** | Convenient spawn/teleport management |
+| **Vault** | External economy integration (optional - plugin has built-in economy) |
 
 ---
 
@@ -387,63 +388,125 @@ teleport:
 
 ---
 
-### Step 6: (Optional) Customize Merchants
+### Step 6: (Optional) Configure Economy
 
-Merchants spawn periodically during runs and offer trades for coins.
+The plugin supports three economy modes for handling coins:
 
-#### Using Admin Commands (Recommended)
-
-Create and manage merchants with in-game commands:
-
-```bash
-# 1. Create a merchant template
-/vrs admin merchant template create potions "§dPotion Merchant"
-
-# 2. Hold the item you want to sell in your hand
-# 3. Add it as a trade (captures item NBT automatically)
-/vrs admin merchant trade add potions 25 5
-# Result: Sells held item for 25 coins, max 5 uses per merchant
-
-# 4. Add more trades by holding different items
-/vrs admin merchant trade add potions 15 3
-
-# 5. List trades to verify
-/vrs admin merchant trade list potions
-```
-
-#### Manual Configuration (Alternative)
-
-Default templates are already configured in `data/merchants.yml`:
+**Edit `config.yml` economy section:**
 
 ```yaml
-templates:
-  basic_supplies:
-    displayName: "§eWandering Trader"
-    trades:
-      - resultItem: "GOLDEN_APPLE"
-        resultAmount: 1
-        costItem: "coin"
-        costAmount: 15
-        maxUses: 3
-      - resultItem: "ARROW"
-        resultAmount: 16
-        costItem: "coin"
-        costAmount: 5
-        maxUses: 10
+economy:
+  # Mode: VAULT (external economy), INTERNAL (plugin-managed per-player), ITEM (physical items)
+  mode: INTERNAL
 
-  rare_goods:
-    displayName: "§dRare Merchant"
-    trades:
-      - resultItem: "ENCHANTED_GOLDEN_APPLE"
-        resultAmount: 1
-        costItem: "coin"
-        costAmount: 50
-        maxUses: 1
+  coin:
+    material: EMERALD
+    customModelData: 0
+    displayName: "§e金币"
+    nbtTag: "vrs_coin"           # NBT tag to identify VRS coins (for ITEM mode)
 ```
 
-**Note:** The `resultItem` field can be:
-- A Bukkit material name (e.g., "GOLDEN_APPLE")
-- An item template ID (e.g., "merchant_potions_potion_1234567890") for custom NBT items
+**Economy Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `VAULT` | Uses external Vault-compatible economy plugin. Falls back to INTERNAL if Vault not installed. |
+| `INTERNAL` | Plugin stores coin balance per-player internally (default). |
+| `ITEM` | Physical coin items in player inventory. Coins have NBT tag for identification. |
+
+---
+
+### Step 7: (Optional) Customize Merchants
+
+Merchants appear as animated armor stands that float and spin. They spawn periodically during runs and offer trades for coins.
+
+#### 7a: Create Merchant Item Pools
+
+Merchant stock is managed through item pools. Each pool contains weighted items with prices.
+
+**Using Admin Commands (Recommended):**
+
+```bash
+# 1. Create a merchant pool
+/vrs admin merchant pool create common_items
+
+# 2. Hold the item you want to sell in your hand
+# 3. Add it to the pool with price and weight
+/vrs admin merchant pool additem common_items 25 1.0
+# Result: Adds held item for 25 coins with weight 1.0
+
+# 4. Add more items by holding different items
+/vrs admin merchant pool additem common_items 50 0.5
+
+# 5. List pool contents
+/vrs admin merchant pool list common_items
+```
+
+**Manual Configuration (Alternative):**
+
+Edit `data/merchant_pools.yml`:
+
+```yaml
+pools:
+  common_items:
+    items:
+      - templateId: "golden_apple_1"
+        weight: 10.0
+        price: 25
+      - templateId: "speed_potion_1"
+        weight: 5.0
+        price: 50
+
+  rare_items:
+    items:
+      - templateId: "enchanted_apple_1"
+        weight: 1.0
+        price: 100
+```
+
+#### 7b: Configure Merchant Behavior
+
+Merchants use invisible armor stands with floating/spinning animation. Configure their behavior in `config.yml`:
+
+```yaml
+merchants:
+  enabled: true
+
+  wandering:
+    spawnIntervalSeconds: 120    # How often to attempt spawning
+    spawnChance: 0.5             # Probability of spawn per interval (0-1)
+    stayTime:
+      minSeconds: 60             # Minimum stay duration
+      maxSeconds: 120            # Maximum stay duration
+    distance:
+      min: 20.0                  # Min distance from players
+      max: 50.0                  # Max distance from players
+
+  stock:
+    limited: true                # Items disappear when purchased
+    minItems: 3                  # Min items in shop
+    maxItems: 6                  # Max items in shop
+
+  display:
+    rotationSpeed: 3.0           # Degrees per tick (spinning)
+    bobHeight: 0.15              # Floating amplitude (blocks)
+    bobSpeed: 0.01               # Floating speed
+```
+
+#### 7c: Create Merchant Templates (Legacy)
+
+You can also create named merchant templates with specific trades:
+
+```bash
+# Create a merchant template
+/vrs admin merchant template create potions "§dPotion Merchant"
+
+# Hold an item and add as trade (25 coins, max 5 uses)
+/vrs admin merchant trade add potions 25 5
+
+# List trades
+/vrs admin merchant trade list potions
+```
 
 ---
 
@@ -457,6 +520,8 @@ At minimum, you need:
 - [ ] **1+ starter helmet** in `data/starters.yml` with matching item template
 - [ ] **Equipment groups** in `data/equipment/weapons.yml` and `helmets.yml`
 - [ ] **Teleport commands** configured in `config.yml` (optional if using default API teleport)
+- [ ] **Economy mode** configured in `config.yml` (defaults to INTERNAL)
+- [ ] **Merchant pools** configured in `data/merchant_pools.yml` (optional, for merchant trades)
 
 ---
 
