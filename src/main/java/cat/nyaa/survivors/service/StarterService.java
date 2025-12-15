@@ -154,29 +154,46 @@ public class StarterService {
 
     /**
      * Grants a single starter item immediately (for GUI selection).
-     * Removes any existing VRS item of the same type first.
+     * Removes any existing VRS item of the same type first, but respects slot location.
      * @param player The player to grant the item to
      * @param option The starter option config
      * @param type Either "weapon" or "helmet"
      */
     public void grantSingleStarterItem(Player player, ConfigService.StarterOptionConfig option, String type) {
-        // Remove existing VRS item of this type
+        ItemStack item = createEquipmentItem(option, type);
+        if (item == null) {
+            plugin.getLogger().warning("Failed to create " + type + " item for " + player.getName());
+            return;
+        }
+
+        // Find existing VRS equipment slot before removing (player may have moved it)
+        int existingSlot = findVrsEquipmentSlot(player, type);
+
+        // Remove existing VRS equipment of this type
         removeVrsEquipment(player, type);
 
-        // Create and grant new item
-        ItemStack item = createEquipmentItem(option, type);
-        if (item != null) {
-            if ("weapon".equals(type)) {
-                // Directly set in slot 0 (grantWeapon would remove again which we already did)
-                player.getInventory().setItem(0, item);
-            } else if ("helmet".equals(type)) {
-                // Directly set helmet (grantHelmet would remove again which we already did)
+        if ("weapon".equals(type)) {
+            // Place new weapon in same slot, or find empty slot
+            if (existingSlot >= 0) {
+                player.getInventory().setItem(existingSlot, item);
+            } else {
+                int emptySlot = findEmptySlot(player);
+                if (emptySlot >= 0) {
+                    player.getInventory().setItem(emptySlot, item);
+                } else {
+                    player.getInventory().setItem(0, item);
+                }
+            }
+        } else if ("helmet".equals(type)) {
+            // Place new helmet in same slot, or use armor slot
+            if (existingSlot >= 0) {
+                player.getInventory().setItem(existingSlot, item);
+            } else {
                 player.getInventory().setHelmet(item);
             }
-            plugin.getLogger().info("Granted " + type + " to " + player.getName() + ": " + item.getType());
-        } else {
-            plugin.getLogger().warning("Failed to create " + type + " item for " + player.getName());
         }
+
+        plugin.getLogger().info("Granted " + type + " to " + player.getName() + ": " + item.getType());
     }
 
     /**
@@ -236,29 +253,97 @@ public class StarterService {
     }
 
     /**
-     * Grants a weapon to the player's main hand.
+     * Grants a weapon to the player, respecting existing VRS weapon location.
+     * If player has an existing VRS weapon (possibly moved), replaces it in-place.
+     * Otherwise finds an empty slot, preferring hotbar.
      */
     private void grantWeapon(Player player, ItemStack weapon) {
         PlayerInventory inv = player.getInventory();
 
+        // Find existing VRS weapon slot first (player may have moved it)
+        int existingSlot = findVrsEquipmentSlot(player, "weapon");
+
         // Remove any existing VRS weapon
         removeVrsEquipment(player, "weapon");
 
-        // Set in main hand (slot 0)
-        inv.setItem(0, weapon);
+        if (existingSlot >= 0) {
+            // Replace in the same slot where VRS weapon was found
+            inv.setItem(existingSlot, weapon);
+        } else {
+            // No existing VRS weapon - find an empty slot
+            int emptySlot = findEmptySlot(player);
+            if (emptySlot >= 0) {
+                inv.setItem(emptySlot, weapon);
+            } else {
+                // Inventory full - place in slot 0 with warning
+                inv.setItem(0, weapon);
+                plugin.getLogger().warning("Player " + player.getName() +
+                    " had full inventory, weapon placed in slot 0");
+            }
+        }
     }
 
     /**
-     * Grants a helmet to the player's helmet slot.
+     * Grants a helmet to the player, respecting existing VRS helmet location.
+     * If player has an existing VRS helmet (possibly moved from armor slot), replaces it in-place.
+     * Otherwise uses the armor helmet slot.
      */
     private void grantHelmet(Player player, ItemStack helmet) {
         PlayerInventory inv = player.getInventory();
 
+        // Find existing VRS helmet slot first (player may have moved it from armor slot)
+        int existingSlot = findVrsEquipmentSlot(player, "helmet");
+
         // Remove any existing VRS helmet
         removeVrsEquipment(player, "helmet");
 
-        // Set in helmet slot
-        inv.setHelmet(helmet);
+        if (existingSlot >= 0) {
+            // Replace in the same slot where VRS helmet was found
+            inv.setItem(existingSlot, helmet);
+        } else {
+            // No existing VRS helmet - use armor helmet slot
+            inv.setHelmet(helmet);
+        }
+    }
+
+    /**
+     * Finds the slot containing VRS equipment of a specific type.
+     * Scans main inventory slots (0-35) to find equipment even if player moved it.
+     * @param player The player to search
+     * @param type Equipment type ("weapon" or "helmet")
+     * @return slot index, or -1 if not found
+     */
+    private int findVrsEquipmentSlot(Player player, String type) {
+        PlayerInventory inv = player.getInventory();
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (isVrsEquipment(item, type)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Finds the first empty slot, preferring hotbar (0-8), then main inventory (9-35).
+     * @param player The player to search
+     * @return slot index, or -1 if inventory is full
+     */
+    private int findEmptySlot(Player player) {
+        PlayerInventory inv = player.getInventory();
+        // Prefer hotbar slots (0-8)
+        for (int i = 0; i < 9; i++) {
+            if (inv.getItem(i) == null || inv.getItem(i).getType().isAir()) {
+                return i;
+            }
+        }
+        // Fall back to main inventory (9-35)
+        for (int i = 9; i < 36; i++) {
+            if (inv.getItem(i) == null || inv.getItem(i).getType().isAir()) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**

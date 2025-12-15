@@ -417,6 +417,15 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Fix: Cancel countdown in `handleTeamWipe()` and add defensive validation in countdown `onComplete()`
   - Files modified: `DeathService.java`, `ReadyService.java`
 
+### VRS Equipment Slot Replacement Fix
+- [x] Fix VRS equipment overwriting player's non-VRS items in inventory
+  - Root cause: `grantWeapon()` and `grantSingleStarterItem()` always placed items in slot 0, ignoring existing items
+  - Fix: Scan inventory for existing VRS equipment (via PDC tags) before removal, then replace in-place
+  - Weapons: If existing VRS weapon found, replace in same slot; otherwise find empty slot (prefer hotbar)
+  - Helmets: If existing VRS helmet found (moved from armor slot), replace in same slot; otherwise use armor slot
+  - Files modified: `StarterService.java`
+  - Tests added: `StarterServiceTest.java`
+
 ---
 
 ## Notes
