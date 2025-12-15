@@ -406,6 +406,13 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 
 ---
 
+## Bug Fixes
+
+### Team Spawn Point Fix
+- [x] Fix team members spawning at different spawn points - all team members now spawn at the same base spawn point with configurable offset (`teleport.teamSpawnOffsetRange`)
+
+---
+
 ## Notes
 
 - All Bukkit API calls must be on main thread

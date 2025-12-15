@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Manages run lifecycle - creation, execution, and termination.
@@ -224,31 +225,34 @@ public class RunService {
     /**
      * Teleports all team members to the run arena using Paper's async teleport API.
      * This allows async chunk loading for smoother teleportation.
+     * All team members spawn at the same base spawn point with small offsets.
      */
     private void teleportTeamToRunAsync(TeamState team, RunState run,
                                          ConfigService.CombatWorldConfig worldConfig, World world) {
+        // Select ONE spawn point for the entire team
+        Location teamSpawnPoint = worldConfig.getRandomSpawnPoint(world);
+        if (teamSpawnPoint == null) {
+            plugin.getLogger().severe("No spawn point available for team " + team.getName());
+            notifyTeam(team, "error.no_spawn_points");
+            return;
+        }
+
+        // Store the team's base spawn point in run state for respawns
+        run.addSpawnPoint(teamSpawnPoint);
+
         for (UUID memberId : team.getMembers()) {
             Player player = Bukkit.getPlayer(memberId);
             if (player == null) continue;
 
             Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
             if (playerStateOpt.isEmpty()) continue;
-            PlayerState playerState = playerStateOpt.get();
 
-            // Select random spawn from configured list
-            Location spawnPoint = worldConfig.getRandomSpawnPoint(world);
-            if (spawnPoint == null) {
-                plugin.getLogger().severe("No spawn point available for player " + player.getName());
-                i18n.send(player, "error.no_spawn_points");
-                continue;
-            }
-
-            // Store spawn point in run state for respawns
-            run.addSpawnPoint(spawnPoint);
+            // Apply random offset to prevent players stacking on exact same location
+            Location playerSpawnPoint = applySpawnOffset(teamSpawnPoint);
 
             // Use Paper's async teleport API for async chunk loading
-            final Location finalSpawnPoint = spawnPoint;
-            player.teleportAsync(spawnPoint).thenAccept(success -> {
+            final Location finalSpawnPoint = playerSpawnPoint;
+            player.teleportAsync(playerSpawnPoint).thenAccept(success -> {
                 // All post-teleport actions run on main thread
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (success) {
@@ -450,6 +454,39 @@ public class RunService {
         if (!loc.clone().add(0, 1, 0).getBlock().isPassable()) return false;
 
         return true;
+    }
+
+    /**
+     * Applies a random offset to a spawn location to prevent players stacking.
+     * @param base The base spawn location
+     * @return A new location with small random offset applied
+     */
+    private Location applySpawnOffset(Location base) {
+        if (base == null || base.getWorld() == null) return base;
+
+        double offsetRange = config.getTeamSpawnOffsetRange();
+        if (offsetRange <= 0) {
+            return base.clone();
+        }
+
+        double offsetX = ThreadLocalRandom.current().nextDouble(-offsetRange, offsetRange);
+        double offsetZ = ThreadLocalRandom.current().nextDouble(-offsetRange, offsetRange);
+
+        Location offset = base.clone().add(offsetX, 0, offsetZ);
+        // Adjust Y to ground level at offset position
+        offset.setY(base.getWorld().getHighestBlockYAt(offset) + 1);
+
+        // Preserve yaw and pitch from base location
+        offset.setYaw(base.getYaw());
+        offset.setPitch(base.getPitch());
+
+        // Ensure safe location
+        if (!isSafeLocation(offset)) {
+            // Fall back to base location if offset is unsafe
+            return base.clone();
+        }
+
+        return offset;
     }
 
     /**

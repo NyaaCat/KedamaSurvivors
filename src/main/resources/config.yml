@@ -92,6 +92,8 @@ teleport:
   prepCommand: ""
   enterCommand: ""
   respawnCommand: ""
+  # Maximum offset in blocks for spreading team spawn positions (prevents players stacking)
+  teamSpawnOffsetRange: 2.0
 
 # ============================================================
 # Starter Selection

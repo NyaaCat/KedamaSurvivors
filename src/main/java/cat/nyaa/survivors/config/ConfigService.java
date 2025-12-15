@@ -137,6 +137,7 @@ public class ConfigService {
     private String prepCommand;
     private String enterCommand;
     private String respawnCommand;
+    private double teamSpawnOffsetRange;
 
     // Template settings
     private boolean escapingEnabled;
@@ -331,6 +332,7 @@ public class ConfigService {
         prepCommand = config.getString("teleport.prepCommand", "");
         enterCommand = config.getString("teleport.enterCommand", "");
         respawnCommand = config.getString("teleport.respawnCommand", "");
+        teamSpawnOffsetRange = config.getDouble("teleport.teamSpawnOffsetRange", 2.0);
     }
 
     private void loadTemplates() {
@@ -626,6 +628,7 @@ public class ConfigService {
     public String getPrepCommand() { return prepCommand; }
     public String getEnterCommand() { return enterCommand; }
     public String getRespawnCommand() { return respawnCommand; }
+    public double getTeamSpawnOffsetRange() { return teamSpawnOffsetRange; }
 
     public boolean isEscapingEnabled() { return escapingEnabled; }
     public String getEscapeChars() { return escapeChars; }
@@ -700,6 +703,7 @@ public class ConfigService {
     public void setPrepCommand(String command) { this.prepCommand = command; }
     public void setEnterCommand(String command) { this.enterCommand = command; }
     public void setRespawnCommand(String command) { this.respawnCommand = command; }
+    public void setTeamSpawnOffsetRange(double range) { this.teamSpawnOffsetRange = range; }
 
     // Timings
     public void setDeathCooldownSeconds(int seconds) { this.deathCooldownSeconds = seconds; }
@@ -761,6 +765,7 @@ public class ConfigService {
         config.set("teleport.prepCommand", prepCommand);
         config.set("teleport.enterCommand", enterCommand);
         config.set("teleport.respawnCommand", respawnCommand);
+        config.set("teleport.teamSpawnOffsetRange", teamSpawnOffsetRange);
 
         // Timings
         config.set("cooldown.deathCooldownSeconds", deathCooldownSeconds);
