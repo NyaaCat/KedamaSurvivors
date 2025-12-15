@@ -1,16 +1,21 @@
 package cat.nyaa.survivors.merchant;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Transformation;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 
 import java.util.UUID;
 
 /**
- * Handles the visual representation of a merchant using an invisible armor stand.
+ * Handles the visual representation of a merchant using an invisible armor stand for hitbox
+ * and an ItemDisplay for the floating item preview.
  * The merchant floats and spins slowly for visual appeal.
  */
 public class MerchantEntity {
@@ -21,9 +26,11 @@ public class MerchantEntity {
     private static final float DEFAULT_ROTATION_SPEED = 3.0f;  // degrees per tick
     private static final double DEFAULT_BOB_SPEED = 0.015;
     private static final double DEFAULT_BOB_HEIGHT = 0.15;
+    private static final float ITEM_DISPLAY_SCALE = 0.7f;  // Scale for item display
 
     private final UUID entityId;
     private ArmorStand armorStand;
+    private ItemDisplay itemDisplay;
     private Location baseLocation;
 
     // Animation state
@@ -41,10 +48,11 @@ public class MerchantEntity {
     }
 
     /**
-     * Spawns the merchant armor stand at the given location.
+     * Spawns the merchant at the given location.
+     * Uses an ArmorStand for hitbox/interaction and an ItemDisplay for the item preview.
      *
      * @param location    the spawn location
-     * @param headItem    the item to display on the head (for 3D preview)
+     * @param headItem    the item to display (for 3D preview)
      * @param displayName the name tag to show above the merchant
      * @return this entity for chaining
      */
@@ -56,8 +64,8 @@ public class MerchantEntity {
 
         this.baseLocation = location.clone();
 
-        armorStand = world.spawn(location, ArmorStand.class, stand -> {
-            // Make invisible but with visible name
+        // Spawn invisible ArmorStand for hitbox and name tag
+        armorStand = world.spawn(baseLocation, ArmorStand.class, stand -> {
             stand.setVisible(false);
             stand.setGravity(false);
             stand.setInvulnerable(true);
@@ -72,11 +80,27 @@ public class MerchantEntity {
             // Tag for identification
             stand.addScoreboardTag(MERCHANT_TAG);
             stand.addScoreboardTag("vrs_merchant_uuid:" + entityId.toString());
+        });
 
-            // Set head item for 3D preview
+        // Spawn ItemDisplay for the floating item preview (at chest height of armor stand)
+        Location displayLoc = baseLocation.clone().add(0, 1.2, 0);
+        itemDisplay = world.spawn(displayLoc, ItemDisplay.class, display -> {
             if (headItem != null) {
-                stand.getEquipment().setHelmet(headItem.clone());
+                display.setItemStack(headItem.clone());
             }
+            display.setBillboard(Display.Billboard.CENTER);  // Always face player
+
+            // Scale transformation
+            display.setTransformation(new Transformation(
+                    new Vector3f(0, 0, 0),  // translation
+                    new AxisAngle4f(0, 0, 1, 0),  // left rotation
+                    new Vector3f(ITEM_DISPLAY_SCALE, ITEM_DISPLAY_SCALE, ITEM_DISPLAY_SCALE),  // scale
+                    new AxisAngle4f(0, 0, 1, 0)   // right rotation
+            ));
+
+            // Tag for identification and cleanup
+            display.addScoreboardTag(MERCHANT_TAG);
+            display.addScoreboardTag("vrs_merchant_uuid:" + entityId.toString());
         });
 
         return this;
@@ -123,22 +147,27 @@ public class MerchantEntity {
             bobDirection = 1;
         }
 
-        // Apply to armor stand
+        // Apply to armor stand (rotation for name tag facing)
         Location newLoc = baseLocation.clone();
         newLoc.setY(baseLocation.getY() + bobOffset);
         newLoc.setYaw(rotation);
-
         armorStand.teleport(newLoc);
+
+        // Apply bob to item display (billboard handles facing, no rotation needed)
+        if (itemDisplay != null && !itemDisplay.isDead()) {
+            Location displayLoc = baseLocation.clone().add(0, 1.2 + bobOffset, 0);
+            itemDisplay.teleport(displayLoc);
+        }
     }
 
     /**
-     * Sets the item displayed on the merchant's head.
+     * Sets the item displayed by the merchant.
      *
      * @param item the item to display
      */
     public void setHeadItem(ItemStack item) {
-        if (armorStand != null && !armorStand.isDead()) {
-            armorStand.getEquipment().setHelmet(item != null ? item.clone() : null);
+        if (itemDisplay != null && !itemDisplay.isDead()) {
+            itemDisplay.setItemStack(item != null ? item.clone() : null);
         }
     }
 
@@ -154,7 +183,7 @@ public class MerchantEntity {
     }
 
     /**
-     * Removes the merchant entity from the world.
+     * Removes the merchant entities from the world.
      */
     public void remove() {
         stopAnimation();
@@ -162,6 +191,11 @@ public class MerchantEntity {
             armorStand.remove();
         }
         armorStand = null;
+
+        if (itemDisplay != null && !itemDisplay.isDead()) {
+            itemDisplay.remove();
+        }
+        itemDisplay = null;
     }
 
     /**
