@@ -799,37 +799,87 @@ Manages enemy archetypes.
 
 ### `/vrs admin merchant`
 
-Manages merchant item pools, templates, and trades.
+Manages merchants - animated armor stands that sell items to players.
 
-**Pool Subcommands:**
+**Permission:** `vrs.admin` (default: op)
+
+#### Merchant System Overview
+
+Merchants appear as invisible armor stands with a floating/spinning animation. There are two merchant **types** and two **behaviors**:
+
+**Merchant Types:**
+
+| Type | Description |
+|------|-------------|
+| `MULTI` | Opens a shop GUI with multiple items. Player clicks items to purchase. Stock is randomly selected from the pool. |
+| `SINGLE` | Direct purchase - right-click to buy immediately. Shows one item floating above the merchant. |
+
+**Merchant Behaviors:**
+
+| Behavior | Description |
+|----------|-------------|
+| `FIXED` | Permanent merchant at a fixed location. Created via admin commands. Does not despawn automatically. |
+| `WANDERING` | Temporary merchant that spawns randomly near players during runs. Despawns after a configured time. |
+
+**Stock Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `limited` | Items disappear after purchase. Merchant becomes empty when all items sold. |
+| `unlimited` | Items respawn after purchase. Merchant never runs out of stock. |
+
+---
+
+#### Spawn Subcommands
+
+Commands to spawn, despawn, and list active merchants:
+
+```
+/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited]
+/vrs admin merchant despawn [radius]
+/vrs admin merchant active
+```
+
+| Command | Description |
+|---------|-------------|
+| `spawn <poolId> <type> [stock]` | Spawn a fixed merchant at your location using the specified pool |
+| `despawn [radius]` | Remove the nearest merchant within radius (default: 5 blocks) |
+| `active` | List all active merchants with their type, behavior, pool, and location |
+
+**Spawn Examples:**
+```
+# Spawn a multi-item shop merchant using "common_shop" pool
+/vrs admin merchant spawn common_shop multi
+
+# Spawn a single-item merchant with unlimited stock
+/vrs admin merchant spawn rare_items single unlimited
+
+# Spawn with limited stock (items disappear when purchased)
+/vrs admin merchant spawn potions multi limited
+
+# Remove the nearest merchant
+/vrs admin merchant despawn
+
+# Remove merchants within 20 blocks
+/vrs admin merchant despawn 20
+
+# List all active merchants
+/vrs admin merchant active
+```
+
+---
+
+#### Pool Subcommands
+
+Pools define weighted item collections that merchants draw stock from:
+
 ```
 /vrs admin merchant pool create <poolId>
 /vrs admin merchant pool delete <poolId>
 /vrs admin merchant pool list [poolId]
-/vrs admin merchant pool additem <poolId> <price> <weight>
+/vrs admin merchant pool additem <poolId> <price> [weight]
 /vrs admin merchant pool removeitem <poolId> <index>
 ```
-
-**Template Subcommands:**
-```
-/vrs admin merchant template create <templateId> [displayName]
-/vrs admin merchant template delete <templateId>
-/vrs admin merchant template list
-/vrs admin merchant template set displayname <templateId> <displayName>
-```
-
-**Trade Subcommands:**
-```
-/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
-/vrs admin merchant trade remove <templateId> <index>
-/vrs admin merchant trade list <templateId>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Pool Management:**
-
-Merchant pools define weighted item collections that merchants draw stock from.
 
 | Command | Description |
 |---------|-------------|
@@ -837,10 +887,10 @@ Merchant pools define weighted item collections that merchants draw stock from.
 | `pool delete <poolId>` | Delete a pool and all its items |
 | `pool list` | List all pools |
 | `pool list <poolId>` | List items in a specific pool |
-| `pool additem <poolId> <price> <weight>` | Add held item to pool with price and selection weight |
+| `pool additem <poolId> <price> [weight]` | Add held item to pool (weight defaults to 1.0) |
 | `pool removeitem <poolId> <index>` | Remove item by index (1-based) |
 
-**Note:** The `pool additem` command captures the NBT of the item in your main hand.
+**Note:** The `pool additem` command captures the NBT of the item in your main hand. Higher weight = higher chance of being selected.
 
 **Pool Examples:**
 ```
@@ -863,6 +913,26 @@ Merchant pools define weighted item collections that merchants draw stock from.
 /vrs admin merchant pool removeitem common_shop 2
 ```
 
+---
+
+#### Template Subcommands (Legacy)
+
+Templates are for fixed-trade merchants with predefined trades:
+
+```
+/vrs admin merchant template create <templateId> [displayName]
+/vrs admin merchant template delete <templateId>
+/vrs admin merchant template list
+/vrs admin merchant template set displayname <templateId> <displayName>
+```
+
+**Trade Subcommands:**
+```
+/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
+/vrs admin merchant trade remove <templateId> <index>
+/vrs admin merchant trade list <templateId>
+```
+
 **Template Examples:**
 ```
 # Create a merchant template
@@ -873,6 +943,54 @@ Merchant pools define weighted item collections that merchants draw stock from.
 
 # List trades
 /vrs admin merchant trade list potions
+```
+
+---
+
+#### Complete Merchant Setup Workflow
+
+**Step 1: Create a pool**
+```
+/vrs admin merchant pool create weapons_shop
+```
+
+**Step 2: Add items to the pool** (hold each item in hand)
+```
+# Diamond sword, 100 coins, weight 0.5 (rare)
+/vrs admin merchant pool additem weapons_shop 100 0.5
+
+# Iron sword, 50 coins, weight 1.0 (common)
+/vrs admin merchant pool additem weapons_shop 50 1.0
+
+# Bow, 75 coins, weight 0.8
+/vrs admin merchant pool additem weapons_shop 75 0.8
+```
+
+**Step 3: Spawn the merchant**
+```
+# Multi-item shop with limited stock
+/vrs admin merchant spawn weapons_shop multi limited
+```
+
+**Step 4: Manage merchants**
+```
+# See all active merchants
+/vrs admin merchant active
+
+# Remove a nearby merchant
+/vrs admin merchant despawn
+```
+
+**Step 5: Configure wandering behavior** (optional)
+```
+# Set spawn interval to 60 seconds
+/vrs admin config set merchantSpawnInterval 60
+
+# Set spawn chance to 75%
+/vrs admin config set merchantSpawnChance 0.75
+
+# See all merchant config options
+/vrs admin config list merchants
 ```
 
 ---

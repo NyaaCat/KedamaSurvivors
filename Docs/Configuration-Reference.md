@@ -763,7 +763,32 @@ rewards:
 
 ## 15. Merchants
 
-Wandering merchant configuration. Merchants appear as animated armor stands with floating/spinning effects.
+Merchant system configuration. Merchants appear as invisible armor stands with a floating/spinning animation, displaying items on their head.
+
+### Merchant Types and Behaviors
+
+**Types:**
+
+| Type | Description |
+|------|-------------|
+| `MULTI` | Opens a shop GUI with multiple items. Player clicks items to purchase. Stock is randomly selected from the pool based on weights. |
+| `SINGLE` | Direct purchase - right-click the merchant to buy immediately. Shows one item floating above. |
+
+**Behaviors:**
+
+| Behavior | Description |
+|----------|-------------|
+| `FIXED` | Permanent merchant at a fixed location. Created via `/vrs admin merchant spawn`. Does not despawn automatically. |
+| `WANDERING` | Temporary merchant that spawns randomly near players during runs. Despawns after configured stay time. |
+
+**Stock Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `limited` | Items disappear after purchase. Merchant becomes empty when all items sold. |
+| `unlimited` | Items respawn after purchase. Merchant never runs out of stock. |
+
+### Configuration
 
 ```yaml
 merchants:
@@ -787,39 +812,66 @@ merchants:
   # Merchant stock settings
   stock:
     limited: true                # Items disappear when purchased (true) or respawn (false)
-    minItems: 3                  # Min items in shop (for multi-type)
-    maxItems: 6                  # Max items in shop (for multi-type)
+    minItems: 3                  # Min items in MULTI shop
+    maxItems: 6                  # Max items in MULTI shop
 
   # Display settings (armor stand animation)
   display:
     rotationSpeed: 3.0           # Degrees per tick (spinning)
     bobHeight: 0.15              # Floating bob amplitude (blocks)
     bobSpeed: 0.01               # Floating bob speed
-    headItemCycleIntervalTicks: 200  # How often head item changes (for multi-type)
+    headItemCycleIntervalTicks: 200  # How often head item changes (for MULTI type)
 ```
 
-**Merchant Settings:**
+### Settings Reference
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | Boolean | `true` | Enable merchant system |
 | `wandering.spawnIntervalSeconds` | Integer | `120` | Seconds between spawn attempts |
-| `wandering.spawnChance` | Double | `0.5` | Probability of spawn per interval |
-| `wandering.stayTime.minSeconds` | Integer | `60` | Minimum merchant stay duration |
-| `wandering.stayTime.maxSeconds` | Integer | `120` | Maximum merchant stay duration |
+| `wandering.spawnChance` | Double | `0.5` | Probability of spawn per interval (0-1) |
+| `wandering.stayTime.minSeconds` | Integer | `60` | Minimum wandering merchant stay duration |
+| `wandering.stayTime.maxSeconds` | Integer | `120` | Maximum wandering merchant stay duration |
 | `wandering.distance.min` | Double | `20.0` | Minimum distance from players to spawn |
 | `wandering.distance.max` | Double | `50.0` | Maximum distance from players to spawn |
 | `wandering.particles.spawn` | Boolean | `true` | Show particles on merchant spawn |
 | `wandering.particles.despawn` | Boolean | `true` | Show particles on merchant despawn |
-| `stock.limited` | Boolean | `true` | Whether items disappear when purchased |
-| `stock.minItems` | Integer | `3` | Minimum items in shop |
-| `stock.maxItems` | Integer | `6` | Maximum items in shop |
+| `stock.limited` | Boolean | `true` | Default stock mode (items disappear when purchased) |
+| `stock.minItems` | Integer | `3` | Minimum items in MULTI shop |
+| `stock.maxItems` | Integer | `6` | Maximum items in MULTI shop |
 | `display.rotationSpeed` | Float | `3.0` | Armor stand rotation speed (degrees/tick) |
-| `display.bobHeight` | Double | `0.15` | Floating animation amplitude |
+| `display.bobHeight` | Double | `0.15` | Floating animation amplitude (blocks) |
 | `display.bobSpeed` | Double | `0.01` | Floating animation speed |
-| `display.headItemCycleIntervalTicks` | Integer | `200` | Head item cycle interval |
+| `display.headItemCycleIntervalTicks` | Integer | `200` | Head item cycle interval (MULTI type cycles through items) |
 
-**Note:** Merchant item pools are stored in `data/merchant_pools.yml`. See [Quick Start Guide](Quick-Start.md) for pool configuration.
+### Runtime Configuration
+
+All merchant settings can be changed at runtime via commands:
+
+```
+/vrs admin config list merchants           # List all merchant settings
+/vrs admin config get merchantSpawnChance  # Get specific value
+/vrs admin config set merchantSpawnChance 0.75  # Set value
+```
+
+### Item Pools
+
+Merchant item pools are stored in `data/merchant_pools.yml`. Pools define weighted collections of items that merchants can sell.
+
+**Pool Structure:**
+```yaml
+pools:
+  common_shop:
+    items:
+      - templateId: "golden_apple_001"
+        weight: 1.0
+        price: 25
+      - templateId: "speed_potion_001"
+        weight: 0.5
+        price: 50
+```
+
+See [Commands Reference](Commands-Reference.md#vrs-admin-merchant) for pool management commands.
 
 ---
 

@@ -634,6 +634,9 @@ admin:
       pool_additem: "§f/vrs admin merchant pool additem <poolId> <price> [weight] §8- §7添加手持物品到池"
       pool_removeitem: "§f/vrs admin merchant pool removeitem <poolId> <index> §8- §7移除物品"
       pool_list: "§f/vrs admin merchant pool list [poolId] §8- §7列出物品池"
+      spawn: "§f/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] §8- §7在当前位置生成商人"
+      despawn: "§f/vrs admin merchant despawn [radius] §8- §7移除附近商人"
+      active: "§f/vrs admin merchant active §8- §7列出活动商人"
     template_created: "§a商人模板 §f{templateId} §a创建成功 (显示名: §f{displayName}§a)"
     template_exists: "§c商人模板 §f{templateId} §c已存在"
     template_deleted: "§a商人模板 §f{templateId} §a已删除"
@@ -663,6 +666,15 @@ admin:
     pool_items_header: "§8========== §6{poolId} 物品 §8=========="
     pool_items_entry: "§7[{index}] §f{templateId} §7价格: §e{price} §7权重: §f{weight}"
     pool_items_empty: "§7无物品"
+    pool_empty: "§c物品池 §f{poolId} §c是空的"
+    # 商人生成/移除/列表
+    invalid_type: "§c无效的商人类型: §f{type} §8(§7使用 multi 或 single§8)"
+    spawned: "§a已生成 §f{type} §a商人 §f{id} §a使用池 §f{poolId}"
+    despawned: "§a已移除商人 §f{id}"
+    no_nearby_merchant: "§c附近没有找到商人"
+    active_header: "§8========== §6活动商人 ({count}) §8=========="
+    active_entry: "§7- §f{id} §8| §7{type}/{behavior} §8| §7池: §f{poolId} §8| §7位置: §f{world} {x},{y},{z}"
+    active_empty: "§7无活动商人"
 
   # 配置管理
   config:

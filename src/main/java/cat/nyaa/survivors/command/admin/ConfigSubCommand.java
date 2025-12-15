@@ -75,6 +75,18 @@ public class ConfigSubCommand implements SubCommand {
                 entry("merchantLifetime", new IntProperty(config::getMerchantLifetime, config::setMerchantLifetime)),
                 entry("merchantMinDistance", new DoubleProperty(config::getMerchantMinDistance, config::setMerchantMinDistance)),
                 entry("merchantMaxDistance", new DoubleProperty(config::getMerchantMaxDistance, config::setMerchantMaxDistance)),
+                entry("merchantSpawnChance", new DoubleProperty(config::getMerchantSpawnChance, config::setMerchantSpawnChance)),
+                entry("merchantLimited", new BooleanProperty(config::isMerchantLimited, config::setMerchantLimited)),
+                entry("merchantMinStaySeconds", new IntProperty(config::getMerchantMinStaySeconds, config::setMerchantMinStaySeconds)),
+                entry("merchantMaxStaySeconds", new IntProperty(config::getMerchantMaxStaySeconds, config::setMerchantMaxStaySeconds)),
+                entry("merchantSpawnParticles", new BooleanProperty(config::isMerchantSpawnParticles, config::setMerchantSpawnParticles)),
+                entry("merchantDespawnParticles", new BooleanProperty(config::isMerchantDespawnParticles, config::setMerchantDespawnParticles)),
+                entry("merchantMinItems", new IntProperty(config::getMerchantMinItems, config::setMerchantMinItems)),
+                entry("merchantMaxItems", new IntProperty(config::getMerchantMaxItems, config::setMerchantMaxItems)),
+                entry("merchantRotationSpeed", new FloatProperty(config::getMerchantRotationSpeed, config::setMerchantRotationSpeed)),
+                entry("merchantBobHeight", new DoubleProperty(config::getMerchantBobHeight, config::setMerchantBobHeight)),
+                entry("merchantBobSpeed", new DoubleProperty(config::getMerchantBobSpeed, config::setMerchantBobSpeed)),
+                entry("merchantHeadItemCycleInterval", new IntProperty(config::getMerchantHeadItemCycleInterval, config::setMerchantHeadItemCycleInterval)),
 
                 // Upgrade
                 entry("upgradeTimeoutSeconds", new IntProperty(config::getUpgradeTimeoutSeconds, config::setUpgradeTimeoutSeconds)),
@@ -188,7 +200,13 @@ public class ConfigSubCommand implements SubCommand {
                 "rewards", List.of("xpShareRadius", "xpSharePercent"),
                 "progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"),
                 "teams", List.of("maxTeamSize", "inviteExpirySeconds"),
-                "merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime", "merchantMinDistance", "merchantMaxDistance"),
+                "merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime",
+                        "merchantMinDistance", "merchantMaxDistance", "merchantSpawnChance",
+                        "merchantLimited", "merchantMinStaySeconds", "merchantMaxStaySeconds",
+                        "merchantSpawnParticles", "merchantDespawnParticles",
+                        "merchantMinItems", "merchantMaxItems",
+                        "merchantRotationSpeed", "merchantBobHeight", "merchantBobSpeed",
+                        "merchantHeadItemCycleInterval"),
                 "upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"),
                 "scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval")
         );
@@ -353,5 +371,26 @@ public class ConfigSubCommand implements SubCommand {
 
         @Override
         public String getTypeName() { return "boolean"; }
+    }
+
+    private static class FloatProperty implements ConfigProperty<Float> {
+        private final Supplier<Float> getter;
+        private final Consumer<Float> setter;
+
+        FloatProperty(Supplier<Float> getter, Consumer<Float> setter) {
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        @Override
+        public Float get() { return getter.get(); }
+
+        @Override
+        public void setFromString(String value) {
+            setter.accept(Float.parseFloat(value));
+        }
+
+        @Override
+        public String getTypeName() { return "float"; }
     }
 }
