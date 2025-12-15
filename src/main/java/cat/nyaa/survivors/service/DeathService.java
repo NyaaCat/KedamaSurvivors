@@ -231,6 +231,10 @@ public class DeathService {
     private void handleTeamWipe(TeamState team, RunState run) {
         plugin.getLogger().info("Team " + team.getName() + " has been wiped!");
 
+        // Cancel any active countdown to prevent race conditions where
+        // a player in COUNTDOWN mode would start a new run after team wipe
+        plugin.getReadyService().cancelCountdown(team.getTeamId());
+
         // Notify all team members
         for (UUID memberId : team.getMembers()) {
             Player member = Bukkit.getPlayer(memberId);

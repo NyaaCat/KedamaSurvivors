@@ -411,6 +411,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 ### Team Spawn Point Fix
 - [x] Fix team members spawning at different spawn points - all team members now spawn at the same base spawn point with configurable offset (`teleport.teamSpawnOffsetRange`)
 
+### Team Wipe During Countdown Fix
+- [x] Fix race condition where player in COUNTDOWN mode would incorrectly start new run after team wipe
+  - Root cause: When last teammate died during countdown, the countdown wasn't cancelled
+  - Fix: Cancel countdown in `handleTeamWipe()` and add defensive validation in countdown `onComplete()`
+  - Files modified: `DeathService.java`, `ReadyService.java`
+
 ---
 
 ## Notes

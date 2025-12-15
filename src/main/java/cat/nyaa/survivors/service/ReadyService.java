@@ -348,11 +348,31 @@ public class ReadyService {
         private void onComplete() {
             activeCountdowns.remove(team.getTeamId());
 
+            // Safety check: Verify at least one team member is still in COUNTDOWN mode
+            // If countdown was cancelled (e.g., team wipe), no players will be in COUNTDOWN
+            boolean hasEligiblePlayers = team.getMembers().stream()
+                .map(state::getPlayer)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .anyMatch(ps -> ps.getMode() == PlayerMode.COUNTDOWN);
+
+            if (!hasEligiblePlayers) {
+                plugin.getLogger().info("Countdown completed but no eligible players in COUNTDOWN mode - aborting run start");
+                return;
+            }
+
             // Check if team already has an active run (players rejoining)
             Optional<RunState> existingRunOpt = state.getTeamRun(team.getTeamId());
             if (existingRunOpt.isPresent() && existingRunOpt.get().isActive()) {
                 // Rejoin players to existing run
                 handleRejoinToRun(existingRunOpt.get());
+                return;
+            }
+
+            // Additional check: If run exists but is ENDING, don't start new run
+            if (existingRunOpt.isPresent() && existingRunOpt.get().isEnded()) {
+                plugin.getLogger().info("Run is ending, not starting new run");
+                resetCountdownPlayersToLobby();
                 return;
             }
 
@@ -390,6 +410,21 @@ public class ReadyService {
                         plugin.getRunService().rejoinPlayerToRun(player, playerState, run);
                     }
                 }
+            }
+        }
+
+        /**
+         * Resets players in COUNTDOWN mode back to LOBBY.
+         * Called when countdown completes but run is ending (team wipe scenario).
+         */
+        private void resetCountdownPlayersToLobby() {
+            for (UUID memberId : team.getMembers()) {
+                state.getPlayer(memberId).ifPresent(ps -> {
+                    if (ps.getMode() == PlayerMode.COUNTDOWN) {
+                        ps.setMode(PlayerMode.LOBBY);
+                        ps.setReady(false);
+                    }
+                });
             }
         }
     }

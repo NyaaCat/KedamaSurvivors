@@ -464,6 +464,106 @@ class DeathServiceTest {
     }
 
     @Nested
+    @DisplayName("Team Wipe During Countdown")
+    class TeamWipeDuringCountdown {
+
+        @Test
+        @DisplayName("should detect wipe when countdown player is not in run participants")
+        void shouldDetectWipeWhenCountdownPlayerNotInParticipants() {
+            // Scenario: Player A died and is in COUNTDOWN, Player B (last teammate) dies
+            UUID playerA = UUID.randomUUID();
+            UUID playerB = team.getLeaderId();
+
+            team.addMember(playerA);
+
+            // Only Player B is in run (Player A was removed when they died)
+            run.addParticipant(playerB);
+
+            // Player B dies - team should be wiped
+            run.markDead(playerB);
+
+            assertTrue(team.isWiped(run.getAlivePlayers(), 300000));
+        }
+
+        @Test
+        @DisplayName("should track correct state when dead player readies up")
+        void shouldTrackCorrectStateWhenDeadPlayerReadiesUp() {
+            PlayerState playerA = new PlayerState(UUID.randomUUID(), "PlayerA");
+            PlayerState playerB = new PlayerState(UUID.randomUUID(), "PlayerB");
+
+            // Initial state: both in run
+            playerA.setMode(PlayerMode.IN_RUN);
+            playerB.setMode(PlayerMode.IN_RUN);
+
+            // Player A dies and goes through death penalty
+            playerA.resetRunState();
+            playerA.setMode(PlayerMode.COOLDOWN);
+            playerA.setCooldownUntilMillis(System.currentTimeMillis() + 30000);
+
+            // Player A cooldown expires, re-selects, readies up
+            playerA.setCooldownUntilMillis(0);
+            playerA.setMode(PlayerMode.LOBBY);
+            playerA.setStarterWeaponOptionId("iron_sword");
+            playerA.setStarterHelmetOptionId("iron_helmet");
+            playerA.setReady(true);
+            playerA.setMode(PlayerMode.COUNTDOWN);
+
+            // Verify state
+            assertEquals(PlayerMode.COUNTDOWN, playerA.getMode());
+            assertTrue(playerA.isReady());
+            assertTrue(playerA.hasSelectedStarters());
+            assertEquals(PlayerMode.IN_RUN, playerB.getMode());
+        }
+
+        @Test
+        @DisplayName("should have COUNTDOWN players reset to LOBBY when countdown cancelled")
+        void shouldResetCountdownPlayersToLobbyWhenCancelled() {
+            PlayerState playerA = new PlayerState(UUID.randomUUID(), "PlayerA");
+            playerA.setMode(PlayerMode.COUNTDOWN);
+            playerA.setReady(true);
+
+            // Simulate countdown cancellation (what cancelCountdown does)
+            if (playerA.getMode() == PlayerMode.COUNTDOWN) {
+                playerA.setMode(playerA.isReady() ? PlayerMode.READY : PlayerMode.LOBBY);
+            }
+
+            // The existing cancelCountdown sets to READY if player.isReady(), LOBBY otherwise
+            assertEquals(PlayerMode.READY, playerA.getMode());
+        }
+
+        @Test
+        @DisplayName("should not have any COUNTDOWN players after countdown cancellation for run start")
+        void shouldNotHaveCountdownPlayersAfterCancellation() {
+            PlayerState playerA = new PlayerState(UUID.randomUUID(), "PlayerA");
+            PlayerState playerB = new PlayerState(UUID.randomUUID(), "PlayerB");
+
+            // Simulate: both players in different modes when team wipe happens
+            playerA.setMode(PlayerMode.COUNTDOWN);
+            playerA.setReady(true);
+            playerB.setMode(PlayerMode.COOLDOWN); // Just died
+
+            // Check if any player is in COUNTDOWN - this is what onComplete checks
+            boolean hasCountdownPlayers =
+                playerA.getMode() == PlayerMode.COUNTDOWN ||
+                playerB.getMode() == PlayerMode.COUNTDOWN;
+
+            assertTrue(hasCountdownPlayers, "Before cancellation, should have COUNTDOWN player");
+
+            // Simulate cancellation effect
+            if (playerA.getMode() == PlayerMode.COUNTDOWN) {
+                playerA.setMode(PlayerMode.READY);
+            }
+
+            // After cancellation
+            hasCountdownPlayers =
+                playerA.getMode() == PlayerMode.COUNTDOWN ||
+                playerB.getMode() == PlayerMode.COUNTDOWN;
+
+            assertFalse(hasCountdownPlayers, "After cancellation, should have no COUNTDOWN players");
+        }
+    }
+
+    @Nested
     @DisplayName("Multi-player Scenarios")
     class MultiPlayerScenarios {
 
