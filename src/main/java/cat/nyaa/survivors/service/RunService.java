@@ -259,6 +259,9 @@ public class RunService {
             Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
             if (playerStateOpt.isEmpty()) continue;
 
+            // Sanitize inventory before teleport to prevent item duplication
+            sanitizePlayerInventory(player, playerStateOpt.get());
+
             // Apply random offset to prevent players stacking on exact same location
             Location playerSpawnPoint = applySpawnOffset(teamSpawnPoint);
 
@@ -499,6 +502,22 @@ public class RunService {
         }
 
         return offset;
+    }
+
+    /**
+     * Sanitizes player inventory before entering combat.
+     * Removes all VRS equipment and re-grants selected starters to prevent duplication.
+     */
+    private void sanitizePlayerInventory(Player player, PlayerState playerState) {
+        StarterService starter = plugin.getStarterService();
+
+        // Remove ALL existing VRS equipment (weapons and helmets)
+        starter.removeAllVrsEquipment(player);
+
+        // Re-grant the selected starter equipment fresh
+        starter.grantStarterEquipment(player, playerState);
+
+        plugin.getLogger().info("Sanitized inventory for " + player.getName() + " before combat teleport");
     }
 
     /**

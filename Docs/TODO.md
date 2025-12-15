@@ -434,6 +434,13 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `PersistenceService.java`
   - Tests added: `PersistenceServiceTest.java` (Per-Player File Operations tests)
 
+### Pre-Teleport Inventory Sanitization
+- [x] Add inventory sanitization before teleport to combat world
+  - Remove all VRS equipment before teleport
+  - Re-grant selected starter items fresh
+  - Prevents item duplication exploits
+  - Files modified: `RunService.java`
+
 ---
 
 ## Notes
