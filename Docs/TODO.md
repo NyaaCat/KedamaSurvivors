@@ -426,6 +426,14 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `StarterService.java`
   - Tests added: `StarterServiceTest.java`
 
+### Per-Player Persistence Refactor
+- [x] Refactor player persistence to use separate files per player UUID
+  - Changed from single `players.json` to individual `players/{uuid}.json` files
+  - `savePlayerAsync(UUID)` now only saves the specified player (not all players)
+  - Updated backup system to copy `players/` directory structure
+  - Files modified: `PersistenceService.java`
+  - Tests added: `PersistenceServiceTest.java` (Per-Player File Operations tests)
+
 ---
 
 ## Notes

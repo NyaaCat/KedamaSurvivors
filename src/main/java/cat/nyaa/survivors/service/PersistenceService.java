@@ -25,10 +25,11 @@ import java.util.stream.Stream;
 /**
  * Handles persistence of player and team state to disk.
  * All file I/O is performed asynchronously to avoid blocking the main thread.
+ * Players are stored in individual files per UUID in the players/ directory.
  */
 public class PersistenceService {
 
-    private static final String PLAYERS_FILE = "players.json";
+    private static final String PLAYERS_DIR = "players";
     private static final String TEAMS_FILE = "teams.json";
     private static final DateTimeFormatter BACKUP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
@@ -38,6 +39,7 @@ public class PersistenceService {
     private final Gson gson;
 
     private Path runtimePath;
+    private Path playersDir;
     private Path backupPath;
     private int autoSaveTaskId = -1;
     private int backupTaskId = -1;
@@ -101,10 +103,12 @@ public class PersistenceService {
     private void initializeDirectories() {
         File dataFolder = plugin.getDataFolder();
         runtimePath = dataFolder.toPath().resolve(config.getRuntimePath());
+        playersDir = runtimePath.resolve(PLAYERS_DIR);
         backupPath = dataFolder.toPath().resolve("backups");
 
         try {
             Files.createDirectories(runtimePath);
+            Files.createDirectories(playersDir);
             Files.createDirectories(backupPath);
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to create data directories", e);
@@ -123,32 +127,66 @@ public class PersistenceService {
     }
 
     private void loadPlayers() {
-        Path file = runtimePath.resolve(PLAYERS_FILE);
-        if (!Files.exists(file)) {
-            plugin.getLogger().info("No player data file found, starting fresh");
+        if (!Files.exists(playersDir)) {
+            plugin.getLogger().info("No player data directory found, starting fresh");
             return;
         }
 
-        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-            Type type = new TypeToken<List<PlayerStateData>>() {}.getType();
-            List<PlayerStateData> dataList = gson.fromJson(reader, type);
-
-            if (dataList == null) {
-                plugin.getLogger().warning("Player data file is empty or invalid");
-                return;
-            }
-
+        try (Stream<Path> files = Files.list(playersDir)) {
             int loaded = 0;
-            for (PlayerStateData data : dataList) {
-                PlayerState player = data.toPlayerState();
-                state.registerPlayer(player);
-                loaded++;
+            int failed = 0;
+
+            List<Path> playerFiles = files
+                    .filter(p -> p.toString().endsWith(".json"))
+                    .filter(p -> !p.getFileName().toString().contains(".corrupt."))
+                    .collect(Collectors.toList());
+
+            for (Path file : playerFiles) {
+                String filename = file.getFileName().toString();
+                String uuidStr = filename.substring(0, filename.length() - 5); // Remove .json
+
+                try {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    Optional<PlayerState> playerOpt = loadSinglePlayer(uuid);
+                    if (playerOpt.isPresent()) {
+                        state.registerPlayer(playerOpt.get());
+                        loaded++;
+                    }
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("Invalid player file name: " + filename);
+                    failed++;
+                }
             }
 
-            plugin.getLogger().info("Loaded " + loaded + " player states from disk");
+            plugin.getLogger().info("Loaded " + loaded + " player states from disk" +
+                    (failed > 0 ? " (" + failed + " failed)" : ""));
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to list player files", e);
+        }
+    }
+
+    /**
+     * Loads a single player from their individual file.
+     * @param uuid The player's UUID
+     * @return The loaded PlayerState, or empty if file doesn't exist or is invalid
+     */
+    private Optional<PlayerState> loadSinglePlayer(UUID uuid) {
+        Path file = playersDir.resolve(uuid.toString() + ".json");
+        if (!Files.exists(file)) {
+            return Optional.empty();
+        }
+
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            PlayerStateData data = gson.fromJson(reader, PlayerStateData.class);
+            if (data == null) {
+                plugin.getLogger().warning("Player file is empty: " + uuid);
+                return Optional.empty();
+            }
+            return Optional.of(data.toPlayerState());
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to load player data", e);
+            plugin.getLogger().log(Level.WARNING, "Failed to load player " + uuid, e);
             handleCorruptFile(file);
+            return Optional.empty();
         }
     }
 
@@ -227,22 +265,35 @@ public class PersistenceService {
 
     /**
      * Saves a single player's state asynchronously.
+     * Only writes the specified player's file, not all players.
      */
     public CompletableFuture<Void> savePlayerAsync(UUID playerId) {
         return CompletableFuture.runAsync(() -> {
-            // We save all players since we use a single file
-            // This could be optimized to use per-player files if needed
-            savePlayers();
+            Optional<PlayerState> playerOpt = state.getPlayer(playerId);
+            if (playerOpt.isPresent()) {
+                saveSinglePlayer(playerOpt.get());
+                if (config.isVerbose()) {
+                    plugin.getLogger().info("Saved player " + playerId + " to disk");
+                }
+            }
         });
     }
 
-    private void savePlayers() {
-        List<PlayerStateData> dataList = state.getAllPlayers().stream()
-                .map(PlayerStateData::fromPlayerState)
-                .collect(Collectors.toList());
+    /**
+     * Saves a single player to their individual file.
+     * Uses atomic write pattern for safety.
+     */
+    private void saveSinglePlayer(PlayerState player) {
+        Path file = playersDir.resolve(player.getUuid().toString() + ".json");
+        PlayerStateData data = PlayerStateData.fromPlayerState(player);
+        writeJsonFile(file, data);
+    }
 
-        Path file = runtimePath.resolve(PLAYERS_FILE);
-        writeJsonFile(file, dataList);
+    private void savePlayers() {
+        Collection<PlayerState> allPlayers = state.getAllPlayers();
+        for (PlayerState player : allPlayers) {
+            saveSinglePlayer(player);
+        }
     }
 
     private void saveTeams() {
@@ -286,6 +337,7 @@ public class PersistenceService {
 
     /**
      * Creates a backup of all data files.
+     * Copies individual player files to a players/ subdirectory in backup.
      */
     public void createBackup() {
         String timestamp = LocalDateTime.now().format(BACKUP_FORMAT);
@@ -294,16 +346,14 @@ public class PersistenceService {
         try {
             Files.createDirectories(backupDir);
 
-            // Copy runtime files to backup
-            Path playersFile = runtimePath.resolve(PLAYERS_FILE);
+            // Backup teams file
             Path teamsFile = runtimePath.resolve(TEAMS_FILE);
-
-            if (Files.exists(playersFile)) {
-                Files.copy(playersFile, backupDir.resolve(PLAYERS_FILE), StandardCopyOption.REPLACE_EXISTING);
-            }
             if (Files.exists(teamsFile)) {
                 Files.copy(teamsFile, backupDir.resolve(TEAMS_FILE), StandardCopyOption.REPLACE_EXISTING);
             }
+
+            // Backup player files
+            backupPlayerFiles(backupDir);
 
             plugin.getLogger().info("Backup created: " + backupDir.getFileName());
 
@@ -311,6 +361,31 @@ public class PersistenceService {
             rotateBackups();
         } catch (IOException e) {
             plugin.getLogger().log(Level.WARNING, "Failed to create backup", e);
+        }
+    }
+
+    /**
+     * Backs up all player files to a players/ subdirectory in the backup directory.
+     */
+    private void backupPlayerFiles(Path backupDir) throws IOException {
+        if (!Files.exists(playersDir)) {
+            return;
+        }
+
+        Path backupPlayersDir = backupDir.resolve(PLAYERS_DIR);
+        Files.createDirectories(backupPlayersDir);
+
+        try (Stream<Path> files = Files.list(playersDir)) {
+            files.filter(p -> p.toString().endsWith(".json"))
+                    .filter(p -> !p.getFileName().toString().contains(".corrupt."))
+                    .forEach(file -> {
+                        try {
+                            Files.copy(file, backupPlayersDir.resolve(file.getFileName()),
+                                    StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            plugin.getLogger().warning("Failed to backup player file: " + file.getFileName());
+                        }
+                    });
         }
     }
 

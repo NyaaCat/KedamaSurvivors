@@ -408,4 +408,144 @@ class PersistenceServiceTest {
             assertEquals("LOBBY", data.mode);
         }
     }
+
+    @Nested
+    @DisplayName("Per-Player File Operations")
+    class PerPlayerFileTests {
+
+        @Test
+        @DisplayName("Should serialize single player to JSON correctly")
+        void singlePlayerJson() {
+            UUID uuid = UUID.randomUUID();
+            PlayerState player = new PlayerState(uuid, "SinglePlayer");
+            player.setStarterWeaponOptionId("weapon_1");
+            player.setPermaScore(100);
+            player.setBalance(500);
+
+            PlayerStateData data = PlayerStateData.fromPlayerState(player);
+            String json = gson.toJson(data);
+
+            assertNotNull(json);
+            assertTrue(json.contains(uuid.toString()));
+            assertTrue(json.contains("SinglePlayer"));
+            assertTrue(json.contains("weapon_1"));
+            assertTrue(json.contains("100"));
+            assertTrue(json.contains("500"));
+        }
+
+        @Test
+        @DisplayName("Should deserialize single player from JSON correctly")
+        void singlePlayerFromJson() {
+            UUID uuid = UUID.randomUUID();
+            String json = """
+                {
+                  "uuid": "%s",
+                  "name": "JsonPlayer",
+                  "mode": "LOBBY",
+                  "starterWeaponOptionId": "starter_bow",
+                  "starterHelmetOptionId": null,
+                  "cooldownUntilMillis": 0,
+                  "permaScore": 42,
+                  "balance": 999
+                }
+                """.formatted(uuid.toString());
+
+            PlayerStateData data = gson.fromJson(json, PlayerStateData.class);
+            PlayerState player = data.toPlayerState();
+
+            assertEquals(uuid, player.getUuid());
+            assertEquals("JsonPlayer", player.getName());
+            assertEquals(PlayerMode.LOBBY, player.getMode());
+            assertEquals("starter_bow", player.getStarterWeaponOptionId());
+            assertNull(player.getStarterHelmetOptionId());
+            assertEquals(42, player.getPermaScore());
+            assertEquals(999, player.getBalance());
+        }
+
+        @Test
+        @DisplayName("Should handle UUID as filename correctly")
+        void uuidFilename() {
+            UUID uuid = UUID.randomUUID();
+            String filename = uuid.toString() + ".json";
+            String extracted = filename.substring(0, filename.length() - 5); // Remove .json
+
+            assertEquals(uuid, UUID.fromString(extracted));
+        }
+
+        @Test
+        @DisplayName("Should correctly identify invalid UUID filename")
+        void invalidUuidFilename() {
+            String invalidFilename = "not-a-valid-uuid.json";
+            String extracted = invalidFilename.substring(0, invalidFilename.length() - 5);
+
+            assertThrows(IllegalArgumentException.class, () -> UUID.fromString(extracted));
+        }
+
+        @Test
+        @DisplayName("Should handle complete player data round-trip")
+        void completePlayerRoundTrip() {
+            UUID uuid = UUID.randomUUID();
+            PlayerState original = new PlayerState(uuid, "RoundTripPlayer");
+            original.setStarterWeaponOptionId("sword_group");
+            original.setStarterHelmetOptionId("helmet_group");
+            original.setPermaScore(1500);
+            original.setBalance(2500);
+            original.setMode(PlayerMode.LOBBY);
+
+            // Serialize
+            PlayerStateData data = PlayerStateData.fromPlayerState(original);
+            String json = gson.toJson(data);
+
+            // Deserialize
+            PlayerStateData restoredData = gson.fromJson(json, PlayerStateData.class);
+            PlayerState restored = restoredData.toPlayerState();
+
+            // Verify all fields
+            assertEquals(original.getUuid(), restored.getUuid());
+            assertEquals(original.getName(), restored.getName());
+            assertEquals(original.getMode(), restored.getMode());
+            assertEquals(original.getStarterWeaponOptionId(), restored.getStarterWeaponOptionId());
+            assertEquals(original.getStarterHelmetOptionId(), restored.getStarterHelmetOptionId());
+            assertEquals(original.getPermaScore(), restored.getPermaScore());
+            assertEquals(original.getBalance(), restored.getBalance());
+        }
+
+        @Test
+        @DisplayName("Should preserve permaScore and balance through serialization")
+        void preserveEconomyData() {
+            UUID uuid = UUID.randomUUID();
+            PlayerState player = new PlayerState(uuid, "EconomyPlayer");
+            player.setPermaScore(Integer.MAX_VALUE);
+            player.setBalance(Integer.MAX_VALUE);
+
+            PlayerStateData data = PlayerStateData.fromPlayerState(player);
+            String json = gson.toJson(data);
+            PlayerStateData restored = gson.fromJson(json, PlayerStateData.class);
+            PlayerState restoredPlayer = restored.toPlayerState();
+
+            assertEquals(Integer.MAX_VALUE, restoredPlayer.getPermaScore());
+            assertEquals(Integer.MAX_VALUE, restoredPlayer.getBalance());
+        }
+
+        @Test
+        @DisplayName("Should handle player with all null optional fields")
+        void playerWithNullOptionalFields() {
+            UUID uuid = UUID.randomUUID();
+            PlayerState player = new PlayerState(uuid, "MinimalPlayer");
+            // Don't set any optional fields
+
+            PlayerStateData data = PlayerStateData.fromPlayerState(player);
+            String json = gson.toJson(data);
+            PlayerStateData restored = gson.fromJson(json, PlayerStateData.class);
+            PlayerState restoredPlayer = restored.toPlayerState();
+
+            assertEquals(uuid, restoredPlayer.getUuid());
+            assertEquals("MinimalPlayer", restoredPlayer.getName());
+            assertEquals(PlayerMode.LOBBY, restoredPlayer.getMode());
+            assertNull(restoredPlayer.getStarterWeaponOptionId());
+            assertNull(restoredPlayer.getStarterHelmetOptionId());
+            assertEquals(0, restoredPlayer.getPermaScore());
+            assertEquals(0, restoredPlayer.getBalance());
+        }
+    }
 }
