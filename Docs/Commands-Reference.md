@@ -981,8 +981,17 @@ Templates are for fixed-trade merchants with predefined trades:
 /vrs admin merchant despawn
 ```
 
-**Step 5: Configure wandering behavior** (optional)
+**Step 5: Enable wandering merchants** (optional)
+
+Wandering merchants require explicit pool configuration. By default, they are disabled.
+
 ```
+# Set the pool for wandering merchants (required to enable)
+/vrs admin config set wanderingMerchantPoolId weapons_shop
+
+# Set wandering merchant type (single or multi, default: single)
+/vrs admin config set wanderingMerchantType single
+
 # Set spawn interval to 60 seconds
 /vrs admin config set merchantSpawnInterval 60
 
@@ -992,6 +1001,8 @@ Templates are for fixed-trade merchants with predefined trades:
 # See all merchant config options
 /vrs admin config list merchants
 ```
+
+**Note:** If `wanderingMerchantPoolId` is empty, wandering merchants will not spawn during runs.
 
 ---
 

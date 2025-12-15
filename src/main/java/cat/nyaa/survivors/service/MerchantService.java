@@ -161,16 +161,28 @@ public class MerchantService {
             return;
         }
 
-        // Get random merchant config from pool
-        Optional<MerchantItemPool> poolOpt = adminConfig.getRandomMerchantPool();
+        // Get configured pool - wandering merchants require explicit pool configuration
+        String poolId = config.getWanderingMerchantPoolId();
+        if (poolId == null || poolId.isEmpty()) {
+            // No pool configured, wandering merchants disabled
+            return;
+        }
+
+        Optional<MerchantItemPool> poolOpt = adminConfig.getMerchantPool(poolId);
         if (poolOpt.isEmpty()) {
+            plugin.getLogger().warning("Wandering merchant pool '" + poolId + "' not found");
             return;
         }
 
         MerchantItemPool pool = poolOpt.get();
+        if (pool.getItems().isEmpty()) {
+            plugin.getLogger().warning("Wandering merchant pool '" + poolId + "' is empty");
+            return;
+        }
 
-        // Determine merchant type (random or configured)
-        MerchantType type = ThreadLocalRandom.current().nextBoolean() ? MerchantType.MULTI : MerchantType.SINGLE;
+        // Parse configured merchant type (default: SINGLE)
+        String typeStr = config.getWanderingMerchantType();
+        MerchantType type = "multi".equalsIgnoreCase(typeStr) ? MerchantType.MULTI : MerchantType.SINGLE;
 
         // Spawn the merchant
         MerchantInstance merchant = spawnMerchant(

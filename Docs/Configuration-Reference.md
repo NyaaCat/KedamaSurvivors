@@ -797,6 +797,8 @@ merchants:
 
   # Wandering merchant spawning behavior
   wandering:
+    poolId: ""                   # Required: Pool ID for wandering merchants (empty = disabled)
+    type: "single"               # Merchant type: "single" or "multi"
     spawnIntervalSeconds: 120    # How often to attempt spawning
     spawnChance: 0.5             # Probability of spawn per interval (0-1)
     stayTime:
@@ -828,6 +830,8 @@ merchants:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | Boolean | `true` | Enable merchant system |
+| `wandering.poolId` | String | `""` | **Required** pool ID for wandering merchants. Empty = wandering merchants disabled. |
+| `wandering.type` | String | `"single"` | Merchant type: `single` (direct purchase) or `multi` (shop GUI) |
 | `wandering.spawnIntervalSeconds` | Integer | `120` | Seconds between spawn attempts |
 | `wandering.spawnChance` | Double | `0.5` | Probability of spawn per interval (0-1) |
 | `wandering.stayTime.minSeconds` | Integer | `60` | Minimum wandering merchant stay duration |
@@ -844,6 +848,26 @@ merchants:
 | `display.bobSpeed` | Double | `0.01` | Floating animation speed |
 | `display.headItemCycleIntervalTicks` | Integer | `200` | Head item cycle interval (MULTI type cycles through items) |
 
+### Enabling Wandering Merchants
+
+Wandering merchants require explicit pool configuration. To enable them:
+
+1. **Create a pool:**
+   ```
+   /vrs admin merchant pool create wandering_pool
+   ```
+
+2. **Add items to the pool** (hold item in hand):
+   ```
+   /vrs admin merchant pool additem wandering_pool 50 1.0
+   ```
+
+3. **Configure wandering merchants:**
+   ```
+   /vrs admin config set wanderingMerchantPoolId wandering_pool
+   /vrs admin config set wanderingMerchantType single
+   ```
+
 ### Runtime Configuration
 
 All merchant settings can be changed at runtime via commands:
@@ -852,6 +876,8 @@ All merchant settings can be changed at runtime via commands:
 /vrs admin config list merchants           # List all merchant settings
 /vrs admin config get merchantSpawnChance  # Get specific value
 /vrs admin config set merchantSpawnChance 0.75  # Set value
+/vrs admin config set wanderingMerchantPoolId my_pool  # Set wandering pool
+/vrs admin config set wanderingMerchantType multi      # Set wandering type
 ```
 
 ### Item Pools

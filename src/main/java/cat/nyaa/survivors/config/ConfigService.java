@@ -183,6 +183,8 @@ public class ConfigService {
     private float merchantRotationSpeed;
     private double merchantBobHeight;
     private double merchantBobSpeed;
+    private String wanderingMerchantPoolId;
+    private String wanderingMerchantType;
 
     public ConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -539,6 +541,8 @@ public class ConfigService {
         merchantRotationSpeed = (float) config.getDouble("merchants.display.rotationSpeed", 3.0);
         merchantBobHeight = config.getDouble("merchants.display.bobHeight", 0.15);
         merchantBobSpeed = config.getDouble("merchants.display.bobSpeed", 0.01);
+        wanderingMerchantPoolId = config.getString("merchants.wandering.poolId", "");
+        wanderingMerchantType = config.getString("merchants.wandering.type", "single");
     }
 
     // ==================== Utility Methods ====================
@@ -704,6 +708,8 @@ public class ConfigService {
     public float getMerchantRotationSpeed() { return merchantRotationSpeed; }
     public double getMerchantBobHeight() { return merchantBobHeight; }
     public double getMerchantBobSpeed() { return merchantBobSpeed; }
+    public String getWanderingMerchantPoolId() { return wanderingMerchantPoolId; }
+    public String getWanderingMerchantType() { return wanderingMerchantType; }
 
     // ==================== Runtime Update Methods ====================
 
@@ -808,6 +814,8 @@ public class ConfigService {
     public void setMerchantRotationSpeed(float speed) { this.merchantRotationSpeed = speed; }
     public void setMerchantBobHeight(double height) { this.merchantBobHeight = height; }
     public void setMerchantBobSpeed(double speed) { this.merchantBobSpeed = speed; }
+    public void setWanderingMerchantPoolId(String poolId) { this.wanderingMerchantPoolId = poolId; }
+    public void setWanderingMerchantType(String type) { this.wanderingMerchantType = type; }
 
     // Upgrade
     public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
@@ -881,6 +889,8 @@ public class ConfigService {
         config.set("merchants.display.rotationSpeed", merchantRotationSpeed);
         config.set("merchants.display.bobHeight", merchantBobHeight);
         config.set("merchants.display.bobSpeed", merchantBobSpeed);
+        config.set("merchants.wandering.poolId", wanderingMerchantPoolId);
+        config.set("merchants.wandering.type", wanderingMerchantType);
 
         // Upgrade
         config.set("upgrade.timeoutSeconds", upgradeTimeoutSeconds);
