@@ -20,25 +20,22 @@ pipeline {
             steps {
                 sh './gradlew clean build'
             }
-        }
-
-        stage('Test') {
-            steps {
-                sh './gradlew test'
-            }
             post {
                 always {
                     junit testResults: '**/build/test-results/test/*.xml', allowEmptyResults: true
                 }
             }
         }
+
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'build/libs/*-reobf.jar', fingerprint: true
+            }
+        }
     }
 
     post {
-        success {
-            archiveArtifacts artifacts: 'build/libs/*-reobf.jar', fingerprint: true
-        }
-        always {
+        cleanup {
             cleanWs()
         }
     }
