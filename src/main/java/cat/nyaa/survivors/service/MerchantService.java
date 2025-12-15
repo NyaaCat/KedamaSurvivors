@@ -598,11 +598,10 @@ public class MerchantService {
             return templateId;
         }
         ItemStack item = templateOpt.get().toItemStack();
-        if (item.getItemMeta() != null && item.getItemMeta().hasDisplayName()) {
-            return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-                    .serialize(item.getItemMeta().displayName());
-        }
-        return item.getType().name();
+        // Use ItemStack.displayName() which returns the proper translated name
+        // This handles both custom display names and default item names
+        return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                .serialize(item.displayName());
     }
 
     private void notifyRunPlayers(RunState run, String messageKey) {
