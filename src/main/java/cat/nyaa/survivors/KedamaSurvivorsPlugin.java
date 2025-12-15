@@ -103,7 +103,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         i18nService = new I18nService(this, configService);
         i18nService.loadLanguage();
 
-        // Economy service for coin/balance operations
+        // State service manages all game state (must be before EconomyService)
+        stateService = new StateService();
+
+        // Economy service for coin/balance operations (depends on StateService)
         economyService = new EconomyService(this);
         economyService.initialize();
 
@@ -114,9 +117,6 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         templateEngine = new TemplateEngine();
         templateEngine.setLogger(getLogger());
         templateEngine.setCommandQueue(commandQueue);
-
-        // State service manages all game state
-        stateService = new StateService();
 
         // Persistence service for saving/loading state (must be after stateService)
         persistenceService = new PersistenceService(this);

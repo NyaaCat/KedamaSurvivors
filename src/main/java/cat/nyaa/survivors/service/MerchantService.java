@@ -503,8 +503,7 @@ public class MerchantService {
 
     private MerchantInstance findMerchantByEntityId(UUID entityId) {
         for (MerchantInstance merchant : activeMerchants.values()) {
-            if (merchant.getEntity().getArmorStand() != null &&
-                    merchant.getEntity().getArmorStand().getUniqueId().equals(entityId)) {
+            if (merchant.getEntity().getEntityId().equals(entityId)) {
                 return merchant;
             }
         }
