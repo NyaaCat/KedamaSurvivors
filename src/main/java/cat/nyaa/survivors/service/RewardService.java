@@ -250,18 +250,29 @@ public class RewardService {
 
     /**
      * Handles overflow XP when at max level.
+     * Shows XP notifications, updates scoreboard progress, and increments run level on conversion.
      */
     private void applyOverflowXp(Player player, PlayerState playerState, int amount) {
         if (!config.isOverflowEnabled()) return;
 
-        int accumulated = playerState.getOverflowXpAccumulated() + amount;
-        int xpPerScore = config.getOverflowXpPerPermaScore();
+        // Notify XP gain (show on action bar like normal XP)
+        notifyXpGained(player, amount, false);
 
+        int xpPerScore = config.getOverflowXpPerPermaScore();
+        int accumulated = playerState.getOverflowXpAccumulated() + amount;
+
+        // Set xpRequired to overflow threshold for scoreboard bar calculation
+        playerState.setXpRequired(xpPerScore);
+
+        // Convert overflow XP to perma-score when threshold reached
         while (accumulated >= xpPerScore) {
             accumulated -= xpPerScore;
             playerState.setPermaScore(playerState.getPermaScore() + 1);
 
-            // Update scoreboard
+            // Increment run level on each overflow conversion (like a "level up")
+            playerState.setRunLevel(playerState.getRunLevel() + 1);
+
+            // Update scoreboard perma-score
             plugin.getScoreboardService().updatePermaScore(player, playerState.getPermaScore());
 
             if (config.isOverflowNotifyPlayer()) {
@@ -270,6 +281,12 @@ public class RewardService {
         }
 
         playerState.setOverflowXpAccumulated(accumulated);
+
+        // Update xpProgress for scoreboard bar display
+        playerState.setXpProgress(accumulated);
+
+        // Update sidebar to reflect new progress
+        plugin.getScoreboardService().updatePlayerSidebar(player);
     }
 
     /**

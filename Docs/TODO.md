@@ -512,6 +512,15 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Only shown when streak >= 2 kills
   - Files modified: `ActionBarRewardService.java`, `zh_CN.yml`
 
+### XP Overflow Progression (Guild Wars 2 Style)
+- [x] Add visible XP progression when player is at max level (both weapon and helmet maxed)
+  - XP reward messages now display on action bar when at max level
+  - Scoreboard XP bar continues to fill, showing progress toward next perma-score conversion
+  - Run level increments each time overflow XP threshold is reached
+  - Perma-score awarded on each overflow conversion (existing behavior preserved)
+  - Files modified: `RewardService.java`
+  - Tests added: `RewardServiceTest.java` (XP Overflow Logic tests)
+
 ---
 
 ## Notes

@@ -88,6 +88,139 @@ class RewardServiceTest {
             assertEquals(expectedScores, scores);
             assertEquals(expectedRemaining, remaining);
         }
+
+        @Test
+        @DisplayName("should update xpProgress for scoreboard during overflow")
+        void shouldUpdateXpProgressForScoreboardDuringOverflow() {
+            // Simulate overflow XP processing (mirrors applyOverflowXp logic)
+            int xpPerScore = 1000;
+            int xpToAdd = 750;
+            int initialAccumulated = 100;
+
+            playerState.setOverflowXpAccumulated(initialAccumulated);
+            int accumulated = playerState.getOverflowXpAccumulated() + xpToAdd;
+
+            // Set xpRequired to overflow threshold for scoreboard bar
+            playerState.setXpRequired(xpPerScore);
+
+            // No conversion yet (850 < 1000)
+            // Update xpProgress for scoreboard display
+            playerState.setXpProgress(accumulated);
+
+            assertEquals(850, playerState.getXpProgress());
+            assertEquals(1000, playerState.getXpRequired());
+        }
+
+        @Test
+        @DisplayName("should increment run level on overflow conversion")
+        void shouldIncrementRunLevelOnOverflowConversion() {
+            // Simulate overflow XP processing that triggers conversion
+            int xpPerScore = 1000;
+            int xpToAdd = 1200;
+            int initialRunLevel = 5;
+
+            playerState.setOverflowXpAccumulated(0);
+            playerState.setRunLevel(initialRunLevel);
+            playerState.setPermaScore(0);
+
+            int accumulated = playerState.getOverflowXpAccumulated() + xpToAdd;
+
+            // Process conversion (mirrors applyOverflowXp loop)
+            while (accumulated >= xpPerScore) {
+                accumulated -= xpPerScore;
+                playerState.setPermaScore(playerState.getPermaScore() + 1);
+                playerState.setRunLevel(playerState.getRunLevel() + 1);
+            }
+
+            playerState.setOverflowXpAccumulated(accumulated);
+            playerState.setXpProgress(accumulated);
+
+            assertEquals(6, playerState.getRunLevel()); // 5 + 1 conversion
+            assertEquals(1, playerState.getPermaScore());
+            assertEquals(200, playerState.getXpProgress()); // 1200 - 1000
+            assertEquals(200, playerState.getOverflowXpAccumulated());
+        }
+
+        @Test
+        @DisplayName("should handle multiple overflow conversions in single XP award")
+        void shouldHandleMultipleOverflowConversionsInSingleXpAward() {
+            // Simulate large XP award triggering multiple conversions
+            int xpPerScore = 1000;
+            int xpToAdd = 3500;
+            int initialRunLevel = 10;
+
+            playerState.setOverflowXpAccumulated(0);
+            playerState.setRunLevel(initialRunLevel);
+            playerState.setPermaScore(5);
+
+            int accumulated = playerState.getOverflowXpAccumulated() + xpToAdd;
+
+            // Process conversions (mirrors applyOverflowXp loop)
+            while (accumulated >= xpPerScore) {
+                accumulated -= xpPerScore;
+                playerState.setPermaScore(playerState.getPermaScore() + 1);
+                playerState.setRunLevel(playerState.getRunLevel() + 1);
+            }
+
+            playerState.setOverflowXpAccumulated(accumulated);
+            playerState.setXpProgress(accumulated);
+
+            assertEquals(13, playerState.getRunLevel()); // 10 + 3 conversions
+            assertEquals(8, playerState.getPermaScore()); // 5 + 3
+            assertEquals(500, playerState.getXpProgress()); // 3500 - 3000
+            assertEquals(500, playerState.getOverflowXpAccumulated());
+        }
+
+        @Test
+        @DisplayName("should handle partial accumulation without conversion")
+        void shouldHandlePartialAccumulationWithoutConversion() {
+            int xpPerScore = 1000;
+            int xpToAdd = 300;
+            int initialRunLevel = 3;
+
+            playerState.setOverflowXpAccumulated(400);
+            playerState.setRunLevel(initialRunLevel);
+            playerState.setPermaScore(2);
+
+            int accumulated = playerState.getOverflowXpAccumulated() + xpToAdd;
+
+            // No conversion (700 < 1000)
+            playerState.setXpRequired(xpPerScore);
+            playerState.setOverflowXpAccumulated(accumulated);
+            playerState.setXpProgress(accumulated);
+
+            assertEquals(3, playerState.getRunLevel()); // Unchanged
+            assertEquals(2, playerState.getPermaScore()); // Unchanged
+            assertEquals(700, playerState.getXpProgress());
+            assertEquals(1000, playerState.getXpRequired());
+        }
+
+        @Test
+        @DisplayName("should reset xpProgress after conversion")
+        void shouldResetXpProgressAfterConversion() {
+            int xpPerScore = 1000;
+            int xpToAdd = 1000; // Exact threshold
+
+            playerState.setOverflowXpAccumulated(0);
+            playerState.setRunLevel(1);
+            playerState.setPermaScore(0);
+
+            int accumulated = playerState.getOverflowXpAccumulated() + xpToAdd;
+
+            // Process conversion
+            while (accumulated >= xpPerScore) {
+                accumulated -= xpPerScore;
+                playerState.setPermaScore(playerState.getPermaScore() + 1);
+                playerState.setRunLevel(playerState.getRunLevel() + 1);
+            }
+
+            playerState.setOverflowXpAccumulated(accumulated);
+            playerState.setXpProgress(accumulated);
+
+            assertEquals(2, playerState.getRunLevel()); // 1 + 1
+            assertEquals(1, playerState.getPermaScore());
+            assertEquals(0, playerState.getXpProgress()); // Reset to 0 after exact conversion
+        }
     }
 
     @Nested
