@@ -100,12 +100,35 @@ public class RewardService {
             run.addXpEarned(xpReward);
             run.addCoinEarned(coinReward);
         });
+
+        // Record kill in stats service
+        StatsService statsService = plugin.getStatsService();
+        if (statsService != null) {
+            statsService.recordKill(killer.getUniqueId());
+        }
+
+        // Notify action bar of kill (for streak message on flush)
+        if ("ACTIONBAR".equals(config.getRewardDisplayMode())) {
+            ActionBarRewardService actionBar = plugin.getActionBarRewardService();
+            if (actionBar != null) {
+                actionBar.addKill(killer);
+            }
+        }
     }
 
     /**
      * Awards XP to a player, handling hold logic and upgrade triggers.
      */
     public void awardXp(Player player, PlayerState playerState, int amount, boolean isShared) {
+        awardXpInternal(player, playerState, amount, isShared, true);
+    }
+
+    /**
+     * Internal XP award method with notification control.
+     *
+     * @param notify If true, notifies player of XP gain via action bar/chat
+     */
+    private void awardXpInternal(Player player, PlayerState playerState, int amount, boolean isShared, boolean notify) {
         if (amount <= 0) return;
 
         // Check if at max level
@@ -114,9 +137,13 @@ public class RewardService {
             return;
         }
 
-        // If upgrade is pending, buffer the XP
+        // If upgrade is pending, buffer the XP but still notify
         if (playerState.isUpgradePending()) {
             playerState.setXpHeld(playerState.getXpHeld() + amount);
+            // Still notify so player sees XP on action bar
+            if (notify) {
+                notifyXpGained(player, amount, isShared);
+            }
             return;
         }
 
@@ -138,7 +165,9 @@ public class RewardService {
         }
 
         // Notify player of XP gain
-        notifyXpGained(player, amount, isShared);
+        if (notify) {
+            notifyXpGained(player, amount, isShared);
+        }
 
         // Update sidebar
         plugin.getScoreboardService().updatePlayerSidebar(player);
@@ -373,12 +402,12 @@ public class RewardService {
         // Recalculate XP required based on new run level
         playerState.setXpRequired(calculateXpRequired(playerState.getRunLevel()));
 
-        // Apply held XP
+        // Apply held XP (skip notification since it was already shown when earned)
         int held = playerState.getXpHeld();
         playerState.setXpHeld(0);
 
         if (held > 0) {
-            awardXp(player, playerState, held, false);
+            awardXpInternal(player, playerState, held, false, false);
         }
 
         // Update sidebar

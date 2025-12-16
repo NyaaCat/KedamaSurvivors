@@ -81,6 +81,20 @@ public class ActionBarRewardService {
     }
 
     /**
+     * Records a kill for display on flush.
+     * Called from RewardService when a kill is made.
+     *
+     * @param player The player who got the kill
+     */
+    public void addKill(Player player) {
+        PendingRewards rewards = getOrCreatePending(player.getUniqueId());
+        rewards.killCount++;
+
+        // Reschedule flush to extend the window
+        scheduleFlush(player);
+    }
+
+    /**
      * Forces immediate display of pending rewards (e.g., on disconnect).
      */
     public void flushNow(UUID playerId) {
@@ -133,7 +147,20 @@ public class ActionBarRewardService {
             if (rewards != null) {
                 Player p = Bukkit.getPlayer(playerId);
                 if (p != null && p.isOnline()) {
-                    sendActionBar(p, rewards);
+                    // Don't call sendActionBar here - it was already shown immediately
+                    // Only handle kill streak on flush
+
+                    int kills = rewards.killCount;
+                    if (kills >= 2) {
+                        // Notify StatsService to potentially update record
+                        StatsService statsService = plugin.getStatsService();
+                        if (statsService != null) {
+                            statsService.recordKillStreak(playerId, kills);
+                        }
+
+                        // Show kill streak message immediately (rewards already faded)
+                        sendKillStreakMessage(p, kills);
+                    }
                 }
             }
         }, delayTicks);
@@ -187,6 +214,38 @@ public class ActionBarRewardService {
         }
     }
 
+    /**
+     * Gets the language key for a kill streak count.
+     *
+     * @param streak The current kill streak
+     * @return The language key for the streak message
+     */
+    private String getStreakKey(int streak) {
+        return switch (streak) {
+            case 2 -> "killstreak.double";
+            case 3 -> "killstreak.triple";
+            case 4 -> "killstreak.quadra";
+            case 5 -> "killstreak.penta";
+            case 6 -> "killstreak.spree";
+            case 7 -> "killstreak.unstoppable";
+            case 8 -> "killstreak.godlike";
+            case 9 -> "killstreak.legendary";
+            default -> "killstreak.generic"; // 10+ kills
+        };
+    }
+
+    /**
+     * Sends a kill streak message to the player.
+     * Called after the reward display flush if streak >= 2.
+     */
+    private void sendKillStreakMessage(Player player, int streak) {
+        if (streak < 2) return;
+
+        String key = getStreakKey(streak);
+        String message = i18n.get(key, "count", streak);
+        player.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(message));
+    }
+
     // ==================== Inner Class ====================
 
     private static class PendingRewards {
@@ -194,5 +253,6 @@ public class ActionBarRewardService {
         int sharedXp = 0;
         int coins = 0;
         int permaScore = 0;
+        int killCount = 0;  // Number of kills in this aggregation window
     }
 }
