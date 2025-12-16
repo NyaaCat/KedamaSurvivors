@@ -65,6 +65,12 @@ public class DeathService {
         RunState run = runOpt.get();
         run.markDead(playerId);
 
+        // Record death in stats service
+        StatsService statsService = plugin.getStatsService();
+        if (statsService != null) {
+            statsService.recordDeath(playerId);
+        }
+
         // Always apply death penalty - player must re-prepare to rejoin
         applyDeathPenalty(player, playerState, run);
 

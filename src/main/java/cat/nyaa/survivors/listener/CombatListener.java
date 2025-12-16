@@ -7,6 +7,7 @@ import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.StateService;
+import cat.nyaa.survivors.service.StatsService;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -84,6 +85,34 @@ public class CombatListener implements Listener {
         // Check if invulnerable player cannot deal damage
         if (!config.isCanDealDamageDuringInvul() && playerState.isInvulnerable()) {
             event.setCancelled(true);
+            return;
+        }
+
+        // Track damage stats for players in run
+        trackDamageStats(event, damager, playerState);
+    }
+
+    /**
+     * Tracks damage dealt and taken for statistics.
+     */
+    private void trackDamageStats(EntityDamageByEntityEvent event, Player damager, PlayerState damagerState) {
+        StatsService statsService = plugin.getStatsService();
+        if (statsService == null) return;
+
+        double damage = event.getFinalDamage();
+        if (damage <= 0) return;
+
+        // Track damage dealt by the damager (if in run and attacking VRS mob)
+        if (damagerState.getMode() == PlayerMode.IN_RUN && isVrsMob(event.getEntity())) {
+            statsService.recordDamageDealt(damager.getUniqueId(), damage);
+        }
+
+        // Track damage taken by victim (if victim is a player in run)
+        if (event.getEntity() instanceof Player victim) {
+            Optional<PlayerState> victimStateOpt = state.getPlayer(victim.getUniqueId());
+            if (victimStateOpt.isPresent() && victimStateOpt.get().getMode() == PlayerMode.IN_RUN) {
+                statsService.recordDamageTaken(victim.getUniqueId(), damage);
+            }
         }
     }
 

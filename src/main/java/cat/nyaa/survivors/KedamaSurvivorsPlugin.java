@@ -22,6 +22,7 @@ import cat.nyaa.survivors.service.SpawnerService;
 import cat.nyaa.survivors.service.StarterService;
 import cat.nyaa.survivors.service.StateService;
 import cat.nyaa.survivors.service.ActionBarRewardService;
+import cat.nyaa.survivors.service.StatsService;
 import cat.nyaa.survivors.service.UpgradeService;
 import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.task.CooldownDisplay;
@@ -64,6 +65,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private UpgradeReminderTask upgradeReminderTask;
     private MerchantService merchantService;
     private PersistenceService persistenceService;
+    private StatsService statsService;
     private CommandQueue commandQueue;
 
     @Override
@@ -123,6 +125,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Persistence service for saving/loading state (must be after stateService)
         persistenceService = new PersistenceService(this);
         persistenceService.initialize();
+
+        // Stats service for player statistics (must be after stateService)
+        statsService = new StatsService(this);
 
         // Scoreboard service for sidebar display
         scoreboardService = new ScoreboardService(this);
@@ -401,5 +406,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public CommandQueue getCommandQueue() {
         return commandQueue;
+    }
+
+    public StatsService getStatsService() {
+        return statsService;
     }
 }

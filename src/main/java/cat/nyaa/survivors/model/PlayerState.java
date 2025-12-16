@@ -70,6 +70,9 @@ public class PlayerState {
     // Player progression level (increments each upgrade, reset per run)
     private volatile int runLevel = 1;
 
+    // Persistent player statistics
+    private final PlayerStats stats = new PlayerStats();
+
     public PlayerState(UUID uuid, String name) {
         this.uuid = uuid;
         this.name = name;
@@ -298,4 +301,6 @@ public class PlayerState {
 
     public int getBalance() { return balance; }
     public void setBalance(int balance) { this.balance = balance; }
+
+    public PlayerStats getStats() { return stats; }
 }

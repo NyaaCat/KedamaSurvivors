@@ -814,3 +814,20 @@ actionbar:
   reward_coins: "§e+{amount} §f金币"
   reward_perma: "§d+{amount} §f积分"
   reward_separator: " §8|§r "
+
+# ============================================================
+# 击杀连杀消息 (Dota风格)
+# ============================================================
+
+killstreak:
+  # 连杀消息 (死亡重置)
+  double: "§e双杀!!"
+  triple: "§6三杀!!"
+  quadra: "§c四杀!!!"
+  penta: "§4五杀!!!"
+  spree: "§4§l大杀特杀!!!!"
+  unstoppable: "§4§l势不可挡!!!!"
+  godlike: "§5§l横扫千军!!!!!"
+  legendary: "§5§l天下无双!!!!!!"
+  # 通用格式 (10+连杀)
+  generic: "§5§l超神 {count} 连杀!!!!!"

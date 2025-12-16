@@ -235,6 +235,12 @@ public class RunService {
         // Apply invulnerability
         long invulEnd = System.currentTimeMillis() + config.getRespawnInvulnerabilityMs();
         playerState.setInvulnerableUntilMillis(invulEnd);
+
+        // Record run start in stats service
+        StatsService statsService = plugin.getStatsService();
+        if (statsService != null) {
+            statsService.recordRunStart(playerId);
+        }
     }
 
     /**
@@ -539,8 +545,16 @@ public class RunService {
         int totalCoins = run.getTotalCoinsCollected();
         long duration = run.getElapsedSeconds();
 
+        // Record run end for all participants
+        StatsService statsService = plugin.getStatsService();
+
         // Notify and teleport players back
         for (UUID memberId : run.getParticipants()) {
+            // Record run end in stats service
+            if (statsService != null) {
+                statsService.recordRunEnd(memberId);
+            }
+
             Player player = Bukkit.getPlayer(memberId);
             if (player == null) continue;
 

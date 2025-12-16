@@ -4,6 +4,7 @@ import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
+import cat.nyaa.survivors.model.PlayerStats;
 import cat.nyaa.survivors.model.TeamState;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -486,6 +487,9 @@ public class PersistenceService {
         public int permaScore;
         public int balance;  // Internal economy balance
 
+        // Player statistics
+        public PlayerStatsData stats;
+
         public static PlayerStateData fromPlayerState(PlayerState player) {
             PlayerStateData data = new PlayerStateData();
             data.uuid = player.getUuid().toString();
@@ -506,6 +510,9 @@ public class PersistenceService {
             data.permaScore = player.getPermaScore();
             data.balance = player.getBalance();
 
+            // Serialize stats
+            data.stats = PlayerStatsData.fromPlayerStats(player.getStats());
+
             return data;
         }
 
@@ -525,7 +532,82 @@ public class PersistenceService {
             player.setPermaScore(permaScore);
             player.setBalance(balance);
 
+            // Restore stats
+            if (stats != null) {
+                stats.applyToPlayerStats(player.getStats());
+            }
+
             return player;
+        }
+    }
+
+    /**
+     * Data transfer object for player stats serialization.
+     */
+    public static class PlayerStatsData {
+        // Time tracking
+        public long totalRunTimeSeconds;
+        public long longestRunTimeSeconds;
+        public long shortestRunTimeSeconds;
+
+        // Kill tracking
+        public int totalKills;
+        public int longestKillStreak;
+        public int highestKillsInRun;
+
+        // Damage dealt tracking
+        public double highestDamageDealt;
+        public double totalDamageDealt;
+
+        // Damage taken tracking
+        public double highestDamageTaken;
+        public double totalDamageTaken;
+
+        // Level tracking
+        public int highestPlayerLevel;
+        public int highestTeamLevel;
+
+        // Death/Run tracking
+        public int totalDeaths;
+        public int mostDeathsInRun;
+        public int runCount;
+
+        public static PlayerStatsData fromPlayerStats(PlayerStats stats) {
+            PlayerStatsData data = new PlayerStatsData();
+            data.totalRunTimeSeconds = stats.getTotalRunTimeSeconds();
+            data.longestRunTimeSeconds = stats.getLongestRunTimeSeconds();
+            data.shortestRunTimeSeconds = stats.getShortestRunTimeSeconds();
+            data.totalKills = stats.getTotalKills();
+            data.longestKillStreak = stats.getLongestKillStreak();
+            data.highestKillsInRun = stats.getHighestKillsInRun();
+            data.highestDamageDealt = stats.getHighestDamageDealt();
+            data.totalDamageDealt = stats.getTotalDamageDealt();
+            data.highestDamageTaken = stats.getHighestDamageTaken();
+            data.totalDamageTaken = stats.getTotalDamageTaken();
+            data.highestPlayerLevel = stats.getHighestPlayerLevel();
+            data.highestTeamLevel = stats.getHighestTeamLevel();
+            data.totalDeaths = stats.getTotalDeaths();
+            data.mostDeathsInRun = stats.getMostDeathsInRun();
+            data.runCount = stats.getRunCount();
+            return data;
+        }
+
+        public void applyToPlayerStats(PlayerStats stats) {
+            stats.setTotalRunTimeSeconds(totalRunTimeSeconds);
+            stats.setLongestRunTimeSeconds(longestRunTimeSeconds);
+            stats.setShortestRunTimeSeconds(shortestRunTimeSeconds);
+            stats.setTotalKills(totalKills);
+            stats.setLongestKillStreak(longestKillStreak);
+            stats.setHighestKillsInRun(highestKillsInRun);
+            stats.setHighestDamageDealt(highestDamageDealt);
+            stats.setTotalDamageDealt(totalDamageDealt);
+            stats.setHighestDamageTaken(highestDamageTaken);
+            stats.setTotalDamageTaken(totalDamageTaken);
+            stats.setHighestPlayerLevel(highestPlayerLevel);
+            stats.setHighestTeamLevel(highestTeamLevel);
+            stats.setTotalDeaths(totalDeaths);
+            stats.setMostDeathsInRun(mostDeathsInRun);
+            stats.setRunCount(runCount);
         }
     }
 

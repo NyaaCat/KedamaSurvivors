@@ -242,6 +242,9 @@ public class UpgradeService {
             }
 
             i18n.send(player, "upgrade.weapon_upgraded", "level", nextLevel);
+
+            // Record level up and team level in stats
+            recordLevelStats(player, playerState);
         }
 
         // Resolve held XP
@@ -290,10 +293,49 @@ public class UpgradeService {
             }
 
             i18n.send(player, "upgrade.helmet_upgraded", "level", nextLevel);
+
+            // Record level up and team level in stats
+            recordLevelStats(player, playerState);
         }
 
         // Resolve held XP
         plugin.getRewardService().resolveHeldXp(player, playerState);
+    }
+
+    /**
+     * Records level statistics after an upgrade.
+     */
+    private void recordLevelStats(Player player, PlayerState playerState) {
+        StatsService statsService = plugin.getStatsService();
+        if (statsService == null) return;
+
+        // Record player level (weapon + helmet levels)
+        int playerLevel = playerState.getPlayerLevel();
+        statsService.recordLevelUp(player.getUniqueId(), playerLevel);
+
+        // Calculate and record team level
+        UUID runId = playerState.getRunId();
+        if (runId != null) {
+            Optional<cat.nyaa.survivors.model.RunState> runOpt = state.getRun(runId);
+            if (runOpt.isPresent()) {
+                int teamLevel = calculateTeamLevel(runOpt.get());
+                statsService.recordTeamLevel(player.getUniqueId(), teamLevel);
+            }
+        }
+    }
+
+    /**
+     * Calculates the total team level (sum of all participating players' levels).
+     */
+    private int calculateTeamLevel(cat.nyaa.survivors.model.RunState run) {
+        int totalLevel = 0;
+        for (UUID memberId : run.getParticipants()) {
+            Optional<PlayerState> memberState = state.getPlayer(memberId);
+            if (memberState.isPresent()) {
+                totalLevel += memberState.get().getPlayerLevel();
+            }
+        }
+        return totalLevel;
     }
 
     /**

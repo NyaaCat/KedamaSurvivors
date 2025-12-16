@@ -491,6 +491,27 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Game event sounds: `countdownTick`, `teleport`, `death`, `runStart`
   - Files modified: `config.yml`, `ConfigService.java`, `ActionBarRewardService.java`, `UpgradeService.java`
 
+### Player Statistics Accounting
+- [x] Add comprehensive persistent player statistics via `StatsService`
+  - **Time Stats**: Total in-run time, longest run time, shortest run time
+  - **Kill Stats**: Total kills, longest kill-streak (resets on death), highest kills in one run
+  - **Damage Stats**: Highest single-hit damage dealt, total damage dealt, highest single-hit damage taken, total damage taken
+  - **Level Stats**: Highest player level reached, highest team overall level reached
+  - **Death/Run Stats**: Total deaths, most deaths in one run, run count
+  - Stats only updated when relevant events occur (not every tick)
+  - Persisted via `PersistenceService` as part of player data
+  - Files created: `PlayerStats.java`, `StatsService.java`
+  - Files modified: `PlayerState.java`, `PersistenceService.java`, `KedamaSurvivorsPlugin.java`, `RewardService.java`, `CombatListener.java`, `DeathService.java`, `RunService.java`, `UpgradeService.java`
+
+### Kill Streak Messages (Dota-Style)
+- [x] Add kill streak messages displayed after action bar reward flush
+  - Dota-style kill streak messages based on current streak (resets on death)
+  - 2=Double Kill, 3=Triple Kill, 4=Ultra Kill, 5=Rampage, 6=Mega Kill
+  - 7=Unstoppable, 8=Wicked Sick, 9=GODLIKE, 10=Beyond GODLIKE, 11+=Generic
+  - Message shown 1 second after reward display resets
+  - Only shown when streak >= 2 kills
+  - Files modified: `ActionBarRewardService.java`, `zh_CN.yml`
+
 ---
 
 ## Notes

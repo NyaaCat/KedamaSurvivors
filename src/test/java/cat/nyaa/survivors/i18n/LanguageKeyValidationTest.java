@@ -8,10 +8,8 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 1. All string literal keys in source code exist in YAML
  * 2. YAML file is valid and parseable
  * 3. Required sections exist
+ * 4. Reports unused YAML keys (defined but never used in code)
  */
 @DisplayName("Language Key Validation")
 class LanguageKeyValidationTest {
@@ -53,30 +52,37 @@ class LanguageKeyValidationTest {
     }
 
     @Nested
-    @DisplayName("String Literal Validation")
-    class StringLiteralValidation {
+    @DisplayName("Missing Keys Detection")
+    class MissingKeysValidation {
 
         @Test
         @DisplayName("All string literal i18n keys should exist in YAML")
         void allStringLiteralKeysExistInYaml() {
             StringBuilder errorMsg = new StringBuilder();
-            int missingCount = 0;
+            List<String> missingKeys = new ArrayList<>();
 
             for (Map.Entry<String, List<SourceLocation>> entry : sourceKeys.entrySet()) {
                 String key = entry.getKey();
                 if (!yamlKeys.contains(key)) {
-                    missingCount++;
-                    errorMsg.append(String.format("\nKey: %s\n", key));
+                    missingKeys.add(key);
+                    errorMsg.append(String.format("\n  Key: %s\n", key));
                     for (SourceLocation loc : entry.getValue()) {
-                        errorMsg.append(String.format("  - %s\n", loc));
+                        errorMsg.append(String.format("    - %s\n", loc));
                     }
                 }
             }
 
-            if (missingCount > 0) {
+            if (!missingKeys.isEmpty()) {
+                // Sort for consistent output
+                missingKeys.sort(String::compareTo);
                 fail(String.format(
-                        "\n\nMissing i18n keys in zh_CN.yml (%d):\n%s",
-                        missingCount,
+                        "\n\n" +
+                        "╔════════════════════════════════════════════════════════════════╗\n" +
+                        "║         MISSING LANGUAGE KEYS IN zh_CN.yml (%d keys)          ║\n" +
+                        "╚════════════════════════════════════════════════════════════════╝\n" +
+                        "%s\n" +
+                        "Add these keys to src/main/resources/lang/zh_CN.yml",
+                        missingKeys.size(),
                         errorMsg
                 ));
             }
@@ -89,6 +95,79 @@ class LanguageKeyValidationTest {
                     "Expected to find i18n string literal keys in source code");
             assertTrue(sourceKeys.size() >= 10,
                     "Expected at least 10 unique string literal keys in source code, found: " + sourceKeys.size());
+        }
+    }
+
+    @Nested
+    @DisplayName("Unused Keys Detection")
+    class UnusedKeysValidation {
+
+        @Test
+        @DisplayName("Report all unused YAML keys")
+        void reportUnusedYamlKeys() {
+            // Find unused YAML keys (defined but not used in code)
+            Set<String> unusedKeys = new TreeSet<>(yamlKeys);  // TreeSet for sorted output
+            unusedKeys.removeAll(sourceKeys.keySet());
+
+            // Group unused keys by prefix for better readability
+            Map<String, List<String>> groupedUnused = unusedKeys.stream()
+                    .collect(Collectors.groupingBy(
+                            key -> {
+                                int dotIndex = key.indexOf('.');
+                                return dotIndex > 0 ? key.substring(0, dotIndex) : key;
+                            },
+                            TreeMap::new,  // Sorted map
+                            Collectors.toList()
+                    ));
+
+            StringBuilder report = new StringBuilder();
+            report.append("\n\n");
+            report.append("╔════════════════════════════════════════════════════════════════╗\n");
+            report.append(String.format("║           UNUSED YAML KEYS REPORT (%d keys)                    ║\n", unusedKeys.size()));
+            report.append("╚════════════════════════════════════════════════════════════════╝\n\n");
+
+            if (unusedKeys.isEmpty()) {
+                report.append("✓ All YAML keys are used in source code!\n");
+            } else {
+                report.append("The following keys are defined in zh_CN.yml but NOT used in source code:\n");
+                report.append("(These may be safe to remove, or the scanner may have missed some usages)\n\n");
+
+                for (Map.Entry<String, List<String>> group : groupedUnused.entrySet()) {
+                    report.append(String.format("── %s (%d keys) ──\n", group.getKey(), group.getValue().size()));
+                    for (String key : group.getValue()) {
+                        report.append(String.format("    - %s\n", key));
+                    }
+                    report.append("\n");
+                }
+            }
+
+            report.append("════════════════════════════════════════════════════════════════\n");
+
+            // Print the report (always passes - informational only)
+            System.out.println(report);
+
+            // This test always passes - it's informational
+            assertTrue(true);
+        }
+
+        @Test
+        @DisplayName("Warn if too many unused keys (potential dead code)")
+        void warnOnExcessiveUnusedKeys() {
+            Set<String> unusedKeys = new HashSet<>(yamlKeys);
+            unusedKeys.removeAll(sourceKeys.keySet());
+
+            // Calculate percentage of unused keys
+            double unusedPercent = (double) unusedKeys.size() / yamlKeys.size() * 100;
+
+            // Print warning if more than 30% are unused
+            if (unusedPercent > 30) {
+                System.out.printf("\n⚠ WARNING: %.1f%% of YAML keys (%d/%d) are unused.\n",
+                        unusedPercent, unusedKeys.size(), yamlKeys.size());
+                System.out.println("Consider reviewing and cleaning up unused keys.\n");
+            }
+
+            // This test always passes - it's a warning only
+            assertTrue(true);
         }
     }
 
@@ -118,7 +197,8 @@ class LanguageKeyValidationTest {
                     "prefix",
                     "info.", "error.", "success.",
                     "team.", "admin.", "help.",
-                    "upgrade.", "gui.", "status."
+                    "upgrade.", "gui.", "status.",
+                    "killstreak."  // New section for kill streak messages
             );
 
             List<String> missingSections = requiredPrefixes.stream()
@@ -143,32 +223,43 @@ class LanguageKeyValidationTest {
     class CoverageStats {
 
         @Test
-        @DisplayName("Report i18n usage statistics")
+        @DisplayName("Report comprehensive i18n usage statistics")
         void reportStatistics() {
-            System.out.println("\n=== Language Key Validation Statistics ===");
-            System.out.println("YAML keys defined: " + yamlKeys.size());
-            System.out.println("Unique string literal keys found: " + sourceKeys.size());
-
             int totalUsages = sourceKeys.values().stream()
                     .mapToInt(List::size)
                     .sum();
-            System.out.println("Total string literal usages: " + totalUsages);
 
-            // Find unused YAML keys (defined but not used in code)
-            Set<String> unusedKeys = new java.util.HashSet<>(yamlKeys);
+            Set<String> unusedKeys = new HashSet<>(yamlKeys);
             unusedKeys.removeAll(sourceKeys.keySet());
 
-            if (!unusedKeys.isEmpty() && unusedKeys.size() < 100) {
-                System.out.println("\nUnused YAML keys (" + unusedKeys.size() + "):");
-                unusedKeys.stream().sorted().limit(30)
-                        .forEach(k -> System.out.println("  - " + k));
-                if (unusedKeys.size() > 30) {
-                    System.out.println("  ... and " + (unusedKeys.size() - 30) + " more");
-                }
-            }
-            System.out.println("==========================================\n");
+            double coveragePercent = (double) (yamlKeys.size() - unusedKeys.size()) / yamlKeys.size() * 100;
 
-            // This test always passes - it's just for reporting
+            StringBuilder report = new StringBuilder();
+            report.append("\n\n");
+            report.append("╔════════════════════════════════════════════════════════════════╗\n");
+            report.append("║              LANGUAGE KEY VALIDATION SUMMARY                   ║\n");
+            report.append("╚════════════════════════════════════════════════════════════════╝\n\n");
+
+            report.append(String.format("  YAML keys defined:            %d\n", yamlKeys.size()));
+            report.append(String.format("  Unique keys used in code:     %d\n", sourceKeys.size()));
+            report.append(String.format("  Total key usages:             %d\n", totalUsages));
+            report.append(String.format("  Unused YAML keys:             %d\n", unusedKeys.size()));
+            report.append(String.format("  Coverage:                     %.1f%%\n", coveragePercent));
+            report.append("\n");
+
+            // Most frequently used keys
+            report.append("  Top 10 most used keys:\n");
+            sourceKeys.entrySet().stream()
+                    .sorted((a, b) -> Integer.compare(b.getValue().size(), a.getValue().size()))
+                    .limit(10)
+                    .forEach(e -> report.append(String.format("    - %s (%d usages)\n",
+                            e.getKey(), e.getValue().size())));
+
+            report.append("\n════════════════════════════════════════════════════════════════\n");
+
+            System.out.println(report);
+
+            // This test always passes - it's for reporting
             assertTrue(true);
         }
     }

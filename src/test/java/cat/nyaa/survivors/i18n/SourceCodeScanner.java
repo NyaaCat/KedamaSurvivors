@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -43,6 +44,35 @@ class SourceCodeScanner {
     private static final Pattern CONDITIONAL_KEY_PATTERN = Pattern.compile(
             "\\?\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\"\\s*:\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\""
     );
+
+    // Matches switch expression case patterns: case N -> "key" or case "str" -> "key"
+    // e.g.: case 2 -> "killstreak.double";
+    private static final Pattern SWITCH_CASE_PATTERN = Pattern.compile(
+            "case\\s+[^-]+->\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\""
+    );
+
+    // Matches switch expression default patterns: default -> "key"
+    // e.g.: default -> "killstreak.generic";
+    private static final Pattern SWITCH_DEFAULT_PATTERN = Pattern.compile(
+            "default\\s*->\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\""
+    );
+
+    // Matches string variable assignments that look like i18n keys
+    // e.g.: String key = "error.not_found";
+    // Captures variables containing "key" or "Key" in the name
+    private static final Pattern STRING_VAR_KEY_PATTERN = Pattern.compile(
+            "(?:String|var)\\s+\\w*[Kk]ey\\w*\\s*=\\s*\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\""
+    );
+
+    // Matches return statements with i18n keys
+    // e.g.: return "status.mode_lobby";
+    // Excludes permission-like patterns (vrs.xxx which are Bukkit permissions)
+    private static final Pattern RETURN_KEY_PATTERN = Pattern.compile(
+            "return\\s+\"([a-z][a-z0-9_]*\\.[a-z0-9_.]+)\""
+    );
+
+    // Permission prefixes to exclude from i18n key detection
+    private static final Set<String> PERMISSION_PREFIXES = Set.of("vrs.");
 
     /**
      * Scan source directory for all i18n key usages.
@@ -133,6 +163,34 @@ class SourceCodeScanner {
             addKey(key1, file, lineNum, foundKeys);
             addKey(key2, file, lineNum, foundKeys);
         }
+
+        // Check switch expression case patterns
+        Matcher switchCaseMatcher = SWITCH_CASE_PATTERN.matcher(line);
+        while (switchCaseMatcher.find()) {
+            String key = switchCaseMatcher.group(1);
+            addKey(key, file, lineNum, foundKeys);
+        }
+
+        // Check switch expression default patterns
+        Matcher switchDefaultMatcher = SWITCH_DEFAULT_PATTERN.matcher(line);
+        while (switchDefaultMatcher.find()) {
+            String key = switchDefaultMatcher.group(1);
+            addKey(key, file, lineNum, foundKeys);
+        }
+
+        // Check string variable assignments containing "key" in name
+        Matcher stringVarMatcher = STRING_VAR_KEY_PATTERN.matcher(line);
+        while (stringVarMatcher.find()) {
+            String key = stringVarMatcher.group(1);
+            addKey(key, file, lineNum, foundKeys);
+        }
+
+        // Check return statements with i18n keys
+        Matcher returnMatcher = RETURN_KEY_PATTERN.matcher(line);
+        while (returnMatcher.find()) {
+            String key = returnMatcher.group(1);
+            addKey(key, file, lineNum, foundKeys);
+        }
     }
 
     private void addKey(String key, Path file, int lineNum,
@@ -142,7 +200,24 @@ class SourceCodeScanner {
         if (key.endsWith(".")) {
             return;
         }
+        // Skip permission-like keys (e.g., vrs.admin, vrs.admin.config)
+        // These are Bukkit permissions, not i18n keys
+        if (isPermissionKey(key)) {
+            return;
+        }
         foundKeys.computeIfAbsent(key, k -> new ArrayList<>())
                 .add(new SourceLocation(file, lineNum));
+    }
+
+    /**
+     * Checks if a key looks like a Bukkit permission rather than an i18n key.
+     */
+    private boolean isPermissionKey(String key) {
+        for (String prefix : PERMISSION_PREFIXES) {
+            if (key.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
