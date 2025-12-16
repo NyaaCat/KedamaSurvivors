@@ -3,6 +3,7 @@ package cat.nyaa.survivors.service;
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.config.ConfigService.EnemyArchetypeConfig;
+import cat.nyaa.survivors.config.ConfigService.SoundConfig;
 import cat.nyaa.survivors.economy.EconomyService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
@@ -307,8 +308,15 @@ public class RewardService {
         String suggested = upgradeService.determineSuggestedUpgrade(playerState);
         playerState.setSuggestedUpgrade(suggested);
 
-        // Send initial chat prompt with clickable options
+        // Always send initial prompt via CHAT (clickable messages)
+        // Reminders will use the configured displayMode (CHAT or SCOREBOARD)
         upgradeService.sendUpgradePrompt(player, playerState, false);
+
+        // Play upgrade available sound
+        SoundConfig sound = config.getSoundUpgradeAvailable();
+        if (sound != null) {
+            sound.play(player);
+        }
 
         // Update scoreboard to show countdown
         plugin.getScoreboardService().updatePlayerSidebar(player);

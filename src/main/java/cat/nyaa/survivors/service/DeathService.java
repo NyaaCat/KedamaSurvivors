@@ -2,6 +2,7 @@ package cat.nyaa.survivors.service;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.config.ConfigService.SoundConfig;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
@@ -119,6 +120,12 @@ public class DeathService {
      * Applies death penalty: clears equipment, resets XP, applies cooldown.
      */
     public void applyDeathPenalty(Player player, PlayerState playerState, RunState run) {
+        // Play death sound
+        SoundConfig deathSound = config.getSoundDeath();
+        if (deathSound != null) {
+            deathSound.play(player);
+        }
+
         // Clear VRS equipment only (keep other items like coins)
         clearVrsEquipment(player);
 

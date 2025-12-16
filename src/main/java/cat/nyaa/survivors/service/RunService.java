@@ -2,6 +2,7 @@ package cat.nyaa.survivors.service;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.config.ConfigService.SoundConfig;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.*;
 import cat.nyaa.survivors.util.TemplateEngine;
@@ -83,8 +84,9 @@ public class RunService {
             merchantService.startForRun(run);
         }
 
-        // Notify start
+        // Notify start and play run start sound
         notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
+        playRunStartSound(team);
 
         plugin.getLogger().info("Started run " + run.getRunId() + " for team " + team.getName() +
                 " in world " + worldConfig.name);
@@ -139,8 +141,9 @@ public class RunService {
             merchantService.startForRun(run);
         }
 
-        // Notify start
+        // Notify start and play run start sound
         notifyTeam(team, "info.run_started", "world", worldConfig.displayName);
+        playRunStartSound(team);
 
         plugin.getLogger().info("Started run " + run.getRunId() + " for team " + team.getName() +
                 " in world " + worldConfig.name);
@@ -701,6 +704,18 @@ public class RunService {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
                 i18n.send(member, key, args);
+            }
+        }
+    }
+
+    private void playRunStartSound(TeamState team) {
+        SoundConfig sound = config.getSoundRunStart();
+        if (sound == null) return;
+
+        for (UUID memberId : team.getMembers()) {
+            Player member = Bukkit.getPlayer(memberId);
+            if (member != null && member.isOnline()) {
+                sound.play(member);
             }
         }
     }
