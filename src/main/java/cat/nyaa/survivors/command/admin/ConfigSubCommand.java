@@ -55,8 +55,14 @@ public class ConfigSubCommand implements SubCommand {
                 entry("maxSpawnsPerTick", new IntProperty(config::getMaxSpawnsPerTick, config::setMaxSpawnsPerTick)),
 
                 // Rewards
+                entry("xpShareEnabled", new BooleanProperty(config::isXpShareEnabled, config::setXpShareEnabled)),
                 entry("xpShareRadius", new DoubleProperty(config::getXpShareRadius, config::setXpShareRadius)),
                 entry("xpSharePercent", new DoubleProperty(config::getXpSharePercent, config::setXpSharePercent)),
+                entry("overflowEnabled", new BooleanProperty(config::isOverflowEnabled, config::setOverflowEnabled)),
+                entry("overflowXpPerPermaScore", new IntProperty(config::getOverflowXpPerPermaScore, config::setOverflowXpPerPermaScore)),
+                entry("overflowNotifyPlayer", new BooleanProperty(config::isOverflowNotifyPlayer, config::setOverflowNotifyPlayer)),
+                entry("maxLevelPermaScoreReward", new IntProperty(config::getMaxLevelPermaScoreReward, config::setMaxLevelPermaScoreReward)),
+                entry("permaScoreDisplayName", new StringProperty(config::getPermaScoreDisplayName, config::setPermaScoreDisplayName)),
 
                 // Progression
                 entry("baseXpRequired", new IntProperty(config::getBaseXpRequired, config::setBaseXpRequired)),
@@ -99,7 +105,26 @@ public class ConfigSubCommand implements SubCommand {
                 // Scoreboard
                 entry("scoreboardEnabled", new BooleanProperty(config::isScoreboardEnabled, config::setScoreboardEnabled)),
                 entry("scoreboardTitle", new StringProperty(config::getScoreboardTitle, config::setScoreboardTitle)),
-                entry("scoreboardUpdateInterval", new IntProperty(config::getScoreboardUpdateInterval, config::setScoreboardUpdateInterval))
+                entry("scoreboardUpdateInterval", new IntProperty(config::getScoreboardUpdateInterval, config::setScoreboardUpdateInterval)),
+
+                // Feedback - display modes
+                entry("rewardDisplayMode", new StringProperty(config::getRewardDisplayMode, config::setRewardDisplayMode)),
+                entry("rewardStackingEnabled", new BooleanProperty(config::isRewardStackingEnabled, config::setRewardStackingEnabled)),
+                entry("rewardStackingTimeoutSeconds", new IntProperty(config::getRewardStackingTimeoutSeconds, config::setRewardStackingTimeoutSeconds)),
+                entry("upgradeReminderDisplayMode", new StringProperty(config::getUpgradeReminderDisplayMode, config::setUpgradeReminderDisplayMode)),
+                entry("upgradeReminderFlashIntervalTicks", new IntProperty(config::getUpgradeReminderFlashIntervalTicks, config::setUpgradeReminderFlashIntervalTicks)),
+
+                // Feedback - sounds (format: "sound volume pitch")
+                entry("soundXpGained", new StringProperty(config::getSoundXpGainedStr, config::setSoundXpGained)),
+                entry("soundCoinGained", new StringProperty(config::getSoundCoinGainedStr, config::setSoundCoinGained)),
+                entry("soundPermaScoreGained", new StringProperty(config::getSoundPermaScoreGainedStr, config::setSoundPermaScoreGained)),
+                entry("soundUpgradeAvailable", new StringProperty(config::getSoundUpgradeAvailableStr, config::setSoundUpgradeAvailable)),
+                entry("soundUpgradeSelected", new StringProperty(config::getSoundUpgradeSelectedStr, config::setSoundUpgradeSelected)),
+                entry("soundKillReward", new StringProperty(config::getSoundKillRewardStr, config::setSoundKillReward)),
+                entry("soundCountdownTick", new StringProperty(config::getSoundCountdownTickStr, config::setSoundCountdownTick)),
+                entry("soundTeleport", new StringProperty(config::getSoundTeleportStr, config::setSoundTeleport)),
+                entry("soundDeath", new StringProperty(config::getSoundDeathStr, config::setSoundDeath)),
+                entry("soundRunStart", new StringProperty(config::getSoundRunStartStr, config::setSoundRunStart))
         );
     }
 
@@ -197,24 +222,30 @@ public class ConfigSubCommand implements SubCommand {
         i18n.send(sender, "admin.config.list_header");
 
         // Group properties by category
-        Map<String, List<String>> categories = Map.of(
-                "teleport", List.of("lobbyWorld", "lobbyX", "lobbyY", "lobbyZ", "prepCommand", "enterCommand", "respawnCommand"),
-                "timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"),
-                "spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "maxSpawnsPerTick"),
-                "rewards", List.of("xpShareRadius", "xpSharePercent"),
-                "progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"),
-                "teams", List.of("maxTeamSize", "inviteExpirySeconds"),
-                "merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime",
-                        "merchantMinDistance", "merchantMaxDistance", "merchantSpawnChance",
-                        "merchantLimited", "merchantMinStaySeconds", "merchantMaxStaySeconds",
-                        "merchantSpawnParticles", "merchantDespawnParticles",
-                        "merchantMinItems", "merchantMaxItems", "merchantShowAllItems",
-                        "merchantRotationSpeed", "merchantBobHeight", "merchantBobSpeed",
-                        "merchantHeadItemCycleInterval",
-                        "wanderingMerchantPoolId", "wanderingMerchantType", "wanderingMerchantMaxCount"),
-                "upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"),
-                "scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval")
-        );
+        Map<String, List<String>> categories = new java.util.HashMap<>();
+        categories.put("teleport", List.of("lobbyWorld", "lobbyX", "lobbyY", "lobbyZ", "prepCommand", "enterCommand", "respawnCommand"));
+        categories.put("timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"));
+        categories.put("spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "maxSpawnsPerTick"));
+        categories.put("rewards", List.of("xpShareEnabled", "xpShareRadius", "xpSharePercent",
+                "overflowEnabled", "overflowXpPerPermaScore", "overflowNotifyPlayer",
+                "maxLevelPermaScoreReward", "permaScoreDisplayName"));
+        categories.put("progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"));
+        categories.put("teams", List.of("maxTeamSize", "inviteExpirySeconds"));
+        categories.put("merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime",
+                "merchantMinDistance", "merchantMaxDistance", "merchantSpawnChance",
+                "merchantLimited", "merchantMinStaySeconds", "merchantMaxStaySeconds",
+                "merchantSpawnParticles", "merchantDespawnParticles",
+                "merchantMinItems", "merchantMaxItems", "merchantShowAllItems",
+                "merchantRotationSpeed", "merchantBobHeight", "merchantBobSpeed",
+                "merchantHeadItemCycleInterval",
+                "wanderingMerchantPoolId", "wanderingMerchantType", "wanderingMerchantMaxCount"));
+        categories.put("upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"));
+        categories.put("scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval"));
+        categories.put("feedback", List.of("rewardDisplayMode", "rewardStackingEnabled", "rewardStackingTimeoutSeconds",
+                "upgradeReminderDisplayMode", "upgradeReminderFlashIntervalTicks",
+                "soundXpGained", "soundCoinGained", "soundPermaScoreGained",
+                "soundUpgradeAvailable", "soundUpgradeSelected", "soundKillReward",
+                "soundCountdownTick", "soundTeleport", "soundDeath", "soundRunStart"));
 
         if (category != null && categories.containsKey(category)) {
             // Show specific category
@@ -256,7 +287,7 @@ public class ConfigSubCommand implements SubCommand {
                     }
                 }
             } else if (action.equals("list")) {
-                for (String cat : List.of("teleport", "timing", "spawning", "rewards", "progression", "teams", "merchants", "upgrade", "scoreboard")) {
+                for (String cat : List.of("teleport", "timing", "spawning", "rewards", "progression", "teams", "merchants", "upgrade", "scoreboard", "feedback")) {
                     if (cat.startsWith(partial)) {
                         completions.add(cat);
                     }

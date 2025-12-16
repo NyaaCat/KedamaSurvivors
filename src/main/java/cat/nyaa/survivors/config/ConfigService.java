@@ -801,6 +801,28 @@ public class ConfigService {
     public SoundConfig getSoundDeath() { return soundDeath; }
     public SoundConfig getSoundRunStart() { return soundRunStart; }
 
+    // Sound getters as strings (for command interface)
+    public String getSoundXpGainedStr() { return formatSoundConfig(soundXpGained); }
+    public String getSoundCoinGainedStr() { return formatSoundConfig(soundCoinGained); }
+    public String getSoundPermaScoreGainedStr() { return formatSoundConfig(soundPermaScoreGained); }
+    public String getSoundUpgradeAvailableStr() { return formatSoundConfig(soundUpgradeAvailable); }
+    public String getSoundUpgradeSelectedStr() { return formatSoundConfig(soundUpgradeSelected); }
+    public String getSoundKillRewardStr() { return formatSoundConfig(soundKillReward); }
+    public String getSoundCountdownTickStr() { return formatSoundConfig(soundCountdownTick); }
+    public String getSoundTeleportStr() { return formatSoundConfig(soundTeleport); }
+    public String getSoundDeathStr() { return formatSoundConfig(soundDeath); }
+    public String getSoundRunStartStr() { return formatSoundConfig(soundRunStart); }
+
+    /**
+     * Formats a SoundConfig back to string format "sound volume pitch".
+     */
+    private String formatSoundConfig(SoundConfig sound) {
+        if (sound == null || sound.sound() == null || sound.sound().isEmpty()) {
+            return "";
+        }
+        return sound.sound() + " " + sound.volume() + " " + sound.pitch();
+    }
+
     // ==================== Runtime Update Methods ====================
 
     /**
@@ -872,8 +894,14 @@ public class ConfigService {
     public void setMaxSpawnsPerTick(int max) { this.maxSpawnsPerTick = max; }
 
     // Rewards
+    public void setXpShareEnabled(boolean enabled) { this.xpShareEnabled = enabled; }
     public void setXpShareRadius(double radius) { this.xpShareRadius = radius; }
     public void setXpSharePercent(double percent) { this.xpSharePercent = percent; }
+    public void setOverflowEnabled(boolean enabled) { this.overflowEnabled = enabled; }
+    public void setOverflowXpPerPermaScore(int xp) { this.overflowXpPerPermaScore = xp; }
+    public void setOverflowNotifyPlayer(boolean notify) { this.overflowNotifyPlayer = notify; }
+    public void setMaxLevelPermaScoreReward(int reward) { this.maxLevelPermaScoreReward = reward; }
+    public void setPermaScoreDisplayName(String name) { this.permaScoreDisplayName = name; }
 
     // Progression
     public void setBaseXpRequired(int value) { this.baseXpRequired = value; }
@@ -918,6 +946,25 @@ public class ConfigService {
     public void setScoreboardTitle(String title) { this.scoreboardTitle = title; }
     public void setScoreboardUpdateInterval(int interval) { this.scoreboardUpdateInterval = interval; }
 
+    // Feedback
+    public void setRewardDisplayMode(String mode) { this.rewardDisplayMode = mode.toUpperCase(); }
+    public void setRewardStackingEnabled(boolean enabled) { this.rewardStackingEnabled = enabled; }
+    public void setRewardStackingTimeoutSeconds(int seconds) { this.rewardStackingTimeoutSeconds = seconds; }
+    public void setUpgradeReminderDisplayMode(String mode) { this.upgradeReminderDisplayMode = mode.toUpperCase(); }
+    public void setUpgradeReminderFlashIntervalTicks(int ticks) { this.upgradeReminderFlashIntervalTicks = ticks; }
+
+    // Sound setters (using string format "sound volume pitch")
+    public void setSoundXpGained(String sound) { this.soundXpGained = parseSoundConfig(sound); }
+    public void setSoundCoinGained(String sound) { this.soundCoinGained = parseSoundConfig(sound); }
+    public void setSoundPermaScoreGained(String sound) { this.soundPermaScoreGained = parseSoundConfig(sound); }
+    public void setSoundUpgradeAvailable(String sound) { this.soundUpgradeAvailable = parseSoundConfig(sound); }
+    public void setSoundUpgradeSelected(String sound) { this.soundUpgradeSelected = parseSoundConfig(sound); }
+    public void setSoundKillReward(String sound) { this.soundKillReward = parseSoundConfig(sound); }
+    public void setSoundCountdownTick(String sound) { this.soundCountdownTick = parseSoundConfig(sound); }
+    public void setSoundTeleport(String sound) { this.soundTeleport = parseSoundConfig(sound); }
+    public void setSoundDeath(String sound) { this.soundDeath = parseSoundConfig(sound); }
+    public void setSoundRunStart(String sound) { this.soundRunStart = parseSoundConfig(sound); }
+
     // ==================== Config Save ====================
 
     /**
@@ -950,8 +997,14 @@ public class ConfigService {
         config.set("spawning.limits.maxSpawnsPerTick", maxSpawnsPerTick);
 
         // Rewards
+        config.set("rewards.xpShare.enabled", xpShareEnabled);
         config.set("rewards.xpShare.radius", xpShareRadius);
         config.set("rewards.xpShare.sharePercent", xpSharePercent);
+        config.set("progression.overflow.enabled", overflowEnabled);
+        config.set("progression.overflow.xpPerPermaScore", overflowXpPerPermaScore);
+        config.set("progression.overflow.notifyPlayer", overflowNotifyPlayer);
+        config.set("progression.maxLevelBehavior.permaScoreReward", maxLevelPermaScoreReward);
+        config.set("economy.permaScore.displayName", permaScoreDisplayName);
 
         // Progression
         config.set("progression.baseXpRequired", baseXpRequired);
@@ -994,6 +1047,25 @@ public class ConfigService {
         config.set("scoreboard.enabled", scoreboardEnabled);
         config.set("scoreboard.title", scoreboardTitle);
         config.set("scoreboard.updateInterval", scoreboardUpdateInterval);
+
+        // Feedback
+        config.set("feedback.rewards.displayMode", rewardDisplayMode);
+        config.set("feedback.rewards.stacking.enabled", rewardStackingEnabled);
+        config.set("feedback.rewards.stacking.timeoutSeconds", rewardStackingTimeoutSeconds);
+        config.set("feedback.upgradeReminder.displayMode", upgradeReminderDisplayMode);
+        config.set("feedback.upgradeReminder.flashIntervalTicks", upgradeReminderFlashIntervalTicks);
+
+        // Sounds
+        config.set("feedback.sounds.xpGained", formatSoundConfig(soundXpGained));
+        config.set("feedback.sounds.coinGained", formatSoundConfig(soundCoinGained));
+        config.set("feedback.sounds.permaScoreGained", formatSoundConfig(soundPermaScoreGained));
+        config.set("feedback.sounds.upgradeAvailable", formatSoundConfig(soundUpgradeAvailable));
+        config.set("feedback.sounds.upgradeSelected", formatSoundConfig(soundUpgradeSelected));
+        config.set("feedback.sounds.killReward", formatSoundConfig(soundKillReward));
+        config.set("feedback.sounds.countdownTick", formatSoundConfig(soundCountdownTick));
+        config.set("feedback.sounds.teleport", formatSoundConfig(soundTeleport));
+        config.set("feedback.sounds.death", formatSoundConfig(soundDeath));
+        config.set("feedback.sounds.runStart", formatSoundConfig(soundRunStart));
 
         try {
             config.save(new java.io.File(plugin.getDataFolder(), "config.yml"));
