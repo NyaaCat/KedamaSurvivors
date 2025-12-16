@@ -416,11 +416,51 @@ economy:
 
 ---
 
-### Step 7: (Optional) Customize Merchants
+### Step 7: (Optional) Configure Notifications & Sounds
+
+Customize how players receive reward notifications and sounds.
+
+**Edit `config.yml` feedback section:**
+
+```yaml
+feedback:
+  rewards:
+    displayMode: ACTIONBAR    # ACTIONBAR (stacked) or CHAT (individual)
+    stacking:
+      timeoutSeconds: 3       # Stack rewards within 3 seconds
+
+  upgradeReminder:
+    displayMode: CHAT         # CHAT (clickable) or SCOREBOARD (flashing line)
+
+  sounds:
+    xpGained: "minecraft:entity.experience_orb.pickup 0.5 1.2"
+    coinGained: "minecraft:entity.item.pickup 0.6 1.0"
+    upgradeAvailable: "minecraft:block.note_block.pling 1.0 1.2"
+```
+
+**Display Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `ACTIONBAR` | Rewards stack and show aggregated totals (e.g., "+50 XP | +5 coins"). Less chat spam. |
+| `CHAT` | Individual messages for each reward (legacy behavior). |
+
+**Upgrade Reminder Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `CHAT` | Clickable chat messages with [Power] and [Defense] options |
+| `SCOREBOARD` | Flashing ">>> Upgrade Available <<<" line on scoreboard. More subtle. |
+
+**Sound Format:** `"sound_name volume pitch"` - Leave empty (`""`) to disable a sound.
+
+---
+
+### Step 8: (Optional) Customize Merchants
 
 Merchants appear as animated armor stands that float and spin. They spawn periodically during runs and offer trades for coins.
 
-#### 7a: Create Merchant Item Pools
+#### 8a: Create Merchant Item Pools
 
 Merchant stock is managed through item pools. Each pool contains weighted items with prices.
 
@@ -464,7 +504,7 @@ pools:
         price: 100
 ```
 
-#### 7b: Configure Merchant Behavior
+#### 8b: Configure Merchant Behavior
 
 Merchants use invisible armor stands with floating/spinning animation. Configure their behavior in `config.yml`:
 
@@ -493,7 +533,7 @@ merchants:
     bobSpeed: 0.01               # Floating speed
 ```
 
-#### 7c: Create Merchant Templates (Legacy)
+#### 8c: Create Merchant Templates (Legacy)
 
 You can also create named merchant templates with specific trades:
 

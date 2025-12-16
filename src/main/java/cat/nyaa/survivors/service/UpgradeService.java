@@ -68,6 +68,15 @@ public class UpgradeService {
             processHelmetUpgrade(player, playerState);
         }
 
+        // Play upgrade selected sound
+        ConfigService.SoundConfig upgradeSound = config.getSoundUpgradeSelected();
+        if (upgradeSound != null) {
+            upgradeSound.play(player);
+        }
+
+        // Hide upgrade reminder (for SCOREBOARD mode)
+        plugin.getScoreboardService().hideUpgradeReminder(player);
+
         // Update scoreboard to remove countdown
         plugin.getScoreboardService().updatePlayerSidebar(player);
     }
@@ -123,6 +132,11 @@ public class UpgradeService {
         // Send header (only on initial prompt)
         if (!isReminder) {
             i18n.send(player, "upgrade.prompt_header");
+            // Play upgrade available sound on initial prompt
+            ConfigService.SoundConfig upgradeSound = config.getSoundUpgradeAvailable();
+            if (upgradeSound != null) {
+                upgradeSound.play(player);
+            }
         } else {
             // Send reminder with countdown
             int seconds = playerState.getUpgradeRemainingSeconds();

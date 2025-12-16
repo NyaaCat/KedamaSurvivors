@@ -137,14 +137,29 @@ public class RewardService {
         }
 
         // Notify player of XP gain
-        if (!isShared) {
-            i18n.send(player, "info.xp_gained", "amount", amount);
-        } else {
-            i18n.send(player, "info.xp_shared", "amount", amount);
-        }
+        notifyXpGained(player, amount, isShared);
 
         // Update sidebar
         plugin.getScoreboardService().updatePlayerSidebar(player);
+    }
+
+    /**
+     * Notifies player of XP gain using configured display mode.
+     */
+    private void notifyXpGained(Player player, int amount, boolean isShared) {
+        if ("ACTIONBAR".equals(config.getRewardDisplayMode())) {
+            ActionBarRewardService actionBar = plugin.getActionBarRewardService();
+            if (actionBar != null) {
+                actionBar.addXp(player, amount, isShared);
+            }
+        } else {
+            // CHAT mode: send individual messages
+            if (!isShared) {
+                i18n.send(player, "info.xp_gained", "amount", amount);
+            } else {
+                i18n.send(player, "info.xp_shared", "amount", amount);
+            }
+        }
     }
 
     /**
@@ -156,7 +171,22 @@ public class RewardService {
         EconomyService economy = plugin.getEconomyService();
         economy.add(player, amount, "kill_reward");
 
-        i18n.send(player, "info.coin_gained", "amount", amount);
+        notifyCoinGained(player, amount);
+    }
+
+    /**
+     * Notifies player of coin gain using configured display mode.
+     */
+    private void notifyCoinGained(Player player, int amount) {
+        if ("ACTIONBAR".equals(config.getRewardDisplayMode())) {
+            ActionBarRewardService actionBar = plugin.getActionBarRewardService();
+            if (actionBar != null) {
+                actionBar.addCoins(player, amount);
+            }
+        } else {
+            // CHAT mode: send individual messages
+            i18n.send(player, "info.coin_gained", "amount", amount);
+        }
     }
 
     /**
@@ -170,7 +200,22 @@ public class RewardService {
         // Update scoreboard
         plugin.getScoreboardService().updatePermaScore(player, playerState.getPermaScore());
 
-        i18n.send(player, "info.perma_score_gained", "amount", amount);
+        notifyPermaScoreGained(player, amount);
+    }
+
+    /**
+     * Notifies player of perma-score gain using configured display mode.
+     */
+    private void notifyPermaScoreGained(Player player, int amount) {
+        if ("ACTIONBAR".equals(config.getRewardDisplayMode())) {
+            ActionBarRewardService actionBar = plugin.getActionBarRewardService();
+            if (actionBar != null) {
+                actionBar.addPermaScore(player, amount);
+            }
+        } else {
+            // CHAT mode: send individual messages
+            i18n.send(player, "info.perma_score_gained", "amount", amount);
+        }
     }
 
     /**

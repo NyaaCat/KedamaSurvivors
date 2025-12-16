@@ -103,8 +103,18 @@ public class UpgradeReminderTask implements Runnable {
             // Check if it's time for a reminder
             Long lastReminder = lastReminderTime.get(playerState.getUuid());
             if (lastReminder == null || (now - lastReminder) >= reminderIntervalMs) {
-                // Send reminder
-                upgrade.sendUpgradePrompt(player, playerState, true);
+                // Send reminder based on configured mode
+                String displayMode = config.getUpgradeReminderDisplayMode();
+
+                if ("SCOREBOARD".equals(displayMode)) {
+                    // For SCOREBOARD mode, ensure the flash is active
+                    // The ScoreboardService handles the display
+                    plugin.getScoreboardService().showUpgradeReminder(player);
+                } else {
+                    // CHAT mode - send clickable chat messages
+                    upgrade.sendUpgradePrompt(player, playerState, true);
+                }
+
                 lastReminderTime.put(playerState.getUuid(), now);
             }
         }

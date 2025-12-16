@@ -26,6 +26,7 @@ Complete reference for all configuration options in `config.yml`.
 18. [Persistence](#18-persistence)
 19. [Templates](#19-templates)
 20. [Debug](#20-debug)
+21. [Feedback & Notifications](#21-feedback--notifications)
 
 ---
 
@@ -1086,6 +1087,97 @@ debug:
     # Include in /vrs debug perf output
     showInDebugCommand: true
 ```
+
+---
+
+## 21. Feedback & Notifications
+
+Settings for reward display, upgrade reminders, and sound effects.
+
+### Reward Display
+
+```yaml
+feedback:
+  rewards:
+    # Display mode: ACTIONBAR (stacked action bar) or CHAT (individual messages)
+    displayMode: ACTIONBAR
+    stacking:
+      enabled: true
+      # Time window in seconds - rewards aggregate within this period
+      timeoutSeconds: 3
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `displayMode` | String | `ACTIONBAR` | `ACTIONBAR` = stacked action bar display, `CHAT` = individual chat messages |
+| `stacking.enabled` | Boolean | `true` | Enable reward stacking (ACTIONBAR mode only) |
+| `stacking.timeoutSeconds` | Integer | `3` | Time window for stacking rewards |
+
+**Note:** Stacking only applies to ACTIONBAR mode. CHAT mode sends individual messages for each reward without aggregation.
+
+### Upgrade Reminder
+
+```yaml
+feedback:
+  upgradeReminder:
+    # Display mode: CHAT (clickable messages) or SCOREBOARD (flashing line)
+    displayMode: CHAT
+    # Scoreboard flash interval in ticks (only for SCOREBOARD mode)
+    flashIntervalTicks: 10
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `displayMode` | String | `CHAT` | `CHAT` = clickable messages, `SCOREBOARD` = flashing scoreboard line |
+| `flashIntervalTicks` | Integer | `10` | Flash interval for scoreboard mode (ticks) |
+
+**Upgrade Reminder Modes:**
+- `CHAT`: Sends clickable [Power] and [Defense] options in chat. Reminders sent at intervals defined in `upgrade.reminderIntervalSeconds`.
+- `SCOREBOARD`: Displays a flashing ">>> Upgrade Available <<<" line on the scoreboard. More subtle, less chat spam.
+
+### Sound Effects
+
+```yaml
+feedback:
+  sounds:
+    # Format: "sound_name volume pitch" or empty string to disable
+    # Uses vanilla Minecraft sound format (e.g., minecraft:entity.experience_orb.pickup)
+
+    # Reward sounds
+    xpGained: "minecraft:entity.experience_orb.pickup 0.5 1.2"
+    coinGained: "minecraft:entity.item.pickup 0.6 1.0"
+    permaScoreGained: "minecraft:entity.player.levelup 0.8 1.0"
+    killReward: ""  # Empty = disabled (XP sound covers this)
+
+    # Upgrade sounds
+    upgradeAvailable: "minecraft:block.note_block.pling 1.0 1.2"
+    upgradeSelected: "minecraft:entity.player.levelup 1.0 1.0"
+
+    # Game event sounds
+    countdownTick: "minecraft:block.note_block.pling 0.8 1.0"
+    teleport: "minecraft:entity.enderman.teleport 0.8 1.0"
+    death: "minecraft:entity.wither.death 0.5 1.0"
+    runStart: "minecraft:entity.player.levelup 1.0 1.0"
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `xpGained` | String | (see above) | Sound when XP is earned |
+| `coinGained` | String | (see above) | Sound when coins are earned |
+| `permaScoreGained` | String | (see above) | Sound when perma-score is earned |
+| `killReward` | String | `""` | Sound on kill (empty = disabled) |
+| `upgradeAvailable` | String | (see above) | Sound when upgrade becomes available |
+| `upgradeSelected` | String | (see above) | Sound when player selects upgrade |
+| `countdownTick` | String | (see above) | Sound during ready countdown |
+| `teleport` | String | (see above) | Sound when teleporting to arena |
+| `death` | String | (see above) | Sound on player death |
+| `runStart` | String | (see above) | Sound when run starts |
+
+**Sound Format:** `"namespace:sound.path volume pitch"` where:
+- `namespace:sound.path` - Vanilla Minecraft sound identifier (e.g., `minecraft:entity.player.levelup`)
+- `volume` - Sound volume (0.0-1.0)
+- `pitch` - Sound pitch (0.5-2.0)
+- Leave empty (`""`) to disable a sound
 
 ---
 

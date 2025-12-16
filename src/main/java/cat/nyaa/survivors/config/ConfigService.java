@@ -165,6 +165,26 @@ public class ConfigService {
     // Enemy archetypes
     private Map<String, EnemyArchetypeConfig> enemyArchetypes;
 
+    // Feedback settings
+    private String rewardDisplayMode;
+    private boolean rewardStackingEnabled;
+    private int rewardStackingTimeoutSeconds;
+    private String upgradeReminderDisplayMode;
+    private int upgradeReminderFlashIntervalTicks;
+
+    // Sound configs (null = disabled)
+    private SoundConfig soundXpGained;
+    private SoundConfig soundCoinGained;
+    private SoundConfig soundPermaScoreGained;
+    private SoundConfig soundUpgradeAvailable;
+    private SoundConfig soundUpgradeSelected;
+    private SoundConfig soundKillReward;
+    // Game event sounds
+    private SoundConfig soundCountdownTick;
+    private SoundConfig soundTeleport;
+    private SoundConfig soundDeath;
+    private SoundConfig soundRunStart;
+
     // Merchant config
     private boolean merchantsEnabled;
     private int merchantSpawnInterval;
@@ -225,6 +245,7 @@ public class ConfigService {
         loadEquipmentPools();
         loadEnemyArchetypes();
         loadMerchants();
+        loadFeedback();
     }
 
     private void loadPluginSettings() {
@@ -525,6 +546,30 @@ public class ConfigService {
         }
     }
 
+    private void loadFeedback() {
+        // Reward display settings
+        rewardDisplayMode = config.getString("feedback.rewards.displayMode", "ACTIONBAR").toUpperCase();
+        rewardStackingEnabled = config.getBoolean("feedback.rewards.stacking.enabled", true);
+        rewardStackingTimeoutSeconds = config.getInt("feedback.rewards.stacking.timeoutSeconds", 3);
+
+        // Upgrade reminder settings
+        upgradeReminderDisplayMode = config.getString("feedback.upgradeReminder.displayMode", "CHAT").toUpperCase();
+        upgradeReminderFlashIntervalTicks = config.getInt("feedback.upgradeReminder.flashIntervalTicks", 10);
+
+        // Sound effects (null = disabled)
+        soundXpGained = parseSoundConfig(config.getString("feedback.sounds.xpGained", "minecraft:entity.experience_orb.pickup 0.5 1.2"));
+        soundCoinGained = parseSoundConfig(config.getString("feedback.sounds.coinGained", "minecraft:entity.item.pickup 0.6 1.0"));
+        soundPermaScoreGained = parseSoundConfig(config.getString("feedback.sounds.permaScoreGained", "minecraft:entity.player.levelup 0.8 1.0"));
+        soundUpgradeAvailable = parseSoundConfig(config.getString("feedback.sounds.upgradeAvailable", "minecraft:block.note_block.pling 1.0 1.2"));
+        soundUpgradeSelected = parseSoundConfig(config.getString("feedback.sounds.upgradeSelected", "minecraft:entity.player.levelup 1.0 1.0"));
+        soundKillReward = parseSoundConfig(config.getString("feedback.sounds.killReward", ""));
+        // Game event sounds
+        soundCountdownTick = parseSoundConfig(config.getString("feedback.sounds.countdownTick", "minecraft:block.note_block.pling 0.8 1.0"));
+        soundTeleport = parseSoundConfig(config.getString("feedback.sounds.teleport", "minecraft:entity.enderman.teleport 0.8 1.0"));
+        soundDeath = parseSoundConfig(config.getString("feedback.sounds.death", "minecraft:entity.wither.death 0.5 1.0"));
+        soundRunStart = parseSoundConfig(config.getString("feedback.sounds.runStart", "minecraft:entity.player.levelup 1.0 1.0"));
+    }
+
     private void loadMerchants() {
         merchantsEnabled = config.getBoolean("merchants.enabled", true);
         merchantSpawnInterval = config.getInt("merchants.wandering.spawnIntervalSeconds", 120);
@@ -566,6 +611,24 @@ public class ConfigService {
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Invalid material: " + name + ", using STONE");
             return Material.STONE;
+        }
+    }
+
+    /**
+     * Parses sound config from "sound_name volume pitch" format.
+     * Returns null if empty or invalid.
+     */
+    private SoundConfig parseSoundConfig(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        try {
+            String[] parts = value.trim().split("\\s+");
+            String sound = parts[0];
+            float volume = parts.length > 1 ? Float.parseFloat(parts[1]) : 1.0f;
+            float pitch = parts.length > 2 ? Float.parseFloat(parts[2]) : 1.0f;
+            return new SoundConfig(sound, volume, pitch);
+        } catch (NumberFormatException e) {
+            plugin.getLogger().warning("Invalid sound config: " + value + ", sound will be disabled");
+            return null;
         }
     }
 
@@ -716,6 +779,27 @@ public class ConfigService {
     public String getWanderingMerchantPoolId() { return wanderingMerchantPoolId; }
     public String getWanderingMerchantType() { return wanderingMerchantType; }
     public int getWanderingMerchantMaxCount() { return wanderingMerchantMaxCount; }
+
+    // Feedback getters
+    public String getRewardDisplayMode() { return rewardDisplayMode; }
+    public boolean isRewardStackingEnabled() { return rewardStackingEnabled; }
+    public int getRewardStackingTimeoutSeconds() { return rewardStackingTimeoutSeconds; }
+    public long getRewardStackingTimeoutMs() { return rewardStackingTimeoutSeconds * 1000L; }
+    public String getUpgradeReminderDisplayMode() { return upgradeReminderDisplayMode; }
+    public int getUpgradeReminderFlashIntervalTicks() { return upgradeReminderFlashIntervalTicks; }
+
+    // Sound getters (nullable)
+    public SoundConfig getSoundXpGained() { return soundXpGained; }
+    public SoundConfig getSoundCoinGained() { return soundCoinGained; }
+    public SoundConfig getSoundPermaScoreGained() { return soundPermaScoreGained; }
+    public SoundConfig getSoundUpgradeAvailable() { return soundUpgradeAvailable; }
+    public SoundConfig getSoundUpgradeSelected() { return soundUpgradeSelected; }
+    public SoundConfig getSoundKillReward() { return soundKillReward; }
+    // Game event sound getters
+    public SoundConfig getSoundCountdownTick() { return soundCountdownTick; }
+    public SoundConfig getSoundTeleport() { return soundTeleport; }
+    public SoundConfig getSoundDeath() { return soundDeath; }
+    public SoundConfig getSoundRunStart() { return soundRunStart; }
 
     // ==================== Runtime Update Methods ====================
 
@@ -1067,5 +1151,20 @@ public class ConfigService {
         public int costAmount = 1;
         /** Maximum uses before trade locks */
         public int maxUses = 10;
+    }
+
+    /**
+     * Configuration for a sound effect with volume and pitch.
+     * Uses vanilla Minecraft sound format (e.g., minecraft:entity.experience_orb.pickup).
+     */
+    public record SoundConfig(String sound, float volume, float pitch) {
+        /**
+         * Plays this sound to a player if configured.
+         */
+        public void play(org.bukkit.entity.Player player) {
+            if (sound != null && !sound.isEmpty() && player != null) {
+                player.playSound(player.getLocation(), sound, volume, pitch);
+            }
+        }
     }
 }

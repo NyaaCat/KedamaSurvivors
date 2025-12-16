@@ -21,6 +21,7 @@ import cat.nyaa.survivors.service.MerchantService;
 import cat.nyaa.survivors.service.SpawnerService;
 import cat.nyaa.survivors.service.StarterService;
 import cat.nyaa.survivors.service.StateService;
+import cat.nyaa.survivors.service.ActionBarRewardService;
 import cat.nyaa.survivors.service.UpgradeService;
 import cat.nyaa.survivors.service.WorldService;
 import cat.nyaa.survivors.task.CooldownDisplay;
@@ -53,6 +54,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private ReadyService readyService;
     private RunService runService;
     private RewardService rewardService;
+    private ActionBarRewardService actionBarRewardService;
     private UpgradeService upgradeService;
     private DeathService deathService;
     private SpawnerService spawnerService;
@@ -139,6 +141,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Run service for run lifecycle management
         runService = new RunService(this);
+
+        // Action bar reward service for stacked reward display (must be before RewardService)
+        actionBarRewardService = new ActionBarRewardService(this);
 
         // Reward service for XP, coins, perma-score
         rewardService = new RewardService(this);
@@ -266,6 +271,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
             upgradeReminderTask.stop();
         }
 
+        // Stop action bar reward service
+        if (actionBarRewardService != null) {
+            actionBarRewardService.stop();
+        }
+
         // Shutdown join switch service
         if (joinSwitchService != null) {
             joinSwitchService.shutdown();
@@ -355,6 +365,10 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public RewardService getRewardService() {
         return rewardService;
+    }
+
+    public ActionBarRewardService getActionBarRewardService() {
+        return actionBarRewardService;
     }
 
     public UpgradeService getUpgradeService() {

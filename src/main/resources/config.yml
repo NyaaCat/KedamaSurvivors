@@ -288,6 +288,45 @@ templates:
     mode: ERROR
 
 # ============================================================
+# Feedback & Notifications
+# ============================================================
+feedback:
+  # Reward display settings
+  rewards:
+    # Display mode: ACTIONBAR (stacked action bar) or CHAT (individual messages)
+    displayMode: ACTIONBAR
+    # Stacking settings (only applies to ACTIONBAR mode)
+    stacking:
+      enabled: true
+      # Time window in seconds - rewards aggregate within this period
+      timeoutSeconds: 3
+
+  # Upgrade reminder settings
+  upgradeReminder:
+    # Display mode: CHAT (clickable messages) or SCOREBOARD (flashing line)
+    displayMode: CHAT
+    # Scoreboard flash interval in ticks (only for SCOREBOARD mode)
+    flashIntervalTicks: 10
+
+  # Sound effects
+  # Format: "sound_name volume pitch" or empty string to disable
+  # Uses vanilla Minecraft sound format (e.g., minecraft:entity.experience_orb.pickup)
+  sounds:
+    # Reward sounds
+    xpGained: "minecraft:entity.experience_orb.pickup 0.5 1.2"
+    coinGained: "minecraft:entity.item.pickup 0.6 1.0"
+    permaScoreGained: "minecraft:entity.player.levelup 0.8 1.0"
+    killReward: ""  # Empty = disabled (XP sound covers this)
+    # Upgrade sounds
+    upgradeAvailable: "minecraft:block.note_block.pling 1.0 1.2"
+    upgradeSelected: "minecraft:entity.player.levelup 1.0 1.0"
+    # Game event sounds
+    countdownTick: "minecraft:block.note_block.pling 0.8 1.0"
+    teleport: "minecraft:entity.enderman.teleport 0.8 1.0"
+    death: "minecraft:entity.wither.death 0.5 1.0"
+    runStart: "minecraft:entity.player.levelup 1.0 1.0"
+
+# ============================================================
 # Debug
 # ============================================================
 debug:

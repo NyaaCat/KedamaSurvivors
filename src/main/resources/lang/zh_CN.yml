@@ -374,6 +374,9 @@ scoreboard:
   status_cooldown: "§7状态: §c冷却中"
   starter_weapon_selected: "§2✓ §7武器已选择"
   starter_helmet_selected: "§2✓ §7护甲已选择"
+  # Upgrade reminder lines (for SCOREBOARD mode)
+  upgrade_reminder: "§e§l>>> 升级可用 <<<"
+  upgrade_reminder_alt: "§6§l>>> 点击升级 <<<"
 
 # ============================================================
 # 状态命令输出
@@ -806,14 +809,8 @@ actionbar:
   invulnerable: "§3无敌保护 §f{seconds}s"
   xp_progress: "§7经验 §f{progress}§8/§f{required}"
   grace_eject: "§e传送倒计时 §f{seconds}s"
-
-# ============================================================
-# 声音
-# ============================================================
-# 这些是配置项，不是翻译
-# sounds:
-#   level_up: ENTITY_PLAYER_LEVELUP
-#   countdown_tick: BLOCK_NOTE_BLOCK_PLING
-#   teleport: ENTITY_ENDERMAN_TELEPORT
-#   death: ENTITY_WITHER_DEATH
-#   coin: ENTITY_EXPERIENCE_ORB_PICKUP
+  # Reward display format - individual formats and separator
+  reward_xp: "§a+{amount} §fXP"
+  reward_coins: "§e+{amount} §f金币"
+  reward_perma: "§d+{amount} §f积分"
+  reward_separator: " §8|§r "

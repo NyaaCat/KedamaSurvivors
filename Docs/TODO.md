@@ -465,6 +465,34 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 
 ---
 
+## Feature Additions
+
+### Action Bar Rewards & Stacking
+- [x] Add action bar reward display mode with stacking
+  - New `feedback.rewards.displayMode` config: `ACTIONBAR` (default) or `CHAT`
+  - Stacking aggregates consecutive rewards within configurable timeout (default 3s)
+  - Action bar shows combined totals: "+50 XP | +5 coins | +1 score"
+  - CHAT mode preserves legacy behavior (individual messages, no stacking)
+  - Files modified: `config.yml`, `zh_CN.yml`, `ConfigService.java`, `RewardService.java`
+  - Files created: `ActionBarRewardService.java`
+
+### Upgrade Reminder Display Modes
+- [x] Add scoreboard upgrade reminder option
+  - New `feedback.upgradeReminder.displayMode` config: `CHAT` (default) or `SCOREBOARD`
+  - SCOREBOARD mode shows flashing ">>> Upgrade Available <<<" line
+  - Configurable flash interval via `flashIntervalTicks`
+  - Files modified: `config.yml`, `zh_CN.yml`, `ConfigService.java`, `ScoreboardService.java`, `UpgradeReminderTask.java`, `UpgradeService.java`
+
+### Configurable Sound Effects
+- [x] Add configurable sound effects for game events
+  - Sound format: `"minecraft:sound.path volume pitch"` (empty to disable)
+  - Reward sounds: `xpGained`, `coinGained`, `permaScoreGained`, `killReward`
+  - Upgrade sounds: `upgradeAvailable`, `upgradeSelected`
+  - Game event sounds: `countdownTick`, `teleport`, `death`, `runStart`
+  - Files modified: `config.yml`, `ConfigService.java`, `ActionBarRewardService.java`, `UpgradeService.java`
+
+---
+
 ## Notes
 
 - All Bukkit API calls must be on main thread

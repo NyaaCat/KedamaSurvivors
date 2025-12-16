@@ -10,6 +10,7 @@ import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.StateService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
 
 import java.util.*;
@@ -37,6 +38,10 @@ public class ScoreboardService {
 
     // Cached player balances (updated on main thread before async scoreboard build)
     private final Map<UUID, Integer> cachedBalances = new ConcurrentHashMap<>();
+
+    // Upgrade reminder state per player (for SCOREBOARD mode)
+    private final Map<UUID, Boolean> upgradeReminderFlashState = new ConcurrentHashMap<>();
+    private final Map<UUID, BukkitTask> upgradeReminderFlashTasks = new ConcurrentHashMap<>();
 
     // Async executor for building scoreboard lines
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -83,6 +88,13 @@ public class ScoreboardService {
 
         // Shutdown async executor
         asyncExecutor.shutdown();
+
+        // Cancel all upgrade reminder flash tasks
+        for (BukkitTask task : upgradeReminderFlashTasks.values()) {
+            task.cancel();
+        }
+        upgradeReminderFlashTasks.clear();
+        upgradeReminderFlashState.clear();
 
         // Clear all player scoreboards
         for (UUID playerId : playerScoreboards.keySet()) {
@@ -258,6 +270,15 @@ public class ScoreboardService {
                 if (remainingSeconds > 0) {
                     lines.put(score--, i18n.get("scoreboard.upgrade_countdown", "seconds", remainingSeconds));
                 }
+
+                // Add flashing upgrade reminder line (SCOREBOARD mode only)
+                if ("SCOREBOARD".equals(config.getUpgradeReminderDisplayMode())) {
+                    Boolean flashState = upgradeReminderFlashState.get(playerId);
+                    if (flashState != null) {
+                        String key = flashState ? "scoreboard.upgrade_reminder" : "scoreboard.upgrade_reminder_alt";
+                        lines.put(score--, i18n.get(key));
+                    }
+                }
             }
 
             // Coins: Total (+current run)
@@ -422,5 +443,56 @@ public class ScoreboardService {
      */
     public boolean hasSidebar(UUID playerId) {
         return playerScoreboards.containsKey(playerId);
+    }
+
+    /**
+     * Shows the upgrade reminder line on the scoreboard (for SCOREBOARD mode).
+     * Starts the flash task that alternates between two text variants.
+     */
+    public void showUpgradeReminder(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        // Only in SCOREBOARD mode
+        if (!"SCOREBOARD".equals(config.getUpgradeReminderDisplayMode())) return;
+
+        // Cancel existing flash task if any
+        BukkitTask existing = upgradeReminderFlashTasks.remove(playerId);
+        if (existing != null) {
+            existing.cancel();
+        }
+
+        // Start flash task
+        upgradeReminderFlashState.put(playerId, true);
+        int interval = config.getUpgradeReminderFlashIntervalTicks();
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            Boolean current = upgradeReminderFlashState.get(playerId);
+            if (current == null) return;
+            upgradeReminderFlashState.put(playerId, !current);
+            Player p = Bukkit.getPlayer(playerId);
+            if (p != null && p.isOnline()) {
+                updatePlayerSidebar(p);
+            }
+        }, interval, interval);
+        upgradeReminderFlashTasks.put(playerId, task);
+
+        // Trigger immediate update
+        updatePlayerSidebar(player);
+    }
+
+    /**
+     * Hides the upgrade reminder line on the scoreboard.
+     * Stops the flash task and removes the reminder state.
+     */
+    public void hideUpgradeReminder(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        BukkitTask task = upgradeReminderFlashTasks.remove(playerId);
+        if (task != null) {
+            task.cancel();
+        }
+        upgradeReminderFlashState.remove(playerId);
+
+        // Trigger update to remove the line
+        updatePlayerSidebar(player);
     }
 }
