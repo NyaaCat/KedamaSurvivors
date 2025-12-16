@@ -521,6 +521,17 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `RewardService.java`
   - Tests added: `RewardServiceTest.java` (XP Overflow Logic tests)
 
+### Damage Contribution XP Rewards
+- [x] Add multi-player damage contribution XP sharing system
+  - When multiple players deal damage to a mob, all contributors receive a share of XP upon mob death
+  - Configurable share percentage (default 10%) via `rewards.damageContribution.sharePercent`
+  - Works independently of proximity-based XP sharing (both can stack)
+  - Damage tracked in-memory per mob (transient, not stored in mob tags)
+  - Killer gets full rewards; other contributors get share percentage
+  - Only XP is shared (coins and perma-score are not affected)
+  - Files created: `DamageContributionService.java`, `DamageContributionServiceTest.java`
+  - Files modified: `RewardService.java`, `CombatListener.java`, `ConfigService.java`, `KedamaSurvivorsPlugin.java`, `ConfigSubCommand.java`, `config.yml`
+
 ---
 
 ## Notes

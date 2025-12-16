@@ -11,6 +11,7 @@ import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.listener.SpawnListener;
 import cat.nyaa.survivors.scoreboard.ScoreboardService;
 import cat.nyaa.survivors.service.AdminConfigService;
+import cat.nyaa.survivors.service.DamageContributionService;
 import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.PersistenceService;
 import cat.nyaa.survivors.service.ReadyService;
@@ -66,6 +67,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private MerchantService merchantService;
     private PersistenceService persistenceService;
     private StatsService statsService;
+    private DamageContributionService damageContributionService;
     private CommandQueue commandQueue;
 
     @Override
@@ -128,6 +130,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Stats service for player statistics (must be after stateService)
         statsService = new StatsService(this);
+
+        // Damage contribution service for tracking mob damage per player
+        damageContributionService = new DamageContributionService(this);
 
         // Scoreboard service for sidebar display
         scoreboardService = new ScoreboardService(this);
@@ -281,6 +286,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
             actionBarRewardService.stop();
         }
 
+        // Clear damage contribution tracking
+        if (damageContributionService != null) {
+            damageContributionService.clearAll();
+        }
+
         // Shutdown join switch service
         if (joinSwitchService != null) {
             joinSwitchService.shutdown();
@@ -410,5 +420,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public StatsService getStatsService() {
         return statsService;
+    }
+
+    public DamageContributionService getDamageContributionService() {
+        return damageContributionService;
     }
 }

@@ -17,7 +17,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Collection;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -40,6 +45,7 @@ public class RewardService {
 
     /**
      * Processes rewards for killing a VRS mob.
+     * Backward-compatible overload without mobId.
      *
      * @param killer      The player who got the kill
      * @param archetypeId The archetype of the killed mob
@@ -47,6 +53,20 @@ public class RewardService {
      * @param deathLoc    Where the mob died (for nearby sharing)
      */
     public void processKillReward(Player killer, String archetypeId, int enemyLevel, Location deathLoc) {
+        processKillReward(killer, archetypeId, enemyLevel, deathLoc, null);
+    }
+
+    /**
+     * Processes rewards for killing a VRS mob.
+     *
+     * @param killer      The player who got the kill
+     * @param archetypeId The archetype of the killed mob
+     * @param enemyLevel  The level of the killed mob
+     * @param deathLoc    Where the mob died (for nearby sharing)
+     * @param mobId       The UUID of the killed mob (for damage contribution tracking)
+     */
+    public void processKillReward(Player killer, String archetypeId, int enemyLevel,
+                                   Location deathLoc, UUID mobId) {
         Optional<PlayerState> killerStateOpt = state.getPlayer(killer.getUniqueId());
         if (killerStateOpt.isEmpty()) return;
 
@@ -73,7 +93,12 @@ public class RewardService {
             plugin.getLogger().info("Kill reward: archetype=" + archetypeId + " xp=" + xpReward + " coins=" + coinReward);
         }
 
-        // Award XP to killer (only if rolled)
+        // 1. Process damage contribution rewards FIRST (excludes killer)
+        if (config.isDamageContributionEnabled() && xpReward > 0 && mobId != null) {
+            processContributorRewards(killer, xpReward, mobId);
+        }
+
+        // 2. Award XP to killer (only if rolled)
         if (xpReward > 0) {
             awardXp(killer, killerState, xpReward, false);
         }
@@ -88,7 +113,7 @@ public class RewardService {
             awardPermaScore(killer, killerState, permaScoreReward);
         }
 
-        // Share XP with nearby players (only if XP was awarded)
+        // 3. Share XP with nearby players (existing proximity-based sharing)
         if (config.isXpShareEnabled() && xpReward > 0) {
             shareXpWithNearby(killer, killerState, xpReward, deathLoc);
         }
@@ -114,6 +139,64 @@ public class RewardService {
                 actionBar.addKill(killer);
             }
         }
+    }
+
+    /**
+     * Awards XP to all players who contributed damage to a mob.
+     * The killer is excluded (they get full rewards separately).
+     * Only XP is shared, not coins or perma-score.
+     * This works independently of the proximity-based xpShare system.
+     *
+     * @param killer   The player who killed the mob (excluded from contribution rewards)
+     * @param baseXp   The base XP reward of the mob
+     * @param mobId    The UUID of the killed mob
+     */
+    private void processContributorRewards(Player killer, int baseXp, UUID mobId) {
+        DamageContributionService contributionService = plugin.getDamageContributionService();
+        if (contributionService == null) return;
+
+        Map<UUID, Double> contributors = contributionService.getContributors(mobId);
+        if (contributors.isEmpty()) {
+            return;
+        }
+
+        double sharePercent = config.getDamageContributionPercent();
+        int sharedXp = (int) (baseXp * sharePercent);
+
+        // Only award if at least 1 XP
+        if (sharedXp <= 0) {
+            contributionService.clearMob(mobId);
+            return;
+        }
+
+        UUID killerId = killer.getUniqueId();
+
+        for (UUID contributorId : contributors.keySet()) {
+            // Skip the killer - they get full rewards
+            if (contributorId.equals(killerId)) continue;
+
+            // Get the contributor player
+            Player contributor = Bukkit.getPlayer(contributorId);
+            if (contributor == null || !contributor.isOnline()) continue;
+
+            // Check if contributor is in an active run
+            Optional<PlayerState> contributorStateOpt = state.getPlayer(contributorId);
+            if (contributorStateOpt.isEmpty()) continue;
+
+            PlayerState contributorState = contributorStateOpt.get();
+            if (contributorState.getMode() != PlayerMode.IN_RUN) continue;
+
+            // Award the contribution XP (marked as shared for notification purposes)
+            awardXp(contributor, contributorState, sharedXp, true);
+
+            if (config.isVerbose()) {
+                plugin.getLogger().info("Damage contribution XP: " + contributor.getName() +
+                        " received " + sharedXp + " XP for damaging mob " + mobId);
+            }
+        }
+
+        // Clean up tracking for this mob
+        contributionService.clearMob(mobId);
     }
 
     /**

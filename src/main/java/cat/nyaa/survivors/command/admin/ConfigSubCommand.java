@@ -58,6 +58,8 @@ public class ConfigSubCommand implements SubCommand {
                 entry("xpShareEnabled", new BooleanProperty(config::isXpShareEnabled, config::setXpShareEnabled)),
                 entry("xpShareRadius", new DoubleProperty(config::getXpShareRadius, config::setXpShareRadius)),
                 entry("xpSharePercent", new DoubleProperty(config::getXpSharePercent, config::setXpSharePercent)),
+                entry("damageContributionEnabled", new BooleanProperty(config::isDamageContributionEnabled, config::setDamageContributionEnabled)),
+                entry("damageContributionPercent", new DoubleProperty(config::getDamageContributionPercent, config::setDamageContributionPercent)),
                 entry("overflowEnabled", new BooleanProperty(config::isOverflowEnabled, config::setOverflowEnabled)),
                 entry("overflowXpPerPermaScore", new IntProperty(config::getOverflowXpPerPermaScore, config::setOverflowXpPerPermaScore)),
                 entry("overflowNotifyPlayer", new BooleanProperty(config::isOverflowNotifyPlayer, config::setOverflowNotifyPlayer)),
@@ -227,6 +229,7 @@ public class ConfigSubCommand implements SubCommand {
         categories.put("timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"));
         categories.put("spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "maxSpawnsPerTick"));
         categories.put("rewards", List.of("xpShareEnabled", "xpShareRadius", "xpSharePercent",
+                "damageContributionEnabled", "damageContributionPercent",
                 "overflowEnabled", "overflowXpPerPermaScore", "overflowNotifyPlayer",
                 "maxLevelPermaScoreReward", "permaScoreDisplayName"));
         categories.put("progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"));

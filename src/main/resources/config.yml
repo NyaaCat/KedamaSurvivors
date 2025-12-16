@@ -189,10 +189,17 @@ spawning:
 # Rewards
 # ============================================================
 rewards:
+  # Proximity-based XP sharing: players nearby the death location receive XP
   xpShare:
     enabled: true
     radius: 20.0
     sharePercent: 0.25
+
+  # Damage contribution XP sharing: players who damaged the mob receive XP
+  # Works independently of xpShare - players can receive from both systems
+  damageContribution:
+    enabled: true
+    sharePercent: 0.10  # 10% of base XP to each contributor
 
   coin:
     material: EMERALD

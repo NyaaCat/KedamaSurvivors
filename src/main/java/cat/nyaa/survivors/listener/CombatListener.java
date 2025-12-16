@@ -5,6 +5,7 @@ import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
+import cat.nyaa.survivors.service.DamageContributionService;
 import cat.nyaa.survivors.service.RewardService;
 import cat.nyaa.survivors.service.StateService;
 import cat.nyaa.survivors.service.StatsService;
@@ -90,6 +91,9 @@ public class CombatListener implements Listener {
 
         // Track damage stats for players in run
         trackDamageStats(event, damager, playerState);
+
+        // Track damage contribution for XP rewards on mob death
+        trackDamageContribution(event, damager, playerState);
     }
 
     /**
@@ -113,6 +117,28 @@ public class CombatListener implements Listener {
             if (victimStateOpt.isPresent() && victimStateOpt.get().getMode() == PlayerMode.IN_RUN) {
                 statsService.recordDamageTaken(victim.getUniqueId(), damage);
             }
+        }
+    }
+
+    /**
+     * Tracks damage contribution to VRS mobs for XP rewards.
+     * When a mob dies, all players who contributed damage receive a share of XP.
+     */
+    private void trackDamageContribution(EntityDamageByEntityEvent event, Player damager, PlayerState damagerState) {
+        if (!config.isDamageContributionEnabled()) return;
+        if (damagerState.getMode() != PlayerMode.IN_RUN) return;
+        if (!isVrsMob(event.getEntity())) return;
+
+        double damage = event.getFinalDamage();
+        if (damage <= 0) return;
+
+        DamageContributionService contributionService = plugin.getDamageContributionService();
+        if (contributionService != null) {
+            contributionService.recordDamage(
+                    event.getEntity().getUniqueId(),
+                    damager.getUniqueId(),
+                    damage
+            );
         }
     }
 
@@ -152,10 +178,11 @@ public class CombatListener implements Listener {
             return;
         }
 
-        // Get reward service and process rewards
+        // Get reward service and process rewards (including damage contribution XP)
         RewardService rewardService = plugin.getRewardService();
         if (rewardService != null) {
-            rewardService.processKillReward(killer, archetypeId, enemyLevel, entity.getLocation());
+            rewardService.processKillReward(killer, archetypeId, enemyLevel,
+                    entity.getLocation(), entity.getUniqueId());
         }
 
         // Clear drops - rewards are direct to inventory

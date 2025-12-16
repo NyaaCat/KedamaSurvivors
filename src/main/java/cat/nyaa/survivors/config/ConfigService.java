@@ -99,6 +99,8 @@ public class ConfigService {
     private boolean xpShareEnabled;
     private double xpShareRadius;
     private double xpSharePercent;
+    private boolean damageContributionEnabled;
+    private double damageContributionPercent;
     private Material coinMaterial;
     private int coinCustomModelData;
     private String coinDisplayName;
@@ -334,6 +336,9 @@ public class ConfigService {
         xpShareEnabled = config.getBoolean("rewards.xpShare.enabled", true);
         xpShareRadius = config.getDouble("rewards.xpShare.radius", 20.0);
         xpSharePercent = config.getDouble("rewards.xpShare.sharePercent", 0.25);
+
+        damageContributionEnabled = config.getBoolean("rewards.damageContribution.enabled", true);
+        damageContributionPercent = config.getDouble("rewards.damageContribution.sharePercent", 0.10);
 
         coinMaterial = parseMaterial(config.getString("economy.coin.material", "EMERALD"));
         coinCustomModelData = config.getInt("economy.coin.customModelData", 0);
@@ -699,6 +704,8 @@ public class ConfigService {
     public boolean isXpShareEnabled() { return xpShareEnabled; }
     public double getXpShareRadius() { return xpShareRadius; }
     public double getXpSharePercent() { return xpSharePercent; }
+    public boolean isDamageContributionEnabled() { return damageContributionEnabled; }
+    public double getDamageContributionPercent() { return damageContributionPercent; }
     public Material getCoinMaterial() { return coinMaterial; }
     public int getCoinCustomModelData() { return coinCustomModelData; }
     public String getCoinDisplayName() { return coinDisplayName; }
@@ -897,6 +904,8 @@ public class ConfigService {
     public void setXpShareEnabled(boolean enabled) { this.xpShareEnabled = enabled; }
     public void setXpShareRadius(double radius) { this.xpShareRadius = radius; }
     public void setXpSharePercent(double percent) { this.xpSharePercent = percent; }
+    public void setDamageContributionEnabled(boolean enabled) { this.damageContributionEnabled = enabled; }
+    public void setDamageContributionPercent(double percent) { this.damageContributionPercent = percent; }
     public void setOverflowEnabled(boolean enabled) { this.overflowEnabled = enabled; }
     public void setOverflowXpPerPermaScore(int xp) { this.overflowXpPerPermaScore = xp; }
     public void setOverflowNotifyPlayer(boolean notify) { this.overflowNotifyPlayer = notify; }
@@ -1000,6 +1009,8 @@ public class ConfigService {
         config.set("rewards.xpShare.enabled", xpShareEnabled);
         config.set("rewards.xpShare.radius", xpShareRadius);
         config.set("rewards.xpShare.sharePercent", xpSharePercent);
+        config.set("rewards.damageContribution.enabled", damageContributionEnabled);
+        config.set("rewards.damageContribution.sharePercent", damageContributionPercent);
         config.set("progression.overflow.enabled", overflowEnabled);
         config.set("progression.overflow.xpPerPermaScore", overflowXpPerPermaScore);
         config.set("progression.overflow.notifyPlayer", overflowNotifyPlayer);
