@@ -8,6 +8,7 @@ import cat.nyaa.survivors.service.AdminConfigService;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +54,7 @@ public class SpawnerSubCommand implements SubCommand {
         i18n.send(sender, "admin.spawner.help.archetype_set_weight");
         i18n.send(sender, "admin.spawner.help.archetype_set_entitytype");
         i18n.send(sender, "admin.spawner.help.archetype_set_minspawnlevel");
+        i18n.send(sender, "admin.spawner.help.archetype_set_worlds");
     }
 
     // ==================== Archetype Commands ====================
@@ -126,6 +128,26 @@ public class SpawnerSubCommand implements SubCommand {
                     }
                 } catch (NumberFormatException e) {
                     i18n.send(sender, "admin.spawner.invalid_level");
+                }
+            }
+            case "worlds" -> {
+                // Parse comma-separated world list or "any"
+                String worldsArg = args[4];
+                List<String> worlds;
+                if ("any".equalsIgnoreCase(worldsArg)) {
+                    worlds = List.of("any");
+                } else {
+                    worlds = Arrays.stream(worldsArg.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .toList();
+                    if (worlds.isEmpty()) {
+                        worlds = List.of("any");
+                    }
+                }
+                boolean success = adminConfig.setArchetypeAllowedWorlds(id, worlds);
+                if (success) {
+                    i18n.send(sender, "admin.spawner.worlds_set", "id", id, "worlds", String.join(", ", worlds));
                 }
             }
             default -> showHelp(sender);
@@ -204,12 +226,14 @@ public class SpawnerSubCommand implements SubCommand {
 
         for (EnemyArchetypeConfig config : archetypes) {
             int cmdCount = config.spawnCommands != null ? config.spawnCommands.size() : 0;
+            String worlds = config.allowedWorlds != null ? String.join(",", config.allowedWorlds) : "any";
             i18n.send(sender, "admin.spawner.archetype_list_entry",
                     "id", config.archetypeId,
                     "entityType", config.enemyType,
                     "weight", config.weight,
                     "minLevel", config.minSpawnLevel,
-                    "cmdCount", cmdCount);
+                    "cmdCount", cmdCount,
+                    "worlds", worlds);
         }
     }
 
@@ -323,7 +347,7 @@ public class SpawnerSubCommand implements SubCommand {
 
             if (subAction.equals("set")) {
                 // Property names for set
-                for (String prop : List.of("weight", "entitytype", "minspawnlevel")) {
+                for (String prop : List.of("weight", "entitytype", "minspawnlevel", "worlds")) {
                     if (prop.startsWith(partial)) {
                         completions.add(prop);
                     }
@@ -377,6 +401,16 @@ public class SpawnerSubCommand implements SubCommand {
                 for (String entity : List.of("zombie", "skeleton", "spider", "creeper", "enderman", "witch", "phantom", "blaze", "wither_skeleton")) {
                     if (entity.startsWith(partial)) {
                         completions.add(entity);
+                    }
+                }
+            } else if (subAction.equals("set") && property.equals("worlds")) {
+                // Suggest "any" and configured combat world names
+                if ("any".startsWith(partial)) {
+                    completions.add("any");
+                }
+                for (var worldConfig : plugin.getConfigService().getCombatWorlds()) {
+                    if (worldConfig.name.toLowerCase().startsWith(partial)) {
+                        completions.add(worldConfig.name);
                     }
                 }
             }

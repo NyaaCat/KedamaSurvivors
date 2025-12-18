@@ -493,6 +493,28 @@ public class AdminConfigService {
         return true;
     }
 
+    /**
+     * Sets the allowed worlds for an archetype.
+     * @param id the archetype ID
+     * @param worlds list of world names, or a list containing "any" for all worlds
+     * @return true if successful, false if archetype not found
+     */
+    public boolean setArchetypeAllowedWorlds(String id, List<String> worlds) {
+        EnemyArchetypeConfig config = archetypes.get(id);
+        if (config == null) {
+            return false;
+        }
+
+        if (worlds == null || worlds.isEmpty()) {
+            config.allowedWorlds = List.of("any");
+        } else {
+            config.allowedWorlds = new ArrayList<>(worlds);
+        }
+        saveArchetypes();
+        updateConfigService();
+        return true;
+    }
+
     // ==================== Persistence ====================
 
     /**
@@ -681,6 +703,14 @@ public class AdminConfigService {
             // Load minSpawnLevel (level gating)
             config.minSpawnLevel = section.getInt("minSpawnLevel", 1);
 
+            // Load allowedWorlds (world restriction)
+            List<String> worldList = section.getStringList("allowedWorlds");
+            if (worldList.isEmpty()) {
+                config.allowedWorlds = List.of("any"); // Default: spawn in any world
+            } else {
+                config.allowedWorlds = new ArrayList<>(worldList);
+            }
+
             ConfigurationSection rewards = section.getConfigurationSection("rewards");
             if (rewards != null) {
                 // Check for new format (xpAmount) vs legacy format (xpBase)
@@ -729,6 +759,9 @@ public class AdminConfigService {
             Use in-game commands: /vrs admin spawner ...
 
             minSpawnLevel: Minimum enemy level required to spawn this archetype
+            allowedWorlds: List of combat world names where this archetype can spawn
+              - Use "any" to allow spawning in all combat worlds (default)
+              - Use specific world names to restrict spawning
             Rewards use chance-based fixed values (no level scaling):
               xpAmount + xpChance, coinAmount + coinChance, permaScoreAmount + permaScoreChance
             """);
@@ -738,6 +771,7 @@ public class AdminConfigService {
             yaml.set(id + ".entityType", config.enemyType);
             yaml.set(id + ".weight", config.weight);
             yaml.set(id + ".minSpawnLevel", config.minSpawnLevel);
+            yaml.set(id + ".allowedWorlds", config.allowedWorlds);
             yaml.set(id + ".spawnCommands", config.spawnCommands);
             yaml.set(id + ".rewards.xpAmount", config.xpAmount);
             yaml.set(id + ".rewards.xpChance", config.xpChance);

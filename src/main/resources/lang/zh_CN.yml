@@ -579,6 +579,7 @@ admin:
       archetype_set_weight: "§f/vrs admin spawner archetype set weight <id> <weight> §8- §7设置权重"
       archetype_set_entitytype: "§f/vrs admin spawner archetype set entitytype <id> <entityType> §8- §7设置实体类型"
       archetype_set_minspawnlevel: "§f/vrs admin spawner archetype set minspawnlevel <id> <level> §8- §7设置最低生成等级"
+      archetype_set_worlds: "§f/vrs admin spawner archetype set worlds <id> <world1,world2,...|any> §8- §7设置允许生成的世界"
     invalid_weight: "§c无效的权重，必须大于0"
     invalid_level: "§c无效的等级，必须大于等于1"
     invalid_chance: "§c无效的概率，必须在0到1之间"
@@ -588,7 +589,7 @@ admin:
     archetype_not_found: "§c找不到原型 §f{id}"
     archetype_list_header: "§8========== §6敌人原型列表 §8=========="
     archetype_list_empty: "§7无原型"
-    archetype_list_entry: "§7- §f{id} §8(§7{entityType}§8) §7权重: §f{weight} §7最低等级: §f{minLevel} §7命令: §f{cmdCount}"
+    archetype_list_entry: "§7- §f{id} §8(§7{entityType}§8) §7权重: §f{weight} §7最低等级: §f{minLevel} §7世界: §f{worlds} §7命令: §f{cmdCount}"
     command_added: "§a已向原型 §f{id} §a添加生成命令"
     command_removed: "§a已从原型 §f{id} §a移除命令 §f#{index}"
     command_invalid_index: "§c无效的命令索引 §f{index}"
@@ -597,6 +598,7 @@ admin:
     weight_set: "§a原型 §f{id} §a权重已设置为: §f{weight}"
     entitytype_set: "§a原型 §f{id} §a实体类型已设置为: §f{entityType}"
     minspawnlevel_set: "§a原型 §f{id} §a最低生成等级已设置为: §f{level}"
+    worlds_set: "§a原型 §f{id} §a允许生成的世界已设置为: §f{worlds}"
 
   # 初始装备管理
   starter:

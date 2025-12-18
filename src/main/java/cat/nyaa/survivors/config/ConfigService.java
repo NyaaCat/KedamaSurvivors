@@ -1202,6 +1202,10 @@ public class ConfigService {
         // Level gating - archetype only spawns when enemy level >= minSpawnLevel
         public int minSpawnLevel = 1;
 
+        // World restriction - limits which combat worlds this archetype can spawn in
+        // "any" means spawn in any combat world (default behavior)
+        public List<String> allowedWorlds = List.of("any");
+
         // Chance-based fixed rewards (no level scaling)
         public int xpAmount = 10;
         public double xpChance = 1.0;        // 0-1, probability to award XP
@@ -1209,6 +1213,26 @@ public class ConfigService {
         public double coinChance = 1.0;      // 0-1, probability to award coins
         public int permaScoreAmount = 1;
         public double permaScoreChance = 0.01; // 0-1, probability to award perma score
+
+        /**
+         * Checks if this archetype is allowed to spawn in the given world.
+         * @param worldName the world name to check
+         * @return true if the archetype can spawn in this world
+         */
+        public boolean isAllowedInWorld(String worldName) {
+            if (allowedWorlds == null || allowedWorlds.isEmpty()) {
+                return true; // Empty list means any world (backward compatibility)
+            }
+            for (String allowed : allowedWorlds) {
+                if ("any".equalsIgnoreCase(allowed)) {
+                    return true;
+                }
+                if (allowed.equalsIgnoreCase(worldName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     /**

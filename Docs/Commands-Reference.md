@@ -758,6 +758,7 @@ Manages enemy archetypes.
 /vrs admin spawner archetype set weight <id> <weight>
 /vrs admin spawner archetype set entitytype <id> <entityType>
 /vrs admin spawner archetype set minspawnlevel <id> <level>
+/vrs admin spawner archetype set worlds <id> <world1,world2,...|any>
 /vrs admin spawner archetype reward <id> <xpAmount> <xpChance> <coinAmount> <coinChance> <permaAmount> <permaChance>
 ```
 
@@ -769,6 +770,7 @@ Manages enemy archetypes.
 | `set weight <id> <weight>` | Set spawn weight (selection probability) |
 | `set entitytype <id> <type>` | Set entity type |
 | `set minspawnlevel <id> <level>` | Set minimum enemy level required to spawn |
+| `set worlds <id> <worlds>` | Set allowed combat worlds (comma-separated list or "any") |
 
 **Reward Command Arguments:**
 | Argument | Description |
@@ -790,6 +792,12 @@ Manages enemy archetypes.
 
 # Set minimum spawn level (only spawns at enemy level 5+)
 /vrs admin spawner archetype set minspawnlevel skeleton 5
+
+# Restrict archetype to specific worlds (comma-separated)
+/vrs admin spawner archetype set worlds wither_skeleton arena_nether,arena_hell
+
+# Allow archetype in all combat worlds
+/vrs admin spawner archetype set worlds zombie any
 
 # Set rewards (xpAmount xpChance coinAmount coinChance permaAmount permaChance)
 /vrs admin spawner archetype reward zombie 10 1.0 1 1.0 1 0.01

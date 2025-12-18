@@ -281,10 +281,10 @@ public class SpawnerService {
             int enemyLevel = calculateEnemyLevel(ctx);
 
             for (int i = 0; i < toSpawn; i++) {
-                // Select archetype based on current level (level-gated selection)
-                EnemyArchetypeConfig archetype = selectArchetype(enemyLevel);
+                // Select archetype based on current level and world (level + world gated selection)
+                EnemyArchetypeConfig archetype = selectArchetype(enemyLevel, ctx.worldName());
                 if (archetype == null) {
-                    // No archetypes available at this level - stop trying
+                    // No archetypes available at this level/world - stop trying
                     break;
                 }
 
@@ -379,23 +379,25 @@ public class SpawnerService {
 
     /**
      * Selects a random archetype using weighted selection.
-     * Only includes archetypes where minSpawnLevel <= currentLevel.
+     * Only includes archetypes where minSpawnLevel <= currentLevel and the world is allowed.
      *
      * @param currentLevel The calculated enemy level for this spawn
-     * @return Selected archetype, or null if no archetypes available at this level
+     * @param worldName The world name where the mob will spawn
+     * @return Selected archetype, or null if no archetypes available
      */
-    private EnemyArchetypeConfig selectArchetype(int currentLevel) {
+    private EnemyArchetypeConfig selectArchetype(int currentLevel, String worldName) {
         Map<String, EnemyArchetypeConfig> allArchetypes = config.getEnemyArchetypes();
         if (allArchetypes.isEmpty()) return null;
 
-        // Filter archetypes by minSpawnLevel
+        // Filter archetypes by minSpawnLevel and allowed worlds
         List<EnemyArchetypeConfig> eligible = allArchetypes.values().stream()
                 .filter(a -> a.minSpawnLevel <= currentLevel)
+                .filter(a -> a.isAllowedInWorld(worldName))
                 .toList();
 
         if (eligible.isEmpty()) {
             if (config.isVerbose()) {
-                plugin.getLogger().fine("No archetypes available at level " + currentLevel);
+                plugin.getLogger().fine("No archetypes available at level " + currentLevel + " in world " + worldName);
             }
             return null;
         }

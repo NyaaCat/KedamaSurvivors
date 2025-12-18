@@ -7,6 +7,8 @@
 #     enemyType: "minecraft:entity_type"
 #     weight: 1.0
 #     minSpawnLevel: 1           # Minimum enemy level required to spawn this archetype
+#     allowedWorlds:             # List of combat world names where this archetype can spawn
+#       - "any"                  # Use "any" to allow spawning in all combat worlds (default)
 #     spawnCommands:
 #       - "command with {placeholders}"
 #     rewards:
@@ -32,16 +34,25 @@
 #   Only archetypes where minSpawnLevel <= currentEnemyLevel are considered.
 #   The weighted pool is dynamically recalculated from eligible archetypes only.
 #
+# World Restriction:
+#   allowedWorlds controls which combat worlds an archetype can spawn in.
+#   - Use "any" (default) to allow spawning in all combat worlds
+#   - Use specific world names to restrict spawning to those worlds only
+#   - World name matching is case-insensitive
+#   Example: Nether-themed mobs can be restricted to nether-style arenas
+#
 # Reward System:
 #   Each reward type (XP, coins, perma-score) is rolled independently:
 #   - Roll random(0,1) < chance => award the fixed amount
 #   - No level scaling - rewards are fixed values with probability
 #
 # Example progression setup:
-#   zombie:                       # Common, available from start
+#   zombie:                       # Common, available from start, spawns anywhere
 #     enemyType: "minecraft:zombie"
 #     weight: 3.0
 #     minSpawnLevel: 1
+#     allowedWorlds:
+#       - "any"
 #     spawnCommands:
 #       - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
 #     rewards:
@@ -52,10 +63,12 @@
 #       permaScoreAmount: 1
 #       permaScoreChance: 0.01
 #
-#   skeleton:                     # Appears at level 5+
+#   skeleton:                     # Appears at level 5+, spawns anywhere
 #     enemyType: "minecraft:skeleton"
 #     weight: 2.0
 #     minSpawnLevel: 5
+#     allowedWorlds:
+#       - "any"
 #     spawnCommands:
 #       - "summon skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
 #     rewards:
@@ -66,10 +79,13 @@
 #       permaScoreAmount: 1
 #       permaScoreChance: 0.02
 #
-#   wither_skeleton:              # Rare, appears at level 15+
+#   wither_skeleton:              # Rare, level 15+, only in nether-style worlds
 #     enemyType: "minecraft:wither_skeleton"
 #     weight: 1.0
 #     minSpawnLevel: 15
+#     allowedWorlds:
+#       - "arena_nether"
+#       - "arena_hell"
 #     spawnCommands:
 #       - "summon wither_skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
 #     rewards:

@@ -649,6 +649,8 @@ spawning:
       enemyType: "minecraft:zombie"
       weight: 3.0
       minSpawnLevel: 1  # Available from start
+      allowedWorlds:    # Which combat worlds this archetype can spawn in
+        - "any"         # "any" = all combat worlds (default)
       spawnCommands:
         - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
       rewards:
@@ -663,6 +665,8 @@ spawning:
       enemyType: "minecraft:skeleton"
       weight: 2.0
       minSpawnLevel: 5  # Only spawns at enemy level 5+
+      allowedWorlds:
+        - "any"
       spawnCommands:
         - "summon skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
       rewards:
@@ -677,6 +681,8 @@ spawning:
       enemyType: "minecraft:spider"
       weight: 1.5
       minSpawnLevel: 1
+      allowedWorlds:
+        - "any"
       spawnCommands:
         - "summon spider {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
       rewards:
@@ -691,10 +697,29 @@ spawning:
       enemyType: "minecraft:creeper"
       weight: 0.5
       minSpawnLevel: 10  # Boss-tier, appears later
+      allowedWorlds:
+        - "any"
       spawnCommands:
         - "summon creeper {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"],ExplosionRadius:0}"
       rewards:
         xpAmount: 25
+        xpChance: 1.0
+        coinAmount: 5
+        coinChance: 1.0
+        permaScoreAmount: 2
+        permaScoreChance: 0.05
+
+    wither_skeleton:
+      enemyType: "minecraft:wither_skeleton"
+      weight: 1.0
+      minSpawnLevel: 15  # Rare, appears at level 15+
+      allowedWorlds:     # Only spawns in nether-themed worlds
+        - "arena_nether"
+        - "arena_hell"
+      spawnCommands:
+        - "summon wither_skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
+      rewards:
+        xpAmount: 30
         xpChance: 1.0
         coinAmount: 5
         coinChance: 1.0
@@ -714,6 +739,12 @@ spawning:
 ```
 
 **Level Gating:** The `minSpawnLevel` property controls when an archetype becomes available. Only archetypes where `minSpawnLevel <= currentEnemyLevel` are considered for spawning. The weighted pool is dynamically recalculated from eligible archetypes.
+
+**World Restriction:** The `allowedWorlds` property controls which combat worlds an archetype can spawn in:
+- Use `["any"]` (default) to allow spawning in all combat worlds
+- Use specific world names (e.g., `["arena_nether", "arena_hell"]`) to restrict spawning to those worlds only
+- World name matching is case-insensitive
+- Example: Nether-themed mobs like wither_skeleton can be restricted to nether-style arenas
 
 **Reward System:** Each reward type (XP, coins, perma-score) is rolled independently:
 - Roll `random(0,1) < chance` → award the fixed amount

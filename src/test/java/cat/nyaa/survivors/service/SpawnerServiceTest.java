@@ -519,4 +519,205 @@ class SpawnerServiceTest {
             assertEquals(20, spawnsExecuted);
         }
     }
+
+    @Nested
+    @DisplayName("Archetype World Filtering")
+    class ArchetypeWorldFiltering {
+
+        @Test
+        @DisplayName("should allow archetype when allowedWorlds contains 'any'")
+        void shouldAllowArchetypeWhenAnyWorld() {
+            EnemyArchetypeConfig config = new EnemyArchetypeConfig();
+            config.allowedWorlds = List.of("any");
+
+            assertTrue(config.isAllowedInWorld("arena_forest"));
+            assertTrue(config.isAllowedInWorld("arena_nether"));
+            assertTrue(config.isAllowedInWorld("any_world"));
+        }
+
+        @Test
+        @DisplayName("should allow archetype when world is in allowedWorlds list")
+        void shouldAllowArchetypeWhenWorldInList() {
+            EnemyArchetypeConfig config = new EnemyArchetypeConfig();
+            config.allowedWorlds = List.of("arena_forest", "arena_desert");
+
+            assertTrue(config.isAllowedInWorld("arena_forest"));
+            assertTrue(config.isAllowedInWorld("arena_desert"));
+        }
+
+        @Test
+        @DisplayName("should deny archetype when world is not in allowedWorlds list")
+        void shouldDenyArchetypeWhenWorldNotInList() {
+            EnemyArchetypeConfig config = new EnemyArchetypeConfig();
+            config.allowedWorlds = List.of("arena_forest", "arena_desert");
+
+            assertFalse(config.isAllowedInWorld("arena_nether"));
+            assertFalse(config.isAllowedInWorld("arena_hell"));
+        }
+
+        @Test
+        @DisplayName("should allow archetype when allowedWorlds is null (backward compatibility)")
+        void shouldAllowArchetypeWhenAllowedWorldsNull() {
+            EnemyArchetypeConfig config = new EnemyArchetypeConfig();
+            config.allowedWorlds = null;
+
+            assertTrue(config.isAllowedInWorld("arena_forest"));
+            assertTrue(config.isAllowedInWorld("any_world"));
+        }
+
+        @Test
+        @DisplayName("should allow archetype when allowedWorlds is empty (backward compatibility)")
+        void shouldAllowArchetypeWhenAllowedWorldsEmpty() {
+            EnemyArchetypeConfig config = new EnemyArchetypeConfig();
+            config.allowedWorlds = List.of();
+
+            assertTrue(config.isAllowedInWorld("arena_forest"));
+            assertTrue(config.isAllowedInWorld("any_world"));
+        }
+
+        @Test
+        @DisplayName("should handle case-insensitive world matching")
+        void shouldHandleCaseInsensitiveMatching() {
+            EnemyArchetypeConfig config = new EnemyArchetypeConfig();
+            config.allowedWorlds = List.of("Arena_Forest");
+
+            assertTrue(config.isAllowedInWorld("arena_forest"));
+            assertTrue(config.isAllowedInWorld("ARENA_FOREST"));
+            assertTrue(config.isAllowedInWorld("Arena_Forest"));
+        }
+
+        @Test
+        @DisplayName("should handle case-insensitive 'any' keyword")
+        void shouldHandleCaseInsensitiveAny() {
+            EnemyArchetypeConfig config1 = new EnemyArchetypeConfig();
+            config1.allowedWorlds = List.of("ANY");
+
+            EnemyArchetypeConfig config2 = new EnemyArchetypeConfig();
+            config2.allowedWorlds = List.of("Any");
+
+            assertTrue(config1.isAllowedInWorld("test_world"));
+            assertTrue(config2.isAllowedInWorld("test_world"));
+        }
+
+        @Test
+        @DisplayName("should filter archetypes by both level and world")
+        void shouldFilterByBothLevelAndWorld() {
+            // Simulate archetype selection logic
+            EnemyArchetypeConfig zombie = new EnemyArchetypeConfig();
+            zombie.archetypeId = "zombie";
+            zombie.minSpawnLevel = 1;
+            zombie.allowedWorlds = List.of("any");
+            zombie.weight = 1.0;
+
+            EnemyArchetypeConfig witherSkeleton = new EnemyArchetypeConfig();
+            witherSkeleton.archetypeId = "wither_skeleton";
+            witherSkeleton.minSpawnLevel = 15;
+            witherSkeleton.allowedWorlds = List.of("arena_nether");
+            witherSkeleton.weight = 1.0;
+
+            List<EnemyArchetypeConfig> all = List.of(zombie, witherSkeleton);
+            int currentLevel = 20;
+            String worldName = "arena_forest";
+
+            // Filter by both level and world
+            List<EnemyArchetypeConfig> eligible = all.stream()
+                    .filter(a -> a.minSpawnLevel <= currentLevel)
+                    .filter(a -> a.isAllowedInWorld(worldName))
+                    .toList();
+
+            // Only zombie should be eligible (wither_skeleton requires arena_nether)
+            assertEquals(1, eligible.size());
+            assertEquals("zombie", eligible.get(0).archetypeId);
+        }
+
+        @Test
+        @DisplayName("should include world-restricted archetype in correct world")
+        void shouldIncludeWorldRestrictedArchetypeInCorrectWorld() {
+            EnemyArchetypeConfig witherSkeleton = new EnemyArchetypeConfig();
+            witherSkeleton.archetypeId = "wither_skeleton";
+            witherSkeleton.minSpawnLevel = 15;
+            witherSkeleton.allowedWorlds = List.of("arena_nether", "arena_hell");
+            witherSkeleton.weight = 1.0;
+
+            List<EnemyArchetypeConfig> all = List.of(witherSkeleton);
+            int currentLevel = 20;
+            String worldName = "arena_nether";
+
+            List<EnemyArchetypeConfig> eligible = all.stream()
+                    .filter(a -> a.minSpawnLevel <= currentLevel)
+                    .filter(a -> a.isAllowedInWorld(worldName))
+                    .toList();
+
+            assertEquals(1, eligible.size());
+            assertEquals("wither_skeleton", eligible.get(0).archetypeId);
+        }
+
+        @Test
+        @DisplayName("should return no archetypes when none match world")
+        void shouldReturnEmptyWhenNoArchetypesMatchWorld() {
+            EnemyArchetypeConfig netherOnly = new EnemyArchetypeConfig();
+            netherOnly.archetypeId = "nether_mob";
+            netherOnly.minSpawnLevel = 1;
+            netherOnly.allowedWorlds = List.of("arena_nether");
+            netherOnly.weight = 1.0;
+
+            List<EnemyArchetypeConfig> all = List.of(netherOnly);
+            int currentLevel = 10;
+            String worldName = "arena_forest";
+
+            List<EnemyArchetypeConfig> eligible = all.stream()
+                    .filter(a -> a.minSpawnLevel <= currentLevel)
+                    .filter(a -> a.isAllowedInWorld(worldName))
+                    .toList();
+
+            assertTrue(eligible.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should handle multiple archetypes with different world restrictions")
+        void shouldHandleMultipleArchetypesWithDifferentRestrictions() {
+            EnemyArchetypeConfig zombie = new EnemyArchetypeConfig();
+            zombie.archetypeId = "zombie";
+            zombie.minSpawnLevel = 1;
+            zombie.allowedWorlds = List.of("any");
+            zombie.weight = 1.0;
+
+            EnemyArchetypeConfig blaze = new EnemyArchetypeConfig();
+            blaze.archetypeId = "blaze";
+            blaze.minSpawnLevel = 1;
+            blaze.allowedWorlds = List.of("arena_nether");
+            blaze.weight = 1.0;
+
+            EnemyArchetypeConfig guardian = new EnemyArchetypeConfig();
+            guardian.archetypeId = "guardian";
+            guardian.minSpawnLevel = 1;
+            guardian.allowedWorlds = List.of("arena_ocean");
+            guardian.weight = 1.0;
+
+            List<EnemyArchetypeConfig> all = List.of(zombie, blaze, guardian);
+            int currentLevel = 10;
+
+            // In arena_nether: zombie and blaze should be eligible
+            List<EnemyArchetypeConfig> netherEligible = all.stream()
+                    .filter(a -> a.minSpawnLevel <= currentLevel)
+                    .filter(a -> a.isAllowedInWorld("arena_nether"))
+                    .toList();
+            assertEquals(2, netherEligible.size());
+
+            // In arena_ocean: zombie and guardian should be eligible
+            List<EnemyArchetypeConfig> oceanEligible = all.stream()
+                    .filter(a -> a.minSpawnLevel <= currentLevel)
+                    .filter(a -> a.isAllowedInWorld("arena_ocean"))
+                    .toList();
+            assertEquals(2, oceanEligible.size());
+
+            // In arena_forest: only zombie should be eligible
+            List<EnemyArchetypeConfig> forestEligible = all.stream()
+                    .filter(a -> a.minSpawnLevel <= currentLevel)
+                    .filter(a -> a.isAllowedInWorld("arena_forest"))
+                    .toList();
+            assertEquals(1, forestEligible.size());
+            assertEquals("zombie", forestEligible.get(0).archetypeId);
+        }
+    }
 }

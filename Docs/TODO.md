@@ -532,6 +532,18 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files created: `DamageContributionService.java`, `DamageContributionServiceTest.java`
   - Files modified: `RewardService.java`, `CombatListener.java`, `ConfigService.java`, `KedamaSurvivorsPlugin.java`, `ConfigSubCommand.java`, `config.yml`
 
+### World-Specific Archetype Spawning
+- [x] Add `allowedWorlds` parameter to archetypes for world-specific spawning
+  - New `allowedWorlds` field in `EnemyArchetypeConfig` (default: `["any"]`)
+  - Special value `"any"` allows spawning in all combat worlds
+  - Specific world names restrict archetype to those worlds only
+  - Case-insensitive world name matching
+  - Admin command: `/vrs admin spawner archetype set worlds <id> <world1,world2,...|any>`
+  - Tab completion for world names from configured combat worlds
+  - Backward compatible: empty or missing `allowedWorlds` treated as "any"
+  - Files modified: `ConfigService.java`, `AdminConfigService.java`, `SpawnerService.java`, `SpawnerSubCommand.java`, `archetypes.yml`, `zh_CN.yml`
+  - Tests added: `SpawnerServiceTest.java` (Archetype World Filtering tests)
+
 ---
 
 ## Notes
