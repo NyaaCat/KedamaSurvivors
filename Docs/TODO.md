@@ -544,6 +544,16 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `ConfigService.java`, `AdminConfigService.java`, `SpawnerService.java`, `SpawnerSubCommand.java`, `archetypes.yml`, `zh_CN.yml`
   - Tests added: `SpawnerServiceTest.java` (Archetype World Filtering tests)
 
+### Scoreboard Coexistence Fix (FastBoard Migration)
+- [x] Fix VRS sidebar replacing other plugins' scoreboards
+  - Problem: VRS created per-player Bukkit scoreboards via `getNewScoreboard()` which replaced the player's existing scoreboard, causing other plugins' objectives and vanilla scoreboards to disappear
+  - Solution: Migrated to [FastBoard](https://github.com/MrMicky-FR/FastBoard) - a packet-based scoreboard library
+  - FastBoard sends scoreboard packets directly to the client without modifying Bukkit's scoreboard state
+  - Benefits: VRS sidebar coexists with other plugins' scoreboards, vanilla objectives remain functional, better performance
+  - Perma-score objective remains on main Bukkit scoreboard (unchanged, uses shared main scoreboard)
+  - Files modified: `build.gradle.kts` (added FastBoard dependency), `ScoreboardService.java` (full refactor to use FastBoard)
+  - Tests added: `ScoreboardServiceTest.java` (Line Ordering for FastBoard tests)
+
 ---
 
 ## Notes

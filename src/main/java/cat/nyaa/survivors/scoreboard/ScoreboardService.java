@@ -8,10 +8,17 @@ import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.StateService;
+import fr.mrmicky.fastboard.adventure.FastBoard;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.scoreboard.*;
+import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,7 +27,8 @@ import java.util.concurrent.Executors;
 
 /**
  * Manages scoreboard display for players in runs.
- * Shows sidebar with player stats and manages perma-score objective.
+ * Uses FastBoard for packet-based sidebar (coexists with other plugins' scoreboards).
+ * Perma-score objective is managed on the main Bukkit scoreboard.
  */
 public class ScoreboardService {
 
@@ -31,7 +39,9 @@ public class ScoreboardService {
     private final EconomyService economy;
 
     private final ScoreboardManager scoreboardManager;
-    private final Map<UUID, Scoreboard> playerScoreboards = new HashMap<>();
+
+    // FastBoard instances for packet-based sidebar (doesn't replace player's scoreboard)
+    private final Map<UUID, FastBoard> playerBoards = new ConcurrentHashMap<>();
 
     // Dirty-flag tracking for incremental updates
     private final Map<UUID, Map<Integer, String>> previousLines = new ConcurrentHashMap<>();
@@ -96,14 +106,13 @@ public class ScoreboardService {
         upgradeReminderFlashTasks.clear();
         upgradeReminderFlashState.clear();
 
-        // Clear all player scoreboards
-        for (UUID playerId : playerScoreboards.keySet()) {
-            Player player = Bukkit.getPlayer(playerId);
-            if (player != null) {
-                player.setScoreboard(scoreboardManager.getMainScoreboard());
+        // Delete all FastBoards (sends packet to clear sidebar)
+        for (FastBoard board : playerBoards.values()) {
+            if (!board.isDeleted()) {
+                board.delete();
             }
         }
-        playerScoreboards.clear();
+        playerBoards.clear();
         previousLines.clear();
         cachedBalances.clear();
     }
@@ -149,23 +158,24 @@ public class ScoreboardService {
     }
 
     /**
-     * Sets up the sidebar scoreboard for a player in a run.
+     * Sets up the sidebar scoreboard for a player.
+     * Uses FastBoard (packet-based) so it doesn't replace the player's actual scoreboard.
      */
     public void setupSidebar(Player player) {
         if (!config.isScoreboardEnabled()) return;
 
         UUID playerId = player.getUniqueId();
 
-        // Create new scoreboard for this player
-        Scoreboard board = scoreboardManager.getNewScoreboard();
+        // Remove existing board if any
+        FastBoard existing = playerBoards.remove(playerId);
+        if (existing != null && !existing.isDeleted()) {
+            existing.delete();
+        }
 
-        // Create sidebar objective
-        Objective sidebar = board.registerNewObjective("vrs_sidebar", Criteria.DUMMY,
-                i18n.getComponent("scoreboard.title"));
-        sidebar.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-        playerScoreboards.put(playerId, board);
-        player.setScoreboard(board);
+        // Create new FastBoard (packet-based, doesn't touch player's scoreboard)
+        FastBoard board = new FastBoard(player);
+        board.updateTitle(i18n.getComponent("scoreboard.title"));
+        playerBoards.put(playerId, board);
 
         // Initial update
         updatePlayerSidebar(player);
@@ -176,13 +186,14 @@ public class ScoreboardService {
      */
     public void removeSidebar(Player player) {
         UUID playerId = player.getUniqueId();
-        Scoreboard board = playerScoreboards.remove(playerId);
+        FastBoard board = playerBoards.remove(playerId);
         previousLines.remove(playerId);
         cachedBalances.remove(playerId);
 
-        if (board != null) {
-            player.setScoreboard(scoreboardManager.getMainScoreboard());
+        if (board != null && !board.isDeleted()) {
+            board.delete();
         }
+        // No need to restore scoreboard - FastBoard never touched it!
     }
 
     /**
@@ -190,7 +201,7 @@ public class ScoreboardService {
      * Builds scoreboard lines on async thread, applies changes on main thread.
      */
     private void updateAllScoreboards() {
-        Set<UUID> playerIds = new HashSet<>(playerScoreboards.keySet());
+        Set<UUID> playerIds = new HashSet<>(playerBoards.keySet());
 
         // Cache balances on main thread (EconomyService.getBalance() may access Bukkit API)
         for (UUID playerId : playerIds) {
@@ -218,7 +229,11 @@ public class ScoreboardService {
                     if (player != null && player.isOnline()) {
                         applyLineChanges(playerId, entry.getValue());
                     } else {
-                        playerScoreboards.remove(playerId);
+                        // Player offline - clean up
+                        FastBoard board = playerBoards.remove(playerId);
+                        if (board != null && !board.isDeleted()) {
+                            board.delete();
+                        }
                         previousLines.remove(playerId);
                     }
                 }
@@ -355,35 +370,29 @@ public class ScoreboardService {
     }
 
     /**
-     * Applies line changes to a player's scoreboard (must run on main thread).
-     * Only updates lines that have changed for efficiency.
+     * Applies line changes to a player's FastBoard.
+     * Converts the score -> line map to a list and updates the board.
      */
     private void applyLineChanges(UUID playerId, Map<Integer, String> newLines) {
-        Scoreboard board = playerScoreboards.get(playerId);
-        if (board == null) return;
-
-        Objective sidebar = board.getObjective("vrs_sidebar");
-        if (sidebar == null) return;
+        FastBoard board = playerBoards.get(playerId);
+        if (board == null || board.isDeleted()) return;
 
         Map<Integer, String> oldLines = previousLines.getOrDefault(playerId, Map.of());
 
-        // Remove lines that changed or were removed
-        for (Map.Entry<Integer, String> old : oldLines.entrySet()) {
-            String newLine = newLines.get(old.getKey());
-            if (!old.getValue().equals(newLine)) {
-                board.resetScores(old.getValue());
+        // Only update if lines changed
+        if (!newLines.equals(oldLines)) {
+            // Convert map to list of Components (FastBoard adventure uses Components)
+            List<Component> lines = new ArrayList<>();
+            List<Integer> scores = new ArrayList<>(newLines.keySet());
+            Collections.sort(scores, Collections.reverseOrder());
+            for (Integer score : scores) {
+                // Convert legacy color codes (§) to Components
+                lines.add(LegacyComponentSerializer.legacySection().deserialize(newLines.get(score)));
             }
-        }
 
-        // Add/update changed lines
-        for (Map.Entry<Integer, String> entry : newLines.entrySet()) {
-            String oldLine = oldLines.get(entry.getKey());
-            if (!entry.getValue().equals(oldLine)) {
-                sidebar.getScore(entry.getValue()).setScore(entry.getKey());
-            }
+            board.updateLines(lines);
+            previousLines.put(playerId, newLines);
         }
-
-        previousLines.put(playerId, newLines);
     }
 
     /**
@@ -432,17 +441,18 @@ public class ScoreboardService {
     }
 
     /**
-     * Gets the player's custom scoreboard, or null if not set up.
+     * Gets the player's FastBoard, or null if not set up.
      */
-    public Scoreboard getPlayerScoreboard(UUID playerId) {
-        return playerScoreboards.get(playerId);
+    public FastBoard getPlayerBoard(UUID playerId) {
+        return playerBoards.get(playerId);
     }
 
     /**
      * Checks if a player has a sidebar set up.
      */
     public boolean hasSidebar(UUID playerId) {
-        return playerScoreboards.containsKey(playerId);
+        FastBoard board = playerBoards.get(playerId);
+        return board != null && !board.isDeleted();
     }
 
     /**

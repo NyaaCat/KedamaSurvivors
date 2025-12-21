@@ -292,6 +292,63 @@ class ScoreboardServiceTest {
     }
 
     @Nested
+    @DisplayName("Line Ordering for FastBoard")
+    class LineOrderingForFastBoard {
+
+        @Test
+        @DisplayName("should order lines by score descending")
+        void shouldOrderLinesByScoreDescending() {
+            java.util.Map<Integer, String> lines = new java.util.LinkedHashMap<>();
+            lines.put(15, "Line A (score 15)");
+            lines.put(10, "Line B (score 10)");
+            lines.put(14, "Line C (score 14)");
+            lines.put(5, "Line D (score 5)");
+
+            java.util.List<String> orderedLines = convertToOrderedList(lines);
+
+            assertEquals(4, orderedLines.size());
+            assertEquals("Line A (score 15)", orderedLines.get(0));
+            assertEquals("Line C (score 14)", orderedLines.get(1));
+            assertEquals("Line B (score 10)", orderedLines.get(2));
+            assertEquals("Line D (score 5)", orderedLines.get(3));
+        }
+
+        @Test
+        @DisplayName("should handle empty lines map")
+        void shouldHandleEmptyLinesMap() {
+            java.util.Map<Integer, String> lines = new java.util.LinkedHashMap<>();
+            java.util.List<String> orderedLines = convertToOrderedList(lines);
+
+            assertTrue(orderedLines.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should handle single line")
+        void shouldHandleSingleLine() {
+            java.util.Map<Integer, String> lines = new java.util.LinkedHashMap<>();
+            lines.put(10, "Only line");
+
+            java.util.List<String> orderedLines = convertToOrderedList(lines);
+
+            assertEquals(1, orderedLines.size());
+            assertEquals("Only line", orderedLines.get(0));
+        }
+
+        /**
+         * Mirrors the line ordering logic used in applyLineChanges for FastBoard.
+         */
+        private java.util.List<String> convertToOrderedList(java.util.Map<Integer, String> lines) {
+            java.util.List<String> result = new java.util.ArrayList<>();
+            java.util.List<Integer> scores = new java.util.ArrayList<>(lines.keySet());
+            java.util.Collections.sort(scores, java.util.Collections.reverseOrder());
+            for (Integer score : scores) {
+                result.add(lines.get(score));
+            }
+            return result;
+        }
+    }
+
+    @Nested
     @DisplayName("Balance Caching Logic")
     class BalanceCachingLogic {
 

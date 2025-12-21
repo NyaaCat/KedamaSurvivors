@@ -16,6 +16,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://jitpack.io")  // For Vault API
+    maven("https://repo.codemc.org/repository/maven-public/")  // FastBoard
 }
 
 dependencies {
@@ -23,6 +24,9 @@ dependencies {
 
     // Optional Vault API for economy integration
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
+
+    // FastBoard for packet-based scoreboard (coexists with other plugins)
+    implementation("fr.mrmicky:fastboard:2.1.3")
 
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
