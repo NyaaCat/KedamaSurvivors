@@ -1,6 +1,7 @@
 plugins {
     java
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.14"
+    id("io.github.goooler.shadow") version "8.1.8"
 }
 
 group = "cat.nyaa"
@@ -53,6 +54,20 @@ tasks {
 
     jar {
         archiveClassifier.set("dev")
+    }
+
+    shadowJar {
+        archiveClassifier.set("")
+
+        // Relocate FastBoard to avoid conflicts with other plugins
+        relocate("fr.mrmicky.fastboard", "cat.nyaa.survivors.lib.fastboard")
+
+        // Minimize jar by removing unused classes
+        minimize()
+    }
+
+    reobfJar {
+        inputJar.set(shadowJar.flatMap { it.archiveFile })
     }
 
     assemble {
