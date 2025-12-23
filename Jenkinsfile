@@ -18,7 +18,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh './gradlew clean build'
+                sh "./gradlew clean build -Pbuild.number=${BUILD_NUMBER}"
             }
             post {
                 always {
@@ -29,7 +29,7 @@ pipeline {
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'build/libs/*-reobf.jar', fingerprint: true
+                archiveArtifacts artifacts: "build/libs/*-${BUILD_NUMBER}-reobf.jar", fingerprint: true
             }
         }
     }

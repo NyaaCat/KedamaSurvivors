@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "cat.nyaa"
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0-${findProperty("build.number") ?: "SNAPSHOT"}"
 
 java {
     toolchain {
@@ -27,7 +27,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
 
     // FastBoard for packet-based scoreboard (coexists with other plugins)
-    implementation("fr.mrmicky:fastboard:2.1.3")
+    implementation("fr.mrmicky:fastboard:2.1.5")
 
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
@@ -62,8 +62,10 @@ tasks {
         // Relocate FastBoard to avoid conflicts with other plugins
         relocate("fr.mrmicky.fastboard", "cat.nyaa.survivors.lib.fastboard")
 
-        // Minimize jar by removing unused classes
-        minimize()
+        // Minimize jar but preserve FastBoard (uses reflection for NMS access)
+        minimize {
+            exclude(dependency("fr.mrmicky:fastboard:.*"))
+        }
     }
 
     reobfJar {
