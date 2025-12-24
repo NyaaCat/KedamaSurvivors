@@ -378,6 +378,29 @@ public class StarterService {
     }
 
     /**
+     * Validates and clears VRS items from player's ender chest.
+     * Called before entering a run to prevent item duplication exploits.
+     *
+     * @param player The player whose ender chest to validate
+     * @return Number of VRS items removed
+     */
+    public int validateAndClearEnderChest(Player player) {
+        int removedCount = 0;
+        org.bukkit.inventory.Inventory enderChest = player.getEnderChest();
+
+        // Scan all ender chest slots (0-26)
+        for (int i = 0; i < enderChest.getSize(); i++) {
+            ItemStack item = enderChest.getItem(i);
+            if (isVrsItem(item)) {
+                enderChest.setItem(i, null);
+                removedCount++;
+            }
+        }
+
+        return removedCount;
+    }
+
+    /**
      * Checks if an item is VRS equipment of a specific type.
      */
     public boolean isVrsEquipment(ItemStack item, String type) {

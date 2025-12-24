@@ -520,8 +520,18 @@ public class RunService {
     private void sanitizePlayerInventory(Player player, PlayerState playerState) {
         StarterService starter = plugin.getStarterService();
 
-        // Remove ALL existing VRS equipment (weapons and helmets)
+        // Remove ALL existing VRS equipment from player inventory
         starter.removeAllVrsEquipment(player);
+
+        // Validate and clear ender chest
+        int enderChestRemoved = starter.validateAndClearEnderChest(player);
+        if (enderChestRemoved > 0) {
+            plugin.getLogger().info("Removed " + enderChestRemoved +
+                " VRS items from " + player.getName() + "'s ender chest");
+            // Send warning message to player
+            plugin.getI18nService().send(player, "warning.ender_chest_cleared",
+                "count", String.valueOf(enderChestRemoved));
+        }
 
         // Re-grant the selected starter equipment fresh
         starter.grantStarterEquipment(player, playerState);

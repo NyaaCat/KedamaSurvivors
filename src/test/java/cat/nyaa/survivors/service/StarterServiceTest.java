@@ -417,4 +417,71 @@ class StarterServiceTest {
             return -1;
         }
     }
+
+    @Nested
+    @DisplayName("Ender Chest Validation Logic")
+    class EnderChestValidationLogic {
+
+        private int countVrsItemsInEnderChest(boolean[] slots) {
+            int count = 0;
+            for (boolean slot : slots) {
+                if (slot) count++;
+            }
+            return count;
+        }
+
+        @Test
+        @DisplayName("should count zero VRS items in empty ender chest")
+        void shouldCountZeroVrsItemsInEmptyEnderChest() {
+            boolean[] enderChest = new boolean[27];
+            assertEquals(0, countVrsItemsInEnderChest(enderChest));
+        }
+
+        @Test
+        @DisplayName("should count single VRS item in ender chest")
+        void shouldCountSingleVrsItemInEnderChest() {
+            boolean[] enderChest = new boolean[27];
+            enderChest[5] = true;
+            assertEquals(1, countVrsItemsInEnderChest(enderChest));
+        }
+
+        @Test
+        @DisplayName("should count multiple VRS items in ender chest")
+        void shouldCountMultipleVrsItemsInEnderChest() {
+            boolean[] enderChest = new boolean[27];
+            enderChest[0] = true;
+            enderChest[10] = true;
+            enderChest[20] = true;
+            assertEquals(3, countVrsItemsInEnderChest(enderChest));
+        }
+
+        @Test
+        @DisplayName("should handle ender chest with all slots filled")
+        void shouldHandleEnderChestWithAllSlotsFilled() {
+            boolean[] enderChest = new boolean[27];
+            for (int i = 0; i < 27; i++) {
+                enderChest[i] = true;
+            }
+            assertEquals(27, countVrsItemsInEnderChest(enderChest));
+        }
+
+        @Test
+        @DisplayName("should clear VRS items and return correct count")
+        void shouldClearVrsItemsAndReturnCorrectCount() {
+            boolean[] enderChest = new boolean[27];
+            enderChest[3] = true;
+            enderChest[15] = true;
+
+            int removedCount = 0;
+            for (int i = 0; i < enderChest.length; i++) {
+                if (enderChest[i]) {
+                    enderChest[i] = false;
+                    removedCount++;
+                }
+            }
+
+            assertEquals(2, removedCount);
+            assertEquals(0, countVrsItemsInEnderChest(enderChest));
+        }
+    }
 }

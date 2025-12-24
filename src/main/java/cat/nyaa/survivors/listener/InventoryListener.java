@@ -14,6 +14,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -156,6 +157,21 @@ public class InventoryListener implements Listener {
         // Prevent ALL item pickups during restricted modes (all modes except LOBBY)
         if (isInRestrictedMode(player)) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) {
+            return;
+        }
+
+        // Block ender chest access during restricted modes
+        if (event.getInventory().getType() == InventoryType.ENDER_CHEST) {
+            if (isInRestrictedMode(player)) {
+                event.setCancelled(true);
+                plugin.getI18nService().send(player, "error.ender_chest_restricted");
+            }
         }
     }
 

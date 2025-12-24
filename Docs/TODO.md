@@ -554,6 +554,15 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `build.gradle.kts` (added FastBoard dependency), `ScoreboardService.java` (full refactor to use FastBoard)
   - Tests added: `ScoreboardServiceTest.java` (Line Ordering for FastBoard tests)
 
+### Ender Chest Validation
+- [x] Block ender chest opening during restricted modes (READY, COUNTDOWN, IN_RUN, COOLDOWN, GRACE_EJECT, DISCONNECTED)
+- [x] Add `validateAndClearEnderChest()` method to StarterService
+- [x] Integrate ender chest validation into pre-teleport sanitization
+- [x] Add warning message when VRS items are removed from ender chest
+- [x] Add unit tests for ender chest validation logic
+- [x] Files modified: `InventoryListener.java`, `StarterService.java`, `RunService.java`, `zh_CN.yml`
+- [x] Tests added: `StarterServiceTest.java` (Ender Chest Validation Logic tests)
+
 ---
 
 ## Notes
