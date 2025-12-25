@@ -420,6 +420,7 @@ public class SpawnerService {
 
     /**
      * Samples a spawn location near the player.
+     * Mobs spawn within the configured vertical range of the player's Y level.
      */
     private Location sampleSpawnLocation(Location playerLoc) {
         World world = playerLoc.getWorld();
@@ -428,6 +429,7 @@ public class SpawnerService {
         double minDist = config.getMinSpawnDistance();
         double maxDist = config.getMaxSpawnDistance();
         int maxAttempts = config.getMaxSampleAttempts();
+        int verticalRange = config.getSpawnVerticalRange();
 
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             // Random angle and distance
@@ -437,15 +439,45 @@ public class SpawnerService {
             double x = playerLoc.getX() + Math.cos(angle) * distance;
             double z = playerLoc.getZ() + Math.sin(angle) * distance;
 
-            // Find safe Y
-            int y = world.getHighestBlockYAt((int) x, (int) z);
-            Location candidate = new Location(world, x, y + 1, z);
+            // Search for safe Y near player's Y level (not highest block)
+            Location candidate = findSafeYNearPlayer(world, x, z, playerLoc.getBlockY(), verticalRange);
 
-            if (isSafeSpawnLocation(candidate)) {
+            if (candidate != null) {
                 return candidate;
             }
         }
 
+        return null;
+    }
+
+    /**
+     * Finds a safe spawn Y within vertical range of the player's Y level.
+     * Searches from player level outward, prioritizing same level.
+     */
+    private Location findSafeYNearPlayer(World world, double x, double z, int playerY, int verticalRange) {
+        for (int yOffset = 0; yOffset <= verticalRange; yOffset++) {
+            // Try at/above player level first
+            Location above = trySpawnAt(world, x, playerY + yOffset, z);
+            if (above != null) return above;
+
+            // Try below player level (skip if yOffset == 0 to avoid duplicate)
+            if (yOffset > 0) {
+                Location below = trySpawnAt(world, x, playerY - yOffset, z);
+                if (below != null) return below;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Attempts to create a spawn location at a specific Y level.
+     * Returns the location if safe, null otherwise.
+     */
+    private Location trySpawnAt(World world, double x, int y, double z) {
+        Location loc = new Location(world, x, y, z);
+        if (isSafeSpawnLocation(loc)) {
+            return loc;
+        }
         return null;
     }
 

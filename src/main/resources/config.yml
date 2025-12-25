@@ -167,6 +167,8 @@ spawning:
     minSpawnDistance: 8.0
     maxSpawnDistance: 25.0
     maxSampleAttempts: 10
+    # Vertical range for mob spawning - mobs spawn within ±N blocks of player's Y level
+    verticalRange: 10
 
   levelCalculation:
     levelSamplingRadius: 50.0

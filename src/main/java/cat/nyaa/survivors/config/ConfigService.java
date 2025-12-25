@@ -79,6 +79,7 @@ public class ConfigService {
     private double minSpawnDistance;
     private double maxSpawnDistance;
     private int maxSampleAttempts;
+    private int spawnVerticalRange;
 
     // Enemy level calculation
     private double levelSamplingRadius;
@@ -309,6 +310,7 @@ public class ConfigService {
         minSpawnDistance = config.getDouble("spawning.positioning.minSpawnDistance", 8.0);
         maxSpawnDistance = config.getDouble("spawning.positioning.maxSpawnDistance", 25.0);
         maxSampleAttempts = config.getInt("spawning.positioning.maxSampleAttempts", 10);
+        spawnVerticalRange = config.getInt("spawning.positioning.verticalRange", 10);
 
         levelSamplingRadius = config.getDouble("spawning.levelCalculation.levelSamplingRadius", 50.0);
         avgLevelMultiplier = config.getDouble("spawning.levelCalculation.avgLevelMultiplier", 1.0);
@@ -687,6 +689,7 @@ public class ConfigService {
     public double getMinSpawnDistance() { return minSpawnDistance; }
     public double getMaxSpawnDistance() { return maxSpawnDistance; }
     public int getMaxSampleAttempts() { return maxSampleAttempts; }
+    public int getSpawnVerticalRange() { return spawnVerticalRange; }
 
     public double getLevelSamplingRadius() { return levelSamplingRadius; }
     public double getAvgLevelMultiplier() { return avgLevelMultiplier; }

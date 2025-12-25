@@ -577,6 +577,12 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Added `getRandomComponent()` method to I18nService for list-based i18n
   - Added `sendWorldTitle()` method to I18nService
   - Files modified: `RunService.java`, `I18nService.java`, `zh_CN.yml`
+- [x] Fix mob spawn locations using rooftop Y instead of player's Y level
+  - Root cause: `sampleSpawnLocation()` used `getHighestBlockYAt()` which ignored player's current Y level
+  - Fix: Search for safe spawn Y within configurable vertical range of player's Y level
+  - Added `spawnVerticalRange` config (default 10 blocks)
+  - Added `findSafeYNearPlayer()` and `trySpawnAt()` helper methods
+  - Files modified: `SpawnerService.java`, `ConfigService.java`, `config.yml`
 
 ---
 
