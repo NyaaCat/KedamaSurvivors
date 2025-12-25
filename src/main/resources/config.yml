@@ -226,6 +226,9 @@ merchants:
     distance:
       min: 20.0                  # Min distance from players
       max: 50.0                  # Max distance from players
+      verticalRange: 10          # Search range above/below player Y level
+    notifications:
+      spawn: true                # Show message when merchant appears
     particles:
       spawn: true                # Show particles when merchant appears
       despawn: true              # Show particles when merchant leaves

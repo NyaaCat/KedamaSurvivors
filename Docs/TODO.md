@@ -584,6 +584,19 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Added `findSafeYNearPlayer()` and `trySpawnAt()` helper methods
   - Files modified: `SpawnerService.java`, `ConfigService.java`, `config.yml`
 
+### Wandering Merchant Fixes
+- [x] Fix wandering merchant spawn Y level to match player's level
+  - Root cause: `sampleWanderingLocation()` used `getHighestBlockYAt()` which ignored player's current Y level
+  - Fix: Apply same pattern as mob spawning - search for safe Y within vertical range of player's level
+  - Added `merchants.wandering.distance.verticalRange` config (default 10 blocks)
+  - Added `findSafeYNearPlayer()` and `tryMerchantSpawnAt()` helper methods
+  - Files modified: `MerchantService.java`, `ConfigService.java`, `config.yml`
+- [x] Add option to disable wandering merchant spawn notifications
+  - Added `merchants.wandering.notifications.spawn` config toggle (default: true)
+  - Wrapped notification call with config check
+  - Files modified: `MerchantService.java`, `ConfigService.java`, `config.yml`
+  - Tests added: `MerchantServiceTest.java`
+
 ---
 
 ## Notes

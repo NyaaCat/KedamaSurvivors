@@ -210,6 +210,8 @@ public class ConfigService {
     private String wanderingMerchantPoolId;
     private String wanderingMerchantType;
     private int wanderingMerchantMaxCount;
+    private int merchantVerticalRange;
+    private boolean merchantSpawnNotification;
 
     public ConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -599,6 +601,8 @@ public class ConfigService {
         wanderingMerchantPoolId = config.getString("merchants.wandering.poolId", "");
         wanderingMerchantType = config.getString("merchants.wandering.type", "single");
         wanderingMerchantMaxCount = config.getInt("merchants.wandering.maxCount", 3);
+        merchantVerticalRange = config.getInt("merchants.wandering.distance.verticalRange", 10);
+        merchantSpawnNotification = config.getBoolean("merchants.wandering.notifications.spawn", true);
     }
 
     // ==================== Utility Methods ====================
@@ -789,6 +793,8 @@ public class ConfigService {
     public String getWanderingMerchantPoolId() { return wanderingMerchantPoolId; }
     public String getWanderingMerchantType() { return wanderingMerchantType; }
     public int getWanderingMerchantMaxCount() { return wanderingMerchantMaxCount; }
+    public int getMerchantVerticalRange() { return merchantVerticalRange; }
+    public boolean isMerchantSpawnNotification() { return merchantSpawnNotification; }
 
     // Feedback getters
     public String getRewardDisplayMode() { return rewardDisplayMode; }
@@ -948,6 +954,8 @@ public class ConfigService {
     public void setWanderingMerchantPoolId(String poolId) { this.wanderingMerchantPoolId = poolId; }
     public void setWanderingMerchantType(String type) { this.wanderingMerchantType = type; }
     public void setWanderingMerchantMaxCount(int maxCount) { this.wanderingMerchantMaxCount = maxCount; }
+    public void setMerchantVerticalRange(int range) { this.merchantVerticalRange = range; }
+    public void setMerchantSpawnNotification(boolean notify) { this.merchantSpawnNotification = notify; }
 
     // Upgrade
     public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
@@ -1052,6 +1060,8 @@ public class ConfigService {
         config.set("merchants.wandering.poolId", wanderingMerchantPoolId);
         config.set("merchants.wandering.type", wanderingMerchantType);
         config.set("merchants.wandering.maxCount", wanderingMerchantMaxCount);
+        config.set("merchants.wandering.distance.verticalRange", merchantVerticalRange);
+        config.set("merchants.wandering.notifications.spawn", merchantSpawnNotification);
 
         // Upgrade
         config.set("upgrade.timeoutSeconds", upgradeTimeoutSeconds);
