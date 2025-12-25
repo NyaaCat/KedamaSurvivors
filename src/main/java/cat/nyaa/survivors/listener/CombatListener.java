@@ -22,6 +22,8 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +34,12 @@ public class CombatListener implements Listener {
 
     private static final String VRS_MOB_TAG = "vrs_mob";
     private static final Pattern LEVEL_TAG_PATTERN = Pattern.compile("vrs_lvl_(\\d+)");
+
+    /**
+     * Tracks EntityDamageByEntityEvent instances that need final damage zeroing.
+     * Events are added at HIGH priority and removed at MONITOR priority.
+     */
+    private final Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
 
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService config;
@@ -59,6 +67,8 @@ public class CombatListener implements Listener {
                 if (damager != null && !damager.equals(victim)) {
                     // Set damage to 0 instead of cancelling (allows other plugins to process)
                     event.setDamage(0);
+                    // Track for final zeroing at MONITOR priority (in case other plugins modify damage)
+                    pvpEventsToZero.add(System.identityHashCode(event));
                     return;
                 }
 
@@ -68,6 +78,8 @@ public class CombatListener implements Listener {
                     ProjectileSource source = cloud.getSource();
                     if (source instanceof Player thrower && !thrower.equals(victim)) {
                         event.setDamage(0);
+                        // Track for final zeroing at MONITOR priority (in case other plugins modify damage)
+                        pvpEventsToZero.add(System.identityHashCode(event));
                         return;
                     }
                 }
@@ -94,6 +106,20 @@ public class CombatListener implements Listener {
 
         // Track damage contribution for XP rewards on mob death
         trackDamageContribution(event, damager, playerState);
+    }
+
+    /**
+     * Ensures PvP damage is zeroed at the final stage, after all other plugins have processed.
+     * This runs at MONITOR priority (last) to override any damage modifications by other plugins.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityDamageByEntityFinal(EntityDamageByEntityEvent event) {
+        int eventId = System.identityHashCode(event);
+        if (pvpEventsToZero.remove(eventId)) {
+            // This event was marked as PvP that should be blocked
+            // Set damage to 0 regardless of what other plugins may have set
+            event.setDamage(0);
+        }
     }
 
     /**

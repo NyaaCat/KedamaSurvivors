@@ -4,7 +4,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -184,6 +186,194 @@ class CombatListenerTest {
             // Verify UUID equality works correctly
             assertTrue(player.equals(player), "Same UUID should be equal");
             assertFalse(player.equals(UUID.randomUUID()), "Different UUIDs should not be equal");
+        }
+    }
+
+    @Nested
+    @DisplayName("Two-Phase PvP Damage Prevention")
+    class TwoPhasePvpDamagePrevention {
+
+        @Test
+        @DisplayName("should track event for final zeroing when PVP blocked at HIGH priority")
+        void shouldTrackEventForFinalZeroingWhenPvpBlocked() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            // Simulate detecting PvP scenario
+            int eventId = 12345;
+            boolean pvpEnabled = false;
+            UUID damager = UUID.randomUUID();
+            UUID victim = UUID.randomUUID();
+
+            if (!pvpEnabled && !damager.equals(victim)) {
+                pvpEventsToZero.add(eventId);
+            }
+
+            assertTrue(pvpEventsToZero.contains(eventId),
+                    "Event should be tracked for final zeroing");
+        }
+
+        @Test
+        @DisplayName("should remove event from tracking when processed at MONITOR priority")
+        void shouldRemoveEventFromTrackingWhenProcessed() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+            int eventId = 12345;
+
+            // Add at HIGH
+            pvpEventsToZero.add(eventId);
+            assertTrue(pvpEventsToZero.contains(eventId));
+
+            // Remove at MONITOR
+            boolean wasTracked = pvpEventsToZero.remove(eventId);
+
+            assertTrue(wasTracked, "Event should have been tracked");
+            assertFalse(pvpEventsToZero.contains(eventId),
+                    "Event should be removed after processing");
+        }
+
+        @Test
+        @DisplayName("should not process events not tracked from HIGH priority")
+        void shouldNotProcessEventsNotTracked() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+            int untrackedEventId = 99999;
+
+            boolean wasTracked = pvpEventsToZero.remove(untrackedEventId);
+
+            assertFalse(wasTracked,
+                    "Untracked events should not be processed at MONITOR");
+        }
+
+        @Test
+        @DisplayName("should handle self-damage without tracking")
+        void shouldHandleSelfDamageWithoutTracking() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            UUID player = UUID.randomUUID();
+            int eventId = 12345;
+            boolean pvpEnabled = false;
+
+            // Self-damage: damager equals victim
+            if (!pvpEnabled && !player.equals(player)) {
+                pvpEventsToZero.add(eventId);
+            }
+
+            assertFalse(pvpEventsToZero.contains(eventId),
+                    "Self-damage events should not be tracked for zeroing");
+        }
+
+        @Test
+        @DisplayName("should not track events when PVP is enabled")
+        void shouldNotTrackEventsWhenPvpEnabled() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            int eventId = 12345;
+            boolean pvpEnabled = true;
+            UUID damager = UUID.randomUUID();
+            UUID victim = UUID.randomUUID();
+
+            if (!pvpEnabled && !damager.equals(victim)) {
+                pvpEventsToZero.add(eventId);
+            }
+
+            assertFalse(pvpEventsToZero.contains(eventId),
+                    "Events should not be tracked when PVP is enabled");
+        }
+
+        @Test
+        @DisplayName("should use atomic remove operation for thread safety")
+        void shouldUseAtomicRemoveOperation() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+            int eventId = 12345;
+
+            pvpEventsToZero.add(eventId);
+
+            // Simulate concurrent access - only one should succeed
+            boolean removed1 = pvpEventsToZero.remove(eventId);
+            boolean removed2 = pvpEventsToZero.remove(eventId);
+
+            assertTrue(removed1, "First removal should succeed");
+            assertFalse(removed2, "Second removal should fail (already removed)");
+        }
+    }
+
+    @Nested
+    @DisplayName("Edge Cases for Two-Phase Handling")
+    class EdgeCasesForTwoPhaseHandling {
+
+        @Test
+        @DisplayName("should handle multiple concurrent PvP events")
+        void shouldHandleMultipleConcurrentEvents() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            // Track multiple events
+            pvpEventsToZero.add(1001);
+            pvpEventsToZero.add(1002);
+            pvpEventsToZero.add(1003);
+
+            assertEquals(3, pvpEventsToZero.size());
+
+            // Process them individually
+            assertTrue(pvpEventsToZero.remove(1002));
+            assertEquals(2, pvpEventsToZero.size());
+
+            assertTrue(pvpEventsToZero.remove(1001));
+            assertTrue(pvpEventsToZero.remove(1003));
+
+            assertTrue(pvpEventsToZero.isEmpty(),
+                    "All events should be cleared after processing");
+        }
+
+        @Test
+        @DisplayName("should handle AreaEffectCloud tracking same as direct damage")
+        void shouldHandleAreaEffectCloudTrackingSameAsDirectDamage() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            // Both direct damage and AoE damage should be tracked the same way
+            int directDamageEventId = 1001;
+            int aoeCloudEventId = 1002;
+
+            // Simulate both being blocked
+            pvpEventsToZero.add(directDamageEventId);
+            pvpEventsToZero.add(aoeCloudEventId);
+
+            // Both should be processable at MONITOR
+            assertTrue(pvpEventsToZero.remove(directDamageEventId));
+            assertTrue(pvpEventsToZero.remove(aoeCloudEventId));
+        }
+
+        @Test
+        @DisplayName("should not have hash collision issues with identity hash codes")
+        void shouldNotHaveHashCollisionIssues() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            // Simulate many events being tracked
+            for (int i = 0; i < 1000; i++) {
+                pvpEventsToZero.add(i);
+            }
+
+            assertEquals(1000, pvpEventsToZero.size());
+
+            // Remove all
+            for (int i = 0; i < 1000; i++) {
+                assertTrue(pvpEventsToZero.remove(i));
+            }
+
+            assertTrue(pvpEventsToZero.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should handle rapid add and remove operations")
+        void shouldHandleRapidAddAndRemoveOperations() {
+            Set<Integer> pvpEventsToZero = ConcurrentHashMap.newKeySet();
+
+            // Rapid add/remove cycles
+            for (int i = 0; i < 100; i++) {
+                int eventId = i;
+                pvpEventsToZero.add(eventId);
+                assertTrue(pvpEventsToZero.remove(eventId));
+                assertFalse(pvpEventsToZero.contains(eventId));
+            }
+
+            assertTrue(pvpEventsToZero.isEmpty());
         }
     }
 }

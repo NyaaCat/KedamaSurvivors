@@ -607,6 +607,17 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files created: `LineOfSightChecker.java`, `LineOfSightCheckerTest.java`
   - Files modified: `SpawnerService.java`, `SpawnContext.java`, `ConfigService.java`
 
+### Two-Phase PvP Damage Prevention (RPGItems Compatibility)
+- [x] Fix friendly fire blocking to ensure final damage is 0 even when other plugins modify damage
+  - Problem: RPGItems (or other plugins) at HIGHEST/MONITOR priority overwrote the `setDamage(0)` from HIGH priority
+  - Solution: Two-phase damage prevention using event tracking
+  - Phase 1 (HIGH): Detect PvP scenarios, set damage to 0, track event via `System.identityHashCode()`
+  - Phase 2 (MONITOR): Check tracked events and enforce final damage = 0
+  - Uses `ConcurrentHashMap.newKeySet()` for thread-safe event tracking
+  - Event remains uncancelled so RPGItems can process effects (healing potions, etc.)
+  - Files modified: `CombatListener.java`
+  - Tests added: `CombatListenerTest.java` (Two-Phase PvP Damage Prevention, Edge Cases for Two-Phase Handling)
+
 ---
 
 ## Notes
