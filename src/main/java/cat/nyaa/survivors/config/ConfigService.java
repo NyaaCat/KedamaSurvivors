@@ -80,6 +80,7 @@ public class ConfigService {
     private double maxSpawnDistance;
     private int maxSampleAttempts;
     private int spawnVerticalRange;
+    private boolean losValidationEnabled;
 
     // Enemy level calculation
     private double levelSamplingRadius;
@@ -313,6 +314,7 @@ public class ConfigService {
         maxSpawnDistance = config.getDouble("spawning.positioning.maxSpawnDistance", 25.0);
         maxSampleAttempts = config.getInt("spawning.positioning.maxSampleAttempts", 10);
         spawnVerticalRange = config.getInt("spawning.positioning.verticalRange", 10);
+        losValidationEnabled = config.getBoolean("spawning.positioning.losValidation", true);
 
         levelSamplingRadius = config.getDouble("spawning.levelCalculation.levelSamplingRadius", 50.0);
         avgLevelMultiplier = config.getDouble("spawning.levelCalculation.avgLevelMultiplier", 1.0);
@@ -694,6 +696,7 @@ public class ConfigService {
     public double getMaxSpawnDistance() { return maxSpawnDistance; }
     public int getMaxSampleAttempts() { return maxSampleAttempts; }
     public int getSpawnVerticalRange() { return spawnVerticalRange; }
+    public boolean isLosValidationEnabled() { return losValidationEnabled; }
 
     public double getLevelSamplingRadius() { return levelSamplingRadius; }
     public double getAvgLevelMultiplier() { return avgLevelMultiplier; }
@@ -1012,6 +1015,7 @@ public class ConfigService {
         config.set("spawning.positioning.minSpawnDistance", minSpawnDistance);
         config.set("spawning.positioning.maxSpawnDistance", maxSpawnDistance);
         config.set("spawning.positioning.maxSampleAttempts", maxSampleAttempts);
+        config.set("spawning.positioning.losValidation", losValidationEnabled);
         config.set("spawning.loop.tickInterval", spawnTickInterval);
         config.set("spawning.limits.targetMobsPerPlayer", targetMobsPerPlayer);
         config.set("spawning.limits.maxSpawnsPerTick", maxSpawnsPerTick);

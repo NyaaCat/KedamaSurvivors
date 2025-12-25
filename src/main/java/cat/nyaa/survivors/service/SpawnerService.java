@@ -9,6 +9,7 @@ import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.service.spawner.SpawnContext;
 import cat.nyaa.survivors.service.spawner.SpawnPlan;
 import cat.nyaa.survivors.service.spawner.WorldSpawnerState;
+import cat.nyaa.survivors.util.LineOfSightChecker;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -242,6 +243,15 @@ public class SpawnerService {
                 // Count nearby players
                 int nearbyPlayers = countNearbyPlayers(player.getLocation(), config.getLevelSamplingRadius(), run);
 
+                // Create LOS checker for spawn radius (captures ChunkSnapshots on main thread)
+                LineOfSightChecker losChecker = null;
+                if (config.isLosValidationEnabled()) {
+                    losChecker = LineOfSightChecker.createForRadius(
+                            player.getLocation(),
+                            config.getMaxSpawnDistance()
+                    );
+                }
+
                 SpawnContext context = new SpawnContext(
                         playerId,
                         run.getRunId(),
@@ -251,7 +261,8 @@ public class SpawnerService {
                         avgLevel,
                         nearbyPlayers,
                         nearbyMobs,
-                        run.getElapsedSeconds()
+                        run.getElapsedSeconds(),
+                        losChecker
                 );
 
                 contexts.add(context);
@@ -288,8 +299,8 @@ public class SpawnerService {
                     break;
                 }
 
-                // Sample spawn location
-                Location spawnLoc = sampleSpawnLocation(ctx.playerLocation());
+                // Sample spawn location with LOS validation
+                Location spawnLoc = sampleSpawnLocation(ctx.playerLocation(), ctx.losChecker());
                 if (spawnLoc == null) continue;
 
                 plans.add(new SpawnPlan(
@@ -421,8 +432,12 @@ public class SpawnerService {
     /**
      * Samples a spawn location near the player.
      * Mobs spawn within the configured vertical range of the player's Y level.
+     *
+     * @param playerLoc The player's location
+     * @param losChecker LOS checker for validating spawn positions (may be null if disabled)
+     * @return A valid spawn location, or null if none found
      */
-    private Location sampleSpawnLocation(Location playerLoc) {
+    private Location sampleSpawnLocation(Location playerLoc, LineOfSightChecker losChecker) {
         World world = playerLoc.getWorld();
         if (world == null) return null;
 
@@ -443,6 +458,10 @@ public class SpawnerService {
             Location candidate = findSafeYNearPlayer(world, x, z, playerLoc.getBlockY(), verticalRange);
 
             if (candidate != null) {
+                // Check line-of-sight to player if LOS validation is enabled
+                if (losChecker != null && !losChecker.hasLineOfSight(candidate, playerLoc)) {
+                    continue; // Blocked, try another location
+                }
                 return candidate;
             }
         }

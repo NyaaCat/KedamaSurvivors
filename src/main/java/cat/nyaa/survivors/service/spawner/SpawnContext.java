@@ -1,5 +1,6 @@
 package cat.nyaa.survivors.service.spawner;
 
+import cat.nyaa.survivors.util.LineOfSightChecker;
 import org.bukkit.Location;
 
 import java.util.UUID;
@@ -17,7 +18,8 @@ public record SpawnContext(
         double averageTeamLevel,
         int nearbyPlayerCount,
         int nearbyMobCount,
-        long runDurationSeconds
+        long runDurationSeconds,
+        LineOfSightChecker losChecker
 ) {
     /**
      * Creates a defensive copy with cloned location.

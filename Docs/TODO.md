@@ -597,6 +597,16 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `MerchantService.java`, `ConfigService.java`, `config.yml`
   - Tests added: `MerchantServiceTest.java`
 
+### Spawn Position Line-of-Sight Validation
+- [x] Add async line-of-sight validation to prevent mobs spawning inside structures
+  - Problem: Mobs spawned inside buildings/structures because only basic block passability was checked
+  - Solution: Use ChunkSnapshot-based LOS check during Phase B (async) to validate spawn positions
+  - Implementation: Capture ChunkSnapshots on main thread in Phase A, perform Bresenham 3D line traversal in Phase B
+  - Rejects spawn positions blocked by occluding blocks between spawn location and player
+  - Added `spawning.positioning.losValidation` config toggle (default: true)
+  - Files created: `LineOfSightChecker.java`, `LineOfSightCheckerTest.java`
+  - Files modified: `SpawnerService.java`, `SpawnContext.java`, `ConfigService.java`
+
 ---
 
 ## Notes
