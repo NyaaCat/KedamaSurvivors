@@ -563,6 +563,21 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
 - [x] Files modified: `InventoryListener.java`, `StarterService.java`, `RunService.java`, `zh_CN.yml`
 - [x] Tests added: `StarterServiceTest.java` (Ender Chest Validation Logic tests)
 
+### Spawn Point and Command Fixes
+- [x] Fix players spawning at rooftop instead of configured spawn point Y coordinate
+  - Root cause: `applySpawnOffset()` and `findSafeLocationNear()` used `getHighestBlockYAt()` which ignores configured Y
+  - Fix: Preserve Y coordinate from spawn point config instead of recalculating
+  - Files modified: `RunService.java`
+- [x] Fix spawn command "execute in" wrapper causing errors with world names like "Nether"
+  - Root cause: World names are not valid Minecraft dimension keys for `execute in` command
+  - Fix: Remove auto-wrap logic entirely; commands must handle world context themselves via `{runWorld}` placeholder
+  - Files modified: `SpawnerService.java`, `archetypes.yml` (documentation)
+- [x] Add world display name title on teleport to combat world
+  - Show world `displayName` as title with random configurable subtitle
+  - Added `getRandomComponent()` method to I18nService for list-based i18n
+  - Added `sendWorldTitle()` method to I18nService
+  - Files modified: `RunService.java`, `I18nService.java`, `zh_CN.yml`
+
 ---
 
 ## Notes

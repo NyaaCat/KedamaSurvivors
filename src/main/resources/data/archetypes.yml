@@ -21,13 +21,13 @@
 #
 # Available placeholders for spawnCommands:
 #   {sx}, {sy}, {sz} - spawn coordinates
-#   {runWorld} - the world where the run is active (auto-wrapped if not specified)
+#   {runWorld} - the world name where the run is active
 #   {enemyLevel} - calculated enemy level
 #   {enemyType} - the entity type from archetype config
 #   {archetypeId} - the archetype ID (IMPORTANT: use in Tags for reward lookup)
 #
-# NOTE: Commands are automatically wrapped with "execute in {runWorld} run ..." if they
-# don't already start with "execute in". This ensures mobs spawn in the correct world.
+# NOTE: Commands run in the world context where the run is active. Many plugin commands
+# (e.g., MythicMobs) support world parameters directly - use {runWorld} in those cases.
 #
 # Level Gating:
 #   minSpawnLevel controls when an archetype joins the spawn pool.

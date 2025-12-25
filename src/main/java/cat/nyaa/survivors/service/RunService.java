@@ -288,6 +288,9 @@ public class RunService {
                         player.teleport(finalSpawnPoint);
                     }
 
+                    // Show world title with display name
+                    plugin.getI18nService().sendWorldTitle(player, worldConfig.displayName);
+
                     // Starter equipment is already granted in GUI selection - just setup scoreboard
                     plugin.getScoreboardService().setupSidebar(player);
 
@@ -455,7 +458,7 @@ public class RunService {
             double offsetZ = java.util.concurrent.ThreadLocalRandom.current().nextDouble(-3, 3);
 
             Location candidate = center.clone().add(offsetX, 0, offsetZ);
-            candidate.setY(center.getWorld().getHighestBlockYAt(candidate) + 1);
+            // Preserve Y from center (teammate location) - don't use getHighestBlockYAt
 
             if (isSafeLocation(candidate)) {
                 return candidate;
@@ -497,8 +500,7 @@ public class RunService {
         double offsetZ = ThreadLocalRandom.current().nextDouble(-offsetRange, offsetRange);
 
         Location offset = base.clone().add(offsetX, 0, offsetZ);
-        // Adjust Y to ground level at offset position
-        offset.setY(base.getWorld().getHighestBlockYAt(offset) + 1);
+        // Preserve Y from configured spawn point (don't use getHighestBlockYAt which causes rooftop spawning)
 
         // Preserve yaw and pitch from base location
         offset.setYaw(base.getYaw());

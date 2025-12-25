@@ -15,7 +15,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handles internationalization and message formatting.
@@ -32,6 +34,7 @@ public class I18nService {
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService configService;
     private final Map<String, String> messages = new HashMap<>();
+    private final Map<String, List<String>> messageLists = new HashMap<>();
 
     public I18nService(KedamaSurvivorsPlugin plugin, ConfigService configService) {
         this.plugin = plugin;
@@ -43,6 +46,7 @@ public class I18nService {
      */
     public void loadLanguage() {
         messages.clear();
+        messageLists.clear();
 
         String language = configService.getLanguage();
         File langFile = new File(plugin.getDataFolder(), "lang/" + language + ".yml");
@@ -81,6 +85,11 @@ public class I18nService {
             if (config.isString(key)) {
                 String fullKey = prefix.isEmpty() ? key : prefix + "." + key;
                 messages.put(key, config.getString(key));
+            } else if (config.isList(key)) {
+                List<String> list = config.getStringList(key);
+                if (!list.isEmpty()) {
+                    messageLists.put(key, list);
+                }
             }
         }
     }
@@ -120,6 +129,18 @@ public class I18nService {
      */
     public Component getComponent(String key, Object... args) {
         return LEGACY_SERIALIZER.deserialize(get(key, args));
+    }
+
+    /**
+     * Gets a random message from a list key as a Component.
+     */
+    public Component getRandomComponent(String listKey) {
+        List<String> list = messageLists.get(listKey);
+        if (list == null || list.isEmpty()) {
+            return Component.empty();
+        }
+        String message = list.get(ThreadLocalRandom.current().nextInt(list.size()));
+        return LEGACY_SERIALIZER.deserialize(parseColors(message));
     }
 
     /**
@@ -222,6 +243,23 @@ public class I18nService {
                         java.time.Duration.ofMillis(fadeIn * 50L),
                         java.time.Duration.ofMillis(stay * 50L),
                         java.time.Duration.ofMillis(fadeOut * 50L)
+                )
+        ));
+    }
+
+    /**
+     * Sends a world title with the world display name and a random subtitle from the configured list.
+     */
+    public void sendWorldTitle(Player player, String worldDisplayName) {
+        Component title = getComponent("run.world_title", "world", worldDisplayName);
+        Component subtitle = getRandomComponent("run.world_subtitles");
+        player.showTitle(net.kyori.adventure.title.Title.title(
+                title,
+                subtitle,
+                net.kyori.adventure.title.Title.Times.times(
+                        java.time.Duration.ofMillis(250),
+                        java.time.Duration.ofMillis(2000),
+                        java.time.Duration.ofMillis(500)
                 )
         ));
     }

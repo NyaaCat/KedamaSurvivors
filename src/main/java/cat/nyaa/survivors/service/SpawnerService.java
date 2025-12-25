@@ -336,12 +336,6 @@ public class SpawnerService {
 
                 String cmd = templateEngine.expand(cmdTemplate, context);
 
-                // Auto-wrap with world context if not already specified
-                // This ensures summon commands execute in the correct world
-                if (!cmd.toLowerCase().startsWith("execute in ")) {
-                    cmd = "execute in " + plan.worldName() + " run " + cmd;
-                }
-
                 try {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
                     commandsThisTick++;
