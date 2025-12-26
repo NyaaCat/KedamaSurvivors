@@ -213,6 +213,17 @@ public class PlayerListener implements Listener {
                 Location spawnPoint = run.getRandomSpawnPoint();
                 if (spawnPoint != null) {
                     player.teleport(spawnPoint);
+                } else {
+                    // No spawn point available - reset to lobby instead of staying in wrong world
+                    plugin.getLogger().warning("No spawn point for reconnecting player " +
+                        player.getName() + " - resetting to LOBBY");
+                    playerState.setMode(PlayerMode.LOBBY);
+                    playerState.resetRunState();
+                    state.markReconnected(playerId);
+                    Location lobby = config.getLobbyLocation();
+                    player.teleport(lobby);
+                    i18n.send(player, "error.no_spawn_points");
+                    return;
                 }
 
                 // Setup scoreboard
@@ -283,28 +294,16 @@ public class PlayerListener implements Listener {
     private void handleDisconnectInCountdown(Player player, PlayerState playerState) {
         UUID playerId = player.getUniqueId();
 
-        // Cancel countdown for the team
+        // Delegate to ReadyService to properly cancel countdown and reset team states
+        // This ensures the BukkitTask is cancelled and all members are notified
+        plugin.getReadyService().handleDisconnect(playerId);
+
+        // Reset the disconnecting player's state
         playerState.setMode(PlayerMode.LOBBY);
         playerState.setReady(false);
 
         Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
-        if (teamOpt.isPresent()) {
-            TeamState team = teamOpt.get();
-            team.setReady(playerId, false);
-
-            // Reset all team members to READY state (not countdown)
-            for (UUID memberId : team.getMembers()) {
-                Optional<PlayerState> memberState = state.getPlayer(memberId);
-                if (memberState.isPresent() && memberState.get().getMode() == PlayerMode.COUNTDOWN) {
-                    memberState.get().setMode(PlayerMode.READY);
-                }
-
-                Player member = Bukkit.getPlayer(memberId);
-                if (member != null && !memberId.equals(playerId)) {
-                    i18n.send(member, "countdown.cancelled", "player", player.getName());
-                }
-            }
-        }
+        teamOpt.ifPresent(team -> team.setReady(playerId, false));
     }
 
     private void handleTeamWipe(TeamState team, RunState run) {

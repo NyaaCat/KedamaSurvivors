@@ -408,6 +408,13 @@ public class ReadyService {
                     Player player = Bukkit.getPlayer(memberId);
                     if (player != null && player.isOnline()) {
                         plugin.getRunService().rejoinPlayerToRun(player, playerState, run);
+                    } else {
+                        // Player was in COUNTDOWN but not online - reset to allow retry later
+                        // This prevents players from being stuck in COUNTDOWN mode forever
+                        playerState.setMode(PlayerMode.LOBBY);
+                        playerState.setReady(false);
+                        plugin.getLogger().warning("Player " + memberId +
+                            " was in COUNTDOWN but offline during rejoin - reset to LOBBY");
                     }
                 }
             }

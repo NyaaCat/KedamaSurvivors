@@ -618,6 +618,16 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `CombatListener.java`
   - Tests added: `CombatListenerTest.java` (Two-Phase PvP Damage Prevention, Edge Cases for Two-Phase Handling)
 
+### Player Stuck in COUNTDOWN Mode Fix
+- [x] Fix team member stuck in COUNTDOWN mode without being teleported
+  - Problem: Player gets stuck in COUNTDOWN mode forever with no countdown visible
+  - Root cause: Player momentarily offline during rejoin flow (network glitch), skipped without mode reset
+  - Fix 1: Add else clause in `handleRejoinToRun()` to reset offline COUNTDOWN players to LOBBY
+  - Fix 2: Fix `handleDisconnectInCountdown()` to call `ReadyService.handleDisconnect()` for proper countdown cancellation
+  - Fix 3: Add null spawn point handling in `handleReconnect()` to reset player to LOBBY
+  - Files modified: `ReadyService.java`, `PlayerListener.java`
+  - Tests added: `ReadyServiceTest.java` (Countdown mode transitions, rejoin flow, disconnect handling, edge cases)
+
 ---
 
 ## Notes
