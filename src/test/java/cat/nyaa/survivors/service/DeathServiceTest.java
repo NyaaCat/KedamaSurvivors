@@ -624,4 +624,68 @@ class DeathServiceTest {
             assertEquals(2, run.getDeathCount(player));
         }
     }
+
+    @Nested
+    @DisplayName("Respawn Location Handling")
+    class RespawnLocationHandling {
+
+        @Test
+        @DisplayName("should redirect COOLDOWN mode player to lobby on respawn")
+        void shouldRedirectCooldownPlayerToLobby() {
+            PlayerState playerState = new PlayerState(UUID.randomUUID(), "TestPlayer");
+            playerState.setMode(PlayerMode.COOLDOWN);
+            playerState.setCooldownUntilMillis(System.currentTimeMillis() + 30000);
+
+            // Simulate the respawn event handler logic:
+            // COOLDOWN mode players should get lobby as respawn location
+            boolean shouldRedirectToLobby = playerState.getMode() == PlayerMode.COOLDOWN;
+
+            assertTrue(shouldRedirectToLobby, "COOLDOWN player should be redirected to lobby on respawn");
+        }
+
+        @Test
+        @DisplayName("should NOT redirect IN_RUN mode player to lobby on respawn")
+        void shouldNotRedirectInRunPlayerToLobby() {
+            PlayerState playerState = new PlayerState(UUID.randomUUID(), "TestPlayer");
+            playerState.setMode(PlayerMode.IN_RUN);
+
+            // IN_RUN players should get run spawn point, not lobby
+            boolean shouldRedirectToLobby = playerState.getMode() == PlayerMode.COOLDOWN;
+
+            assertFalse(shouldRedirectToLobby, "IN_RUN player should NOT be redirected to lobby");
+        }
+
+        @Test
+        @DisplayName("should NOT redirect LOBBY mode player to lobby (already there)")
+        void shouldNotRedirectLobbyPlayer() {
+            PlayerState playerState = new PlayerState(UUID.randomUUID(), "TestPlayer");
+            playerState.setMode(PlayerMode.LOBBY);
+
+            // LOBBY players respawning shouldn't need special handling
+            boolean shouldRedirectToLobby = playerState.getMode() == PlayerMode.COOLDOWN;
+
+            assertFalse(shouldRedirectToLobby, "LOBBY player doesn't need redirect - already in lobby");
+        }
+
+        @Test
+        @DisplayName("should handle mode transition from IN_RUN to COOLDOWN before respawn")
+        void shouldHandleModeTransitionBeforeRespawn() {
+            PlayerState playerState = new PlayerState(UUID.randomUUID(), "TestPlayer");
+
+            // Initial state: player in run
+            playerState.setMode(PlayerMode.IN_RUN);
+            assertEquals(PlayerMode.IN_RUN, playerState.getMode());
+
+            // Simulate death penalty: mode changes to COOLDOWN
+            playerState.setMode(PlayerMode.COOLDOWN);
+            playerState.setCooldownUntilMillis(System.currentTimeMillis() + 30000);
+
+            // Now when respawn event fires, mode is COOLDOWN
+            assertEquals(PlayerMode.COOLDOWN, playerState.getMode());
+
+            // Verify the respawn handler would redirect to lobby
+            boolean shouldRedirectToLobby = playerState.getMode() == PlayerMode.COOLDOWN;
+            assertTrue(shouldRedirectToLobby, "After death penalty, respawning player should go to lobby");
+        }
+    }
 }

@@ -628,6 +628,18 @@ Living document tracking implementation progress. Mark tasks with `[x]` when com
   - Files modified: `ReadyService.java`, `PlayerListener.java`
   - Tests added: `ReadyServiceTest.java` (Countdown mode transitions, rejoin flow, disconnect handling, edge cases)
 
+### Dead Player Respawns at Death Location Fix
+- [x] Fix dead player failing to teleport to lobby, respawning at death location instead
+  - Problem: Player respawns at their death location instead of lobby after dying
+  - Root cause: Race condition between mode change and PlayerRespawnEvent
+    - `applyDeathPenalty()` sets mode to COOLDOWN immediately
+    - 20 ticks later, `player.spigot().respawn()` triggers PlayerRespawnEvent
+    - `handleRespawn()` only handles IN_RUN mode, returns null for COOLDOWN
+    - No respawn location set, player respawns at death location
+  - Fix: Add COOLDOWN mode check in `onPlayerRespawn()` to redirect to lobby
+  - Files modified: `PlayerListener.java`
+  - Tests added: `DeathServiceTest.java` (Respawn Location Handling tests)
+
 ---
 
 ## Notes

@@ -352,7 +352,15 @@ public class PlayerListener implements Listener {
 
         PlayerState playerState = playerStateOpt.get();
 
-        // Delegate respawn handling to DeathService
+        // COOLDOWN mode players should respawn at lobby (they died and are waiting to rejoin)
+        // This handles the case where applyDeathPenalty() sets mode to COOLDOWN before
+        // the scheduled respawn task triggers this event
+        if (playerState.getMode() == PlayerMode.COOLDOWN) {
+            event.setRespawnLocation(config.getLobbyLocation());
+            return;
+        }
+
+        // Delegate respawn handling to DeathService for IN_RUN players
         Location respawnLoc = death.handleRespawn(player, playerState);
         if (respawnLoc != null) {
             event.setRespawnLocation(respawnLoc);
