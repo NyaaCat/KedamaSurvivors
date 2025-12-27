@@ -127,6 +127,7 @@ public class AdminSubCommand implements SubCommand {
                 initSubCommands();
                 configSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
             }
+            case "multiplier" -> handleMultiplier(sender, args);
             default -> i18n.send(sender, "error.unknown_command", "command", action);
         }
     }
@@ -140,6 +141,7 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.help.reset");
         i18n.send(sender, "admin.help.setperma");
         i18n.send(sender, "admin.help.join");
+        i18n.send(sender, "admin.help.multiplier");
         i18n.send(sender, "admin.help.world");
         i18n.send(sender, "admin.help.starter");
         i18n.send(sender, "admin.help.debug");
@@ -339,6 +341,103 @@ public class AdminSubCommand implements SubCommand {
         }
     }
 
+    // ==================== Score Multiplier ====================
+
+    private void handleMultiplier(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            // Show current status
+            boolean enabled = config.isScoreMultiplierEnabled();
+            int multiplier = config.getScoreMultiplier();
+            boolean affectsPerma = config.isScoreMultiplierAffectsPerma();
+            String statusOn = i18n.get("multiplier.status_on");
+            String statusOff = i18n.get("multiplier.status_off");
+            i18n.send(sender, "multiplier.status",
+                    "status", enabled ? statusOn : statusOff,
+                    "multiplier", multiplier,
+                    "perma", affectsPerma ? statusOn : statusOff);
+            return;
+        }
+
+        String subAction = args[1].toLowerCase();
+        switch (subAction) {
+            case "on" -> {
+                boolean wasEnabled = config.isScoreMultiplierEnabled();
+                config.setScoreMultiplierEnabled(true);
+                config.saveConfig();
+                i18n.send(sender, "multiplier.enabled", "multiplier", config.getScoreMultiplier());
+                plugin.getLogger().info("Admin enabled score multiplier: " + config.getScoreMultiplier() + "x");
+
+                // Broadcast to all online players if state changed
+                if (!wasEnabled) {
+                    broadcastMultiplierEnabled();
+                }
+            }
+            case "off" -> {
+                boolean wasEnabled = config.isScoreMultiplierEnabled();
+                config.setScoreMultiplierEnabled(false);
+                config.saveConfig();
+                i18n.send(sender, "multiplier.disabled");
+                plugin.getLogger().info("Admin disabled score multiplier");
+
+                // Broadcast to all online players if state changed
+                if (wasEnabled) {
+                    broadcastMultiplierDisabled();
+                }
+            }
+            case "set" -> {
+                if (args.length < 3) {
+                    i18n.send(sender, "error.invalid_argument", "arg", "set <value>");
+                    return;
+                }
+                try {
+                    int value = Integer.parseInt(args[2]);
+                    if (value < 1) {
+                        i18n.send(sender, "error.invalid_number", "value", args[2]);
+                        return;
+                    }
+                    config.setScoreMultiplier(value);
+                    config.saveConfig();
+                    i18n.send(sender, "multiplier.set", "multiplier", value);
+                    plugin.getLogger().info("Admin set score multiplier to: " + value + "x");
+                } catch (NumberFormatException e) {
+                    i18n.send(sender, "error.invalid_number", "value", args[2]);
+                }
+            }
+            case "perma" -> {
+                if (args.length < 3) {
+                    i18n.send(sender, "error.invalid_argument", "arg", "perma <on|off>");
+                    return;
+                }
+                String permaArg = args[2].toLowerCase();
+                if (permaArg.equals("on")) {
+                    config.setScoreMultiplierAffectsPerma(true);
+                    config.saveConfig();
+                    i18n.send(sender, "multiplier.perma_on");
+                } else if (permaArg.equals("off")) {
+                    config.setScoreMultiplierAffectsPerma(false);
+                    config.saveConfig();
+                    i18n.send(sender, "multiplier.perma_off");
+                } else {
+                    i18n.send(sender, "error.invalid_argument", "arg", permaArg);
+                }
+            }
+            default -> i18n.send(sender, "error.invalid_argument", "arg", subAction);
+        }
+    }
+
+    private void broadcastMultiplierEnabled() {
+        int multiplier = config.getScoreMultiplier();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            i18n.sendTitle(p, null, "multiplier.enabled", 10, 40, 10, "multiplier", multiplier);
+        }
+    }
+
+    private void broadcastMultiplierDisabled() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            i18n.sendTitle(p, null, "multiplier.disabled", 10, 40, 10);
+        }
+    }
+
     // ==================== Debug Commands ====================
 
     private void handleDebug(CommandSender sender, String[] args) {
@@ -488,7 +587,7 @@ public class AdminSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "world", "starter", "debug", "equipment", "spawner", "merchant", "config")) {
+            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "multiplier", "world", "starter", "debug", "equipment", "spawner", "merchant", "config")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
@@ -545,6 +644,12 @@ public class AdminSubCommand implements SubCommand {
                         completions.add(sub);
                     }
                 }
+            } else if (action.equals("multiplier")) {
+                for (String sub : List.of("on", "off", "set", "perma")) {
+                    if (sub.startsWith(partial)) {
+                        completions.add(sub);
+                    }
+                }
             }
         } else if (args.length == 3) {
             String action = args[0].toLowerCase();
@@ -563,6 +668,12 @@ public class AdminSubCommand implements SubCommand {
                     String shortId = run.getRunId().toString().substring(0, 8);
                     if (shortId.startsWith(partial)) {
                         completions.add(shortId);
+                    }
+                }
+            } else if (action.equals("multiplier") && subAction.equals("perma")) {
+                for (String sub : List.of("on", "off")) {
+                    if (sub.startsWith(partial)) {
+                        completions.add(sub);
                     }
                 }
             }

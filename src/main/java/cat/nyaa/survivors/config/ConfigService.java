@@ -107,6 +107,11 @@ public class ConfigService {
     private int coinCustomModelData;
     private String coinDisplayName;
 
+    // Score multiplier mode
+    private int scoreMultiplier;
+    private boolean scoreMultiplierEnabled;
+    private boolean scoreMultiplierAffectsPerma;
+
     // Progression
     private int baseXpRequired;
     private int xpPerLevelIncrease;
@@ -349,6 +354,11 @@ public class ConfigService {
         coinMaterial = parseMaterial(config.getString("economy.coin.material", "EMERALD"));
         coinCustomModelData = config.getInt("economy.coin.customModelData", 0);
         coinDisplayName = config.getString("economy.coin.displayName", "§e金币");
+
+        // Score multiplier mode
+        scoreMultiplier = config.getInt("rewards.multiplier.value", 1);
+        scoreMultiplierEnabled = config.getBoolean("rewards.multiplier.enabled", false);
+        scoreMultiplierAffectsPerma = config.getBoolean("rewards.multiplier.affectsPermaScore", false);
     }
 
     private void loadProgression() {
@@ -719,6 +729,14 @@ public class ConfigService {
     public Material getCoinMaterial() { return coinMaterial; }
     public int getCoinCustomModelData() { return coinCustomModelData; }
     public String getCoinDisplayName() { return coinDisplayName; }
+
+    // Score multiplier getters/setters
+    public int getScoreMultiplier() { return scoreMultiplier; }
+    public void setScoreMultiplier(int value) { this.scoreMultiplier = value; }
+    public boolean isScoreMultiplierEnabled() { return scoreMultiplierEnabled; }
+    public void setScoreMultiplierEnabled(boolean value) { this.scoreMultiplierEnabled = value; }
+    public boolean isScoreMultiplierAffectsPerma() { return scoreMultiplierAffectsPerma; }
+    public void setScoreMultiplierAffectsPerma(boolean value) { this.scoreMultiplierAffectsPerma = value; }
 
     public int getBaseXpRequired() { return baseXpRequired; }
     public int getXpPerLevelIncrease() { return xpPerLevelIncrease; }

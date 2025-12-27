@@ -65,6 +65,9 @@ public class ConfigSubCommand implements SubCommand {
                 entry("overflowNotifyPlayer", new BooleanProperty(config::isOverflowNotifyPlayer, config::setOverflowNotifyPlayer)),
                 entry("maxLevelPermaScoreReward", new IntProperty(config::getMaxLevelPermaScoreReward, config::setMaxLevelPermaScoreReward)),
                 entry("permaScoreDisplayName", new StringProperty(config::getPermaScoreDisplayName, config::setPermaScoreDisplayName)),
+                entry("scoreMultiplier", new IntProperty(config::getScoreMultiplier, config::setScoreMultiplier)),
+                entry("scoreMultiplierEnabled", new BooleanProperty(config::isScoreMultiplierEnabled, config::setScoreMultiplierEnabled)),
+                entry("scoreMultiplierAffectsPerma", new BooleanProperty(config::isScoreMultiplierAffectsPerma, config::setScoreMultiplierAffectsPerma)),
 
                 // Progression
                 entry("baseXpRequired", new IntProperty(config::getBaseXpRequired, config::setBaseXpRequired)),
@@ -231,7 +234,8 @@ public class ConfigSubCommand implements SubCommand {
         categories.put("rewards", List.of("xpShareEnabled", "xpShareRadius", "xpSharePercent",
                 "damageContributionEnabled", "damageContributionPercent",
                 "overflowEnabled", "overflowXpPerPermaScore", "overflowNotifyPlayer",
-                "maxLevelPermaScoreReward", "permaScoreDisplayName"));
+                "maxLevelPermaScoreReward", "permaScoreDisplayName",
+                "scoreMultiplier", "scoreMultiplierEnabled", "scoreMultiplierAffectsPerma"));
         categories.put("progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"));
         categories.put("teams", List.of("maxTeamSize", "inviteExpirySeconds"));
         categories.put("merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime",

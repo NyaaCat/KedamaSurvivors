@@ -84,9 +84,26 @@ public class RewardService {
         ThreadLocalRandom random = ThreadLocalRandom.current();
 
         // Roll for each reward type independently
-        int xpReward = random.nextDouble() < archetype.xpChance ? archetype.xpAmount : 0;
-        int coinReward = random.nextDouble() < archetype.coinChance ? archetype.coinAmount : 0;
-        int permaScoreReward = random.nextDouble() < archetype.permaScoreChance ? archetype.permaScoreAmount : 0;
+        int baseXpReward = random.nextDouble() < archetype.xpChance ? archetype.xpAmount : 0;
+        int baseCoinReward = random.nextDouble() < archetype.coinChance ? archetype.coinAmount : 0;
+        int basePermaScoreReward = random.nextDouble() < archetype.permaScoreChance ? archetype.permaScoreAmount : 0;
+
+        // Apply score multiplier if enabled
+        final int xpReward;
+        final int coinReward;
+        final int permaScoreReward;
+        if (config.isScoreMultiplierEnabled()) {
+            int multiplier = config.getScoreMultiplier();
+            xpReward = baseXpReward * multiplier;
+            coinReward = baseCoinReward * multiplier;
+            permaScoreReward = config.isScoreMultiplierAffectsPerma()
+                    ? basePermaScoreReward * multiplier
+                    : basePermaScoreReward;
+        } else {
+            xpReward = baseXpReward;
+            coinReward = baseCoinReward;
+            permaScoreReward = basePermaScoreReward;
+        }
 
         // Debug logging
         if (config.isVerbose()) {

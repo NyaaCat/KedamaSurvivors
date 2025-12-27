@@ -439,6 +439,7 @@ admin:
     reset: "§f/vrs admin reset <player> §8- §7重置玩家"
     setperma: "§f/vrs admin setperma <player> <amount> §8- §7设置积分"
     join: "§f/vrs admin join <enable|disable> §8- §7游戏入口开关"
+    multiplier: "§f/vrs admin multiplier [on|off|set|perma] §8- §7积分倍率模式"
     world: "§f/vrs admin world §8- §7世界管理"
     starter: "§f/vrs admin starter §8- §7初始装备选项管理"
     debug: "§f/vrs admin debug <player|perf|templates|run> §8- §7调试命令"
@@ -847,3 +848,17 @@ killstreak:
   legendary: "§5§l天下无双!!!!!!"
   # 通用格式 (10+连杀)
   generic: "§5§l超神 {count} 连杀!!!!!"
+
+# ============================================================
+# 积分倍率模式
+# ============================================================
+
+multiplier:
+  enabled: "§a§l奖励 §6{multiplier}§a 倍模式已开启!"
+  disabled: "§7奖励倍率已关闭"
+  status: "§7奖励倍率模式: {status} §8| §7倍率: §f{multiplier}x §8| §7影响永久积分: {perma}"
+  status_on: "§a开启"
+  status_off: "§c关闭"
+  set: "§a奖励倍率已设置为 §f{multiplier}x"
+  perma_on: "§a奖励倍率现在会影响永久积分"
+  perma_off: "§7奖励倍率不再影响永久积分"
