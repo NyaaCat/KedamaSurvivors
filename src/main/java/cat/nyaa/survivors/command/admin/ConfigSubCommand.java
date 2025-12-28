@@ -52,6 +52,8 @@ public class ConfigSubCommand implements SubCommand {
                 entry("maxSampleAttempts", new IntProperty(config::getMaxSampleAttempts, config::setMaxSampleAttempts)),
                 entry("spawnTickInterval", new IntProperty(config::getSpawnTickInterval, config::setSpawnTickInterval)),
                 entry("targetMobsPerPlayer", new IntProperty(config::getTargetMobsPerPlayer, config::setTargetMobsPerPlayer)),
+                entry("targetMobsPerPlayerIncreasePerLevel", new DoubleProperty(config::getTargetMobsPerPlayerIncreasePerLevel, config::setTargetMobsPerPlayerIncreasePerLevel)),
+                entry("targetMobsPerPlayerMax", new IntProperty(config::getTargetMobsPerPlayerMax, config::setTargetMobsPerPlayerMax)),
                 entry("maxSpawnsPerTick", new IntProperty(config::getMaxSpawnsPerTick, config::setMaxSpawnsPerTick)),
 
                 // Rewards
@@ -230,7 +232,7 @@ public class ConfigSubCommand implements SubCommand {
         Map<String, List<String>> categories = new java.util.HashMap<>();
         categories.put("teleport", List.of("lobbyWorld", "lobbyX", "lobbyY", "lobbyZ", "prepCommand", "enterCommand", "respawnCommand"));
         categories.put("timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"));
-        categories.put("spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "maxSpawnsPerTick"));
+        categories.put("spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "targetMobsPerPlayerIncreasePerLevel", "targetMobsPerPlayerMax", "maxSpawnsPerTick"));
         categories.put("rewards", List.of("xpShareEnabled", "xpShareRadius", "xpSharePercent",
                 "damageContributionEnabled", "damageContributionPercent",
                 "overflowEnabled", "overflowXpPerPermaScore", "overflowNotifyPlayer",

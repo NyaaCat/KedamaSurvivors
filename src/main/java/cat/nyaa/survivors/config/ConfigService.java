@@ -934,6 +934,8 @@ public class ConfigService {
     public void setMaxSampleAttempts(int attempts) { this.maxSampleAttempts = attempts; }
     public void setSpawnTickInterval(int interval) { this.spawnTickInterval = interval; }
     public void setTargetMobsPerPlayer(int target) { this.targetMobsPerPlayer = target; }
+    public void setTargetMobsPerPlayerIncreasePerLevel(double increase) { this.targetMobsPerPlayerIncreasePerLevel = increase; }
+    public void setTargetMobsPerPlayerMax(int max) { this.targetMobsPerPlayerMax = max; }
     public void setMaxSpawnsPerTick(int max) { this.maxSpawnsPerTick = max; }
 
     // Rewards
