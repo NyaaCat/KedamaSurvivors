@@ -13,6 +13,8 @@ import cat.nyaa.survivors.util.LineOfSightChecker;
 import cat.nyaa.survivors.util.TemplateEngine;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+
+import java.util.Collections;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -57,6 +59,9 @@ public class SpawnerService {
 
     // Random for spawn calculations
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
+
+    // Pending spawn plans that couldn't be executed due to per-tick limits
+    private final List<SpawnPlan> pendingPlans = new ArrayList<>();
 
     public SpawnerService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -183,6 +188,21 @@ public class SpawnerService {
     private void executeSpawnTick() {
         if (!config.isSpawningEnabled()) return;
 
+        // First, execute any pending plans from previous tick
+        if (!pendingPlans.isEmpty()) {
+            // Filter out stale plans (player offline, left run, or too far from spawn location)
+            List<SpawnPlan> validPlans = filterValidPlans(pendingPlans);
+            pendingPlans.clear();
+
+            if (!validPlans.isEmpty()) {
+                executeSpawnPlans(validPlans);
+                // If we still have pending plans after execution, wait for next tick
+                if (!pendingPlans.isEmpty()) {
+                    return;
+                }
+            }
+        }
+
         // Phase A: Collect spawn contexts on main thread
         List<SpawnContext> contexts = collectSpawnContexts();
 
@@ -201,6 +221,31 @@ public class SpawnerService {
                 plugin.getLogger().log(Level.WARNING, "Error during spawn planning", e);
             }
         });
+    }
+
+    /**
+     * Filters pending plans to remove stale entries.
+     * A plan is stale if the target player is offline, not in a run, or too far from spawn location.
+     */
+    private List<SpawnPlan> filterValidPlans(List<SpawnPlan> plans) {
+        double maxDistance = config.getMaxSpawnDistance() * 2; // Allow some buffer for player movement
+
+        return plans.stream().filter(plan -> {
+            Player player = Bukkit.getPlayer(plan.targetPlayerId());
+            if (player == null || !player.isOnline()) return false;
+
+            // Check player is still in the correct world
+            if (!player.getWorld().getName().equals(plan.worldName())) return false;
+
+            // Check player is still in a run
+            Optional<PlayerState> playerStateOpt = state.getPlayer(plan.targetPlayerId());
+            if (playerStateOpt.isEmpty() || playerStateOpt.get().getMode() != PlayerMode.IN_RUN) return false;
+
+            // Check player hasn't moved too far from the planned spawn location
+            if (player.getLocation().distance(plan.spawnLocation()) > maxDistance) return false;
+
+            return true;
+        }).toList();
     }
 
     /**
@@ -275,9 +320,11 @@ public class SpawnerService {
     /**
      * Phase B: Plan spawns based on collected contexts.
      * Runs on async thread.
+     * Uses round-robin interleaving to ensure fair distribution across players.
      */
     private List<SpawnPlan> planSpawns(List<SpawnContext> contexts) {
-        List<SpawnPlan> plans = new ArrayList<>();
+        // Collect plans per player for round-robin interleaving
+        List<List<SpawnPlan>> plansPerPlayer = new ArrayList<>();
 
         for (SpawnContext ctx : contexts) {
             int targetMobs = calculateTargetMobsForLevel(ctx.averageTeamLevel());
@@ -286,11 +333,15 @@ public class SpawnerService {
                     config.getMaxSpawnsPerPlayerPerTick()
             );
 
-            if (toSpawn <= 0) continue;
+            if (toSpawn <= 0) {
+                plansPerPlayer.add(Collections.emptyList());
+                continue;
+            }
 
             // Calculate enemy level FIRST (needed for archetype selection)
             int enemyLevel = calculateEnemyLevel(ctx);
 
+            List<SpawnPlan> playerPlans = new ArrayList<>();
             for (int i = 0; i < toSpawn; i++) {
                 // Select archetype based on current level and world (level + world gated selection)
                 EnemyArchetypeConfig archetype = selectArchetype(enemyLevel, ctx.worldName());
@@ -303,7 +354,7 @@ public class SpawnerService {
                 Location spawnLoc = sampleSpawnLocation(ctx.playerLocation(), ctx.losChecker());
                 if (spawnLoc == null) continue;
 
-                plans.add(new SpawnPlan(
+                playerPlans.add(new SpawnPlan(
                         ctx.playerId(),
                         ctx.worldName(),
                         spawnLoc,
@@ -311,18 +362,41 @@ public class SpawnerService {
                         enemyLevel
                 ));
             }
+            plansPerPlayer.add(playerPlans);
         }
 
-        return plans;
+        // Round-robin interleave: take 1 from each player, then 2nd from each, etc.
+        return interleaveRoundRobin(plansPerPlayer);
+    }
+
+    /**
+     * Interleaves plans from multiple players in round-robin fashion.
+     * Ensures fair distribution when maxSpawnsPerTick limits total spawns.
+     */
+    private List<SpawnPlan> interleaveRoundRobin(List<List<SpawnPlan>> plansPerPlayer) {
+        List<SpawnPlan> result = new ArrayList<>();
+        int maxSize = plansPerPlayer.stream().mapToInt(List::size).max().orElse(0);
+
+        for (int i = 0; i < maxSize; i++) {
+            for (List<SpawnPlan> playerPlans : plansPerPlayer) {
+                if (i < playerPlans.size()) {
+                    result.add(playerPlans.get(i));
+                }
+            }
+        }
+
+        return result;
     }
 
     /**
      * Phase C: Execute spawn plans on main thread.
      * Must run on main thread.
+     * Remaining plans that couldn't be executed are stored in pendingPlans for next tick.
      */
     private void executeSpawnPlans(List<SpawnPlan> plans) {
         int commandsThisTick = 0;
         int spawnsThisTick = 0;
+        int plansExecuted = 0;
 
         int maxCommands = config.getMaxCommandsPerTick();
         int maxSpawns = config.getMaxSpawnsPerTick();
@@ -356,10 +430,18 @@ public class SpawnerService {
             }
 
             spawnsThisTick++;
+            plansExecuted++;
+        }
+
+        // Store remaining plans for next tick
+        pendingPlans.clear();
+        if (plansExecuted < plans.size()) {
+            pendingPlans.addAll(plans.subList(plansExecuted, plans.size()));
         }
 
         if (config.isVerbose() && spawnsThisTick > 0) {
-            plugin.getLogger().info("Spawned " + spawnsThisTick + " entities using " + commandsThisTick + " commands");
+            plugin.getLogger().info("Spawned " + spawnsThisTick + " entities using " + commandsThisTick + " commands"
+                    + (pendingPlans.isEmpty() ? "" : ", " + pendingPlans.size() + " pending"));
         }
     }
 
