@@ -157,7 +157,9 @@ spawning:
     blockNaturalSpawns: true  # Block natural mob spawns in combat worlds
 
   limits:
-    targetMobsPerPlayer: 10
+    targetMobsPerPlayer: 4
+    targetMobsPerPlayerIncreasePerLevel: 0.5  # Increase per run level
+    targetMobsPerPlayerMax: 10  # Maximum target regardless of level
     maxSpawnsPerPlayerPerTick: 3
     maxSpawnsPerTick: 20
     maxCommandsPerTick: 50

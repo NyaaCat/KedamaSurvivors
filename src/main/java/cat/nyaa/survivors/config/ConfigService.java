@@ -70,6 +70,8 @@ public class ConfigService {
     private boolean spawningEnabled;
     private boolean blockNaturalSpawns;
     private int targetMobsPerPlayer;
+    private double targetMobsPerPlayerIncreasePerLevel;
+    private int targetMobsPerPlayerMax;
     private int maxSpawnsPerPlayerPerTick;
     private int maxSpawnsPerTick;
     private int maxCommandsPerTick;
@@ -310,6 +312,8 @@ public class ConfigService {
         blockNaturalSpawns = config.getBoolean("spawning.loop.blockNaturalSpawns", true);
 
         targetMobsPerPlayer = config.getInt("spawning.limits.targetMobsPerPlayer", 10);
+        targetMobsPerPlayerIncreasePerLevel = config.getDouble("spawning.limits.targetMobsPerPlayerIncreasePerLevel", 0.0);
+        targetMobsPerPlayerMax = config.getInt("spawning.limits.targetMobsPerPlayerMax", 10);
         maxSpawnsPerPlayerPerTick = config.getInt("spawning.limits.maxSpawnsPerPlayerPerTick", 3);
         maxSpawnsPerTick = config.getInt("spawning.limits.maxSpawnsPerTick", 20);
         maxCommandsPerTick = config.getInt("spawning.limits.maxCommandsPerTick", 50);
@@ -697,6 +701,8 @@ public class ConfigService {
     public boolean isSpawningEnabled() { return spawningEnabled; }
     public boolean isBlockNaturalSpawns() { return blockNaturalSpawns; }
     public int getTargetMobsPerPlayer() { return targetMobsPerPlayer; }
+    public double getTargetMobsPerPlayerIncreasePerLevel() { return targetMobsPerPlayerIncreasePerLevel; }
+    public int getTargetMobsPerPlayerMax() { return targetMobsPerPlayerMax; }
     public int getMaxSpawnsPerPlayerPerTick() { return maxSpawnsPerPlayerPerTick; }
     public int getMaxSpawnsPerTick() { return maxSpawnsPerTick; }
     public int getMaxCommandsPerTick() { return maxCommandsPerTick; }

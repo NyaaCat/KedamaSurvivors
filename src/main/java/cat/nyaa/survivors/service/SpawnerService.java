@@ -280,7 +280,7 @@ public class SpawnerService {
         List<SpawnPlan> plans = new ArrayList<>();
 
         for (SpawnContext ctx : contexts) {
-            int targetMobs = config.getTargetMobsPerPlayer();
+            int targetMobs = calculateTargetMobsForLevel(ctx.averageTeamLevel());
             int toSpawn = Math.min(
                     targetMobs - ctx.nearbyMobCount(),
                     config.getMaxSpawnsPerPlayerPerTick()
@@ -380,6 +380,19 @@ public class SpawnerService {
         // Clamp to configured bounds
         int result = (int) Math.round(level);
         return Math.max(config.getMinEnemyLevel(), Math.min(config.getMaxEnemyLevel(), result));
+    }
+
+    /**
+     * Calculate target mobs per player based on team average run level.
+     * Formula: floor(base + (level - 1) * increasePerLevel), capped at max.
+     */
+    private int calculateTargetMobsForLevel(double avgTeamLevel) {
+        int base = config.getTargetMobsPerPlayer();
+        double increase = config.getTargetMobsPerPlayerIncreasePerLevel();
+        int max = config.getTargetMobsPerPlayerMax();
+
+        int target = (int) Math.floor(base + (avgTeamLevel - 1) * increase);
+        return Math.min(target, max);
     }
 
     /**
