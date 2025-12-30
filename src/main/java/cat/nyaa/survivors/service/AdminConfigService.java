@@ -742,6 +742,13 @@ public class AdminConfigService {
             }
 
             archetypes.put(id, config);
+
+            // Debug: log loaded archetype with minSpawnLevel
+            if (configService.isVerbose()) {
+                plugin.getLogger().info("[AdminConfigService] Loaded archetype: " + id +
+                        ", minSpawnLevel=" + config.minSpawnLevel +
+                        ", allowedWorlds=" + config.allowedWorlds);
+            }
         }
 
         // Auto-save migrated data

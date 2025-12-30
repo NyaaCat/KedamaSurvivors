@@ -341,6 +341,15 @@ public class SpawnerService {
             // Calculate enemy level FIRST (needed for archetype selection)
             int enemyLevel = calculateEnemyLevel(ctx);
 
+            // Debug: log level calculation details
+            if (config.isVerbose()) {
+                plugin.getLogger().info("[SpawnDebug] avgTeamLevel=" + ctx.averageTeamLevel() +
+                        ", nearbyPlayers=" + ctx.nearbyPlayerCount() +
+                        ", runDuration=" + ctx.runDurationSeconds() + "s" +
+                        ", calculatedEnemyLevel=" + enemyLevel +
+                        ", world=" + ctx.worldName());
+            }
+
             List<SpawnPlan> playerPlans = new ArrayList<>();
             for (int i = 0; i < toSpawn; i++) {
                 // Select archetype based on current level and world (level + world gated selection)
@@ -497,9 +506,20 @@ public class SpawnerService {
 
         if (eligible.isEmpty()) {
             if (config.isVerbose()) {
-                plugin.getLogger().fine("No archetypes available at level " + currentLevel + " in world " + worldName);
+                plugin.getLogger().info("[SpawnDebug] No archetypes available at level " + currentLevel + " in world " + worldName);
             }
             return null;
+        }
+
+        // Debug: log archetype selection
+        if (config.isVerbose()) {
+            plugin.getLogger().info("[SpawnDebug] Selecting archetype: level=" + currentLevel +
+                    ", world=" + worldName +
+                    ", totalArchetypes=" + allArchetypes.size() +
+                    ", eligible=" + eligible.size() +
+                    ", eligibleIds=" + eligible.stream()
+                            .map(a -> a.archetypeId + "(minLvl:" + a.minSpawnLevel + ")")
+                            .toList());
         }
 
         // Calculate total weight from eligible archetypes only

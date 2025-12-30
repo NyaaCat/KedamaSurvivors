@@ -13,6 +13,7 @@ import cat.nyaa.survivors.scoreboard.ScoreboardService;
 import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.DamageContributionService;
 import cat.nyaa.survivors.service.DeathService;
+import cat.nyaa.survivors.service.InventoryValidationService;
 import cat.nyaa.survivors.service.PersistenceService;
 import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.RewardService;
@@ -68,6 +69,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private PersistenceService persistenceService;
     private StatsService statsService;
     private DamageContributionService damageContributionService;
+    private InventoryValidationService inventoryValidationService;
     private CommandQueue commandQueue;
 
     @Override
@@ -170,6 +172,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Join switch service for global entry control
         joinSwitchService = new JoinSwitchService(this);
 
+        // Inventory validation service for checking player equipment
+        inventoryValidationService = new InventoryValidationService(this);
+
         // Disconnect checker for grace period expiry
         disconnectChecker = new DisconnectChecker(this);
 
@@ -243,6 +248,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         if (commandQueue != null) {
             commandQueue.start();
         }
+
+        // Start inventory validation service
+        if (inventoryValidationService != null) {
+            inventoryValidationService.start();
+        }
     }
 
     private void stopTasks() {
@@ -304,6 +314,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Stop command queue (executes remaining commands)
         if (commandQueue != null) {
             commandQueue.stop();
+        }
+
+        // Stop inventory validation service
+        if (inventoryValidationService != null) {
+            inventoryValidationService.stop();
         }
 
         // Cancel all scheduled tasks
@@ -424,5 +439,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public DamageContributionService getDamageContributionService() {
         return damageContributionService;
+    }
+
+    public InventoryValidationService getInventoryValidationService() {
+        return inventoryValidationService;
     }
 }
