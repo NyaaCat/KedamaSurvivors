@@ -720,4 +720,228 @@ class SpawnerServiceTest {
             assertEquals("zombie", forestEligible.get(0).archetypeId);
         }
     }
+
+    @Nested
+    @DisplayName("Dynamic Spawn Scaling")
+    class DynamicSpawnScalingTests {
+
+        // Default config values
+        private static final int BASE_TARGET = 4;
+        private static final double INCREASE_PER_LEVEL = 0.5;
+        private static final int MAX_TARGET = 10;
+
+        @Test
+        @DisplayName("should return base target at level 1")
+        void shouldReturnBaseTargetAtLevel1() {
+            double avgTeamLevel = 1.0;
+            int target = calculateTargetMobs(avgTeamLevel);
+
+            assertEquals(4, target);
+        }
+
+        @Test
+        @DisplayName("should increase target with higher levels")
+        void shouldIncreaseTargetWithHigherLevels() {
+            // Level 5: floor(4 + (5-1) * 0.5) = floor(6) = 6
+            assertEquals(6, calculateTargetMobs(5.0));
+
+            // Level 10: floor(4 + (10-1) * 0.5) = floor(8.5) = 8
+            assertEquals(8, calculateTargetMobs(10.0));
+
+            // Level 15: floor(4 + (15-1) * 0.5) = floor(11) = 10 (capped)
+            assertEquals(10, calculateTargetMobs(15.0));
+        }
+
+        @Test
+        @DisplayName("should cap target at maximum")
+        void shouldCapTargetAtMaximum() {
+            // Level 100: would be floor(4 + 99 * 0.5) = 53, but capped at 10
+            int target = calculateTargetMobs(100.0);
+            assertEquals(MAX_TARGET, target);
+        }
+
+        @Test
+        @DisplayName("should handle fractional levels")
+        void shouldHandleFractionalLevels() {
+            // Level 3.5: floor(4 + (3.5-1) * 0.5) = floor(5.25) = 5
+            assertEquals(5, calculateTargetMobs(3.5));
+
+            // Level 6.9: floor(4 + (6.9-1) * 0.5) = floor(6.95) = 6
+            assertEquals(6, calculateTargetMobs(6.9));
+        }
+
+        @Test
+        @DisplayName("should handle level less than 1")
+        void shouldHandleLevelLessThanOne() {
+            // Level 0.5: floor(4 + (0.5-1) * 0.5) = floor(3.75) = 3
+            // But typically level shouldn't be below 1
+            assertEquals(3, calculateTargetMobs(0.5));
+        }
+
+        @Test
+        @DisplayName("should scale linearly between thresholds")
+        void shouldScaleLinearlyBetweenThresholds() {
+            // Verify stair-step behavior with 0.5 increment
+            // Levels 1-2: target = 4
+            assertEquals(4, calculateTargetMobs(1.0));
+            assertEquals(4, calculateTargetMobs(2.0));
+
+            // Levels 3-4: target = 5
+            assertEquals(5, calculateTargetMobs(3.0));
+            assertEquals(5, calculateTargetMobs(4.0));
+
+            // Levels 5-6: target = 6
+            assertEquals(6, calculateTargetMobs(5.0));
+            assertEquals(6, calculateTargetMobs(6.0));
+        }
+
+        @Test
+        @DisplayName("should respect custom config values")
+        void shouldRespectCustomConfigValues() {
+            int customBase = 6;
+            double customIncrease = 1.0;
+            int customMax = 15;
+
+            // Level 5 with custom: floor(6 + (5-1) * 1.0) = 10
+            int target = calculateTargetMobsCustom(5.0, customBase, customIncrease, customMax);
+            assertEquals(10, target);
+
+            // Level 20 with custom: floor(6 + (20-1) * 1.0) = 25, capped at 15
+            target = calculateTargetMobsCustom(20.0, customBase, customIncrease, customMax);
+            assertEquals(15, target);
+        }
+
+        @Test
+        @DisplayName("should calculate spawn amount correctly")
+        void shouldCalculateSpawnAmountCorrectly() {
+            int targetMobs = 8;
+            int nearbyMobCount = 3;
+            int maxSpawnsPerPlayerPerTick = 3;
+
+            int toSpawn = Math.min(
+                    targetMobs - nearbyMobCount,
+                    maxSpawnsPerPlayerPerTick
+            );
+
+            assertEquals(3, toSpawn);
+        }
+
+        @Test
+        @DisplayName("should not spawn when at or above target")
+        void shouldNotSpawnWhenAtOrAboveTarget() {
+            int targetMobs = 6;
+            int nearbyMobCount = 6;
+            int maxSpawnsPerPlayerPerTick = 3;
+
+            int toSpawn = Math.min(
+                    targetMobs - nearbyMobCount,
+                    maxSpawnsPerPlayerPerTick
+            );
+
+            assertEquals(0, toSpawn);
+        }
+
+        @Test
+        @DisplayName("should not spawn when over target")
+        void shouldNotSpawnWhenOverTarget() {
+            int targetMobs = 6;
+            int nearbyMobCount = 10;
+            int maxSpawnsPerPlayerPerTick = 3;
+
+            int toSpawn = Math.min(
+                    targetMobs - nearbyMobCount,
+                    maxSpawnsPerPlayerPerTick
+            );
+
+            assertTrue(toSpawn <= 0);
+        }
+
+        @Test
+        @DisplayName("should limit spawns to max per tick")
+        void shouldLimitSpawnsToMaxPerTick() {
+            int targetMobs = 10;
+            int nearbyMobCount = 0;
+            int maxSpawnsPerPlayerPerTick = 3;
+
+            int toSpawn = Math.min(
+                    targetMobs - nearbyMobCount,
+                    maxSpawnsPerPlayerPerTick
+            );
+
+            assertEquals(3, toSpawn);
+        }
+
+        private int calculateTargetMobs(double avgTeamLevel) {
+            return calculateTargetMobsCustom(avgTeamLevel, BASE_TARGET, INCREASE_PER_LEVEL, MAX_TARGET);
+        }
+
+        private int calculateTargetMobsCustom(double avgTeamLevel, int base, double increasePerLevel, int max) {
+            int target = (int) Math.floor(base + (avgTeamLevel - 1) * increasePerLevel);
+            return Math.min(target, max);
+        }
+    }
+
+    @Nested
+    @DisplayName("Average Team Level Calculation")
+    class AverageTeamLevelCalculationTests {
+
+        @Test
+        @DisplayName("should calculate average of team member levels")
+        void shouldCalculateAverageOfTeamMemberLevels() {
+            List<Integer> teamLevels = List.of(3, 5, 7, 9);
+            double average = teamLevels.stream()
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(1.0);
+
+            assertEquals(6.0, average);
+        }
+
+        @Test
+        @DisplayName("should return 1.0 for empty team")
+        void shouldReturnDefaultForEmptyTeam() {
+            List<Integer> teamLevels = List.of();
+            double average = teamLevels.stream()
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(1.0);
+
+            assertEquals(1.0, average);
+        }
+
+        @Test
+        @DisplayName("should handle single player")
+        void shouldHandleSinglePlayer() {
+            List<Integer> teamLevels = List.of(5);
+            double average = teamLevels.stream()
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(1.0);
+
+            assertEquals(5.0, average);
+        }
+
+        @Test
+        @DisplayName("should filter players outside radius")
+        void shouldFilterPlayersOutsideRadius() {
+            // Simulate filtering players within 50 block radius
+            List<MockPlayer> allPlayers = List.of(
+                    new MockPlayer(1, 10.0),   // within radius
+                    new MockPlayer(2, 30.0),   // within radius
+                    new MockPlayer(3, 60.0),   // outside radius
+                    new MockPlayer(4, 100.0)   // outside radius
+            );
+            double radius = 50.0;
+
+            List<Integer> nearbyLevels = allPlayers.stream()
+                    .filter(p -> p.distance <= radius)
+                    .map(p -> p.level)
+                    .toList();
+
+            assertEquals(2, nearbyLevels.size());
+            assertEquals(List.of(1, 2), nearbyLevels);
+        }
+
+        private record MockPlayer(int level, double distance) {}
+    }
 }

@@ -461,6 +461,8 @@ admin:
     spawner: "§f/vrs admin spawner §8- §7刷怪器原型管理"
     merchant: "§f/vrs admin merchant §8- §7商店模板管理"
     config: "§f/vrs admin config §8- §7配置管理"
+    coin: "§f/vrs admin coin §8- §7金币管理"
+    perma: "§f/vrs admin perma §8- §7永久积分管理"
 
   # 状态
   status:
@@ -490,6 +492,9 @@ admin:
   # 金币命令
   coin:
     help: "§7金币管理: /vrs admin coin <add|set|get> <player> [amount]"
+    usage_add: "§c用法: /vrs admin coin add <player> <amount>"
+    usage_set: "§c用法: /vrs admin coin set <player> <amount>"
+    usage_get: "§c用法: /vrs admin coin get <player>"
     added: "§a已为 §f{player} §a增加 §e{amount} §a金币，当前余额: §e{balance}"
     set: "§a已将 §f{player} §a的金币设置为 §e{amount}"
     get: "§7{player} 的金币余额: §e{balance}"
@@ -498,6 +503,9 @@ admin:
   # 永久积分命令
   perma:
     help: "§7永久积分管理: /vrs admin perma <add|set|get> <player> [amount]"
+    usage_add: "§c用法: /vrs admin perma add <player> <amount>"
+    usage_set: "§c用法: /vrs admin perma set <player> <amount>"
+    usage_get: "§c用法: /vrs admin perma get <player>"
     added: "§a已为 §f{player} §a增加 §d{amount} §a永久积分，当前: §d{total}"
     set: "§a已将 §f{player} §a的永久积分设置为 §d{amount}"
     get: "§7{player} 的永久积分: §d{amount}"
