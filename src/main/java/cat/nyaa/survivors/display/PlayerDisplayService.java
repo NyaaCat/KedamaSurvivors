@@ -106,7 +106,18 @@ public class PlayerDisplayService {
 
             TextDisplay display = playerDisplays.get(player.getUniqueId());
 
-            if (display == null || !display.isValid()) {
+            // Check if display needs to be recreated
+            boolean needsRecreate = display == null || !display.isValid();
+
+            // Also recreate if player changed worlds
+            if (!needsRecreate && display != null && !display.getWorld().equals(player.getWorld())) {
+                // Player switched worlds - remove old display and create new one
+                display.remove();
+                playerDisplays.remove(player.getUniqueId());
+                needsRecreate = true;
+            }
+
+            if (needsRecreate) {
                 // Create new display entity
                 display = createDisplayEntity(player, className, level);
                 if (display != null) {
@@ -142,6 +153,7 @@ public class PlayerDisplayService {
 
     /**
      * Creates a TextDisplay entity above a player.
+     * Visible to everyone by default, hidden from owner only.
      */
     private TextDisplay createDisplayEntity(Player player, String className, int level) {
         Location spawnLoc = getDisplayLocation(player.getLocation());
@@ -154,16 +166,16 @@ public class PlayerDisplayService {
                 // Billboard mode - always face the viewer
                 entity.setBillboard(Display.Billboard.CENTER);
 
-                // Visual settings
-                entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0)); // Transparent background
+                // Visual settings - transparent background with shadow
+                entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
                 entity.setShadowed(true);
                 entity.setSeeThrough(false);
                 entity.setDefaultBackground(false);
 
-                // View range
+                // View range - 1.0 means default (64 blocks * entityDistanceScaling)
                 entity.setViewRange(1.0f);
 
-                // No interpolation needed for position updates
+                // No interpolation for position updates
                 entity.setInterpolationDuration(0);
 
                 // Make persistent = false so it doesn't save to world
@@ -174,9 +186,14 @@ public class PlayerDisplayService {
                 entity.addScoreboardTag("vrs_owner_" + player.getUniqueId());
             });
 
+            // Hide from owner only - everyone else sees it by default
+            player.hideEntity(plugin, display);
+
+            plugin.getLogger().info("Created TextDisplay for player " + player.getName() + " at " + spawnLoc);
             return display;
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to create TextDisplay for player " + player.getName() + ": " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
@@ -198,28 +215,16 @@ public class PlayerDisplayService {
     }
 
     /**
-     * Updates visibility of a display entity for all players.
-     * The display should be visible to all IN_RUN players except the owner.
+     * Updates visibility of a display entity.
+     * Just ensures owner cannot see their own display.
      */
     private void updateVisibility(Player owner, TextDisplay display) {
-        UUID ownerId = owner.getUniqueId();
-
-        for (Player viewer : Bukkit.getOnlinePlayers()) {
-            if (viewer.getUniqueId().equals(ownerId)) {
-                // Owner should not see their own display
-                viewer.hideEntity(plugin, display);
-            } else {
-                // Check if viewer is in IN_RUN mode and same world
-                Optional<PlayerState> viewerStateOpt = state.getPlayer(viewer.getUniqueId());
-                if (viewerStateOpt.isPresent()
-                        && viewerStateOpt.get().getMode() == PlayerMode.IN_RUN
-                        && viewer.getWorld().equals(owner.getWorld())) {
-                    viewer.showEntity(plugin, display);
-                } else {
-                    viewer.hideEntity(plugin, display);
-                }
-            }
+        // Ensure owner still cannot see their own display
+        // (in case they reconnected or something)
+        if (!owner.canSee(display)) {
+            return; // Already hidden
         }
+        owner.hideEntity(plugin, display);
     }
 
     /**
@@ -249,8 +254,11 @@ public class PlayerDisplayService {
         TextDisplay display = playerDisplays.remove(playerId);
         lastDisplayData.remove(playerId);
 
-        if (display != null && display.isValid()) {
-            display.remove();
+        if (display != null) {
+            if (display.isValid()) {
+                display.remove();
+                plugin.getLogger().info("Removed TextDisplay for player " + playerId);
+            }
         }
     }
 
