@@ -20,7 +20,6 @@ import org.bukkit.scheduler.BukkitTask;
 import org.joml.Vector3f;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,15 +40,19 @@ public class PlayerDisplayService {
     // Default offset above player head (configurable via overheadDisplay.yOffset)
     private static final float DEFAULT_Y_OFFSET = 2.3f;
 
-    // Entity data IDs for TextDisplay (hardcoded to match NMS values)
-    // These are the actual data slot IDs from net.minecraft.world.entity.Display and Display.TextDisplay
-    // Base Display data slots: 0-7 (interpolation_start, interpolation_duration, translation, scale, etc.)
-    // TextDisplay data slots: 23 (TEXT), 24 (LINE_WIDTH), 25 (BACKGROUND_COLOR), 26 (TEXT_OPACITY), 27 (STYLE_FLAGS)
-    private static final int DATA_ID_TEXT = 23;
-    private static final int DATA_ID_BACKGROUND_COLOR = 25;
-    private static final int DATA_ID_TEXT_OPACITY = 26;
-    private static final int DATA_ID_STYLE_FLAGS = 27;
-    private static final int DATA_ID_SCALE = 11;  // Display base class scale vector
+    // Entity data IDs for Display and TextDisplay (hardcoded to match NMS/protocol values)
+    // Reference: https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata
+    // Base Display data slots:
+    private static final int DATA_ID_TRANSLATION = 11;      // Vector3 - position offset
+    private static final int DATA_ID_SCALE = 12;            // Vector3 - scale
+    private static final int DATA_ID_BILLBOARD = 15;        // Byte - billboard mode (0=FIXED, 1=VERTICAL, 2=HORIZONTAL, 3=CENTER)
+    private static final int DATA_ID_VIEW_RANGE = 17;       // Float - view range multiplier (default 1.0)
+    // TextDisplay data slots:
+    private static final int DATA_ID_TEXT = 23;             // Text Component
+    private static final int DATA_ID_LINE_WIDTH = 24;       // VarInt - line width (default 200)
+    private static final int DATA_ID_BACKGROUND_COLOR = 25; // Int - ARGB background color
+    private static final int DATA_ID_TEXT_OPACITY = 26;     // Byte - text opacity (-1 = 255 = fully opaque)
+    private static final int DATA_ID_STYLE_FLAGS = 27;      // Byte - style flags (shadow, see-through, default_background, alignment)
 
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService config;
@@ -93,6 +96,7 @@ public class PlayerDisplayService {
 
     /**
      * Called every tick to update display entities.
+     * All operations run on main thread for thread safety with Bukkit API.
      */
     private void tickUpdate() {
         // Check if overhead display is enabled
@@ -104,61 +108,57 @@ public class PlayerDisplayService {
             return;
         }
 
-        // 1. Collect display data for all IN_RUN players (on main thread)
+        // 1. Collect display data for all IN_RUN players
         Map<UUID, DisplayData> displayDataMap = collectDisplayData();
 
         if (displayDataMap.isEmpty()) {
+            // Clean up any stale entities
+            cleanupStaleEntities(Collections.emptySet());
             return;
         }
 
-        // 2. Process and send packets (can be done on async thread for calculation, but packets must go on main)
-        CompletableFuture.runAsync(() -> {
-            Map<Player, List<Object>> packetsPerViewer = new HashMap<>();
+        // 2. Process viewers and create packets
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            Optional<PlayerState> viewerStateOpt = state.getPlayer(viewer.getUniqueId());
+            if (viewerStateOpt.isEmpty()) continue;
 
-            for (Player viewer : Bukkit.getOnlinePlayers()) {
-                Optional<PlayerState> viewerStateOpt = state.getPlayer(viewer.getUniqueId());
-                if (viewerStateOpt.isEmpty()) continue;
+            // Only send to viewers in IN_RUN mode
+            if (viewerStateOpt.get().getMode() != PlayerMode.IN_RUN) continue;
 
-                // Only send to viewers in IN_RUN mode
-                if (viewerStateOpt.get().getMode() != PlayerMode.IN_RUN) continue;
+            List<Object> packets = new ArrayList<>();
 
-                List<Object> packets = new ArrayList<>();
+            for (Map.Entry<UUID, DisplayData> entry : displayDataMap.entrySet()) {
+                UUID targetId = entry.getKey();
 
-                for (Map.Entry<UUID, DisplayData> entry : displayDataMap.entrySet()) {
-                    UUID targetId = entry.getKey();
+                // Don't show player's own display to themselves
+                if (targetId.equals(viewer.getUniqueId())) continue;
 
-                    // Don't show player's own display to themselves
-                    if (targetId.equals(viewer.getUniqueId())) continue;
+                Player target = Bukkit.getPlayer(targetId);
+                if (target == null || !target.isOnline()) continue;
 
-                    Player target = Bukkit.getPlayer(targetId);
-                    if (target == null || !target.isOnline()) continue;
-
-                    // Check if they're in the same world
-                    if (!viewer.getWorld().equals(target.getWorld())) continue;
-
-                    // Check visibility (distance-based, using render distance)
-                    if (!isVisible(viewer, target)) {
-                        // Send destroy packet if viewer knew about this entity
-                        sendDestroyIfKnown(viewer, targetId);
-                        continue;
-                    }
-
-                    DisplayData data = entry.getValue();
-                    packets.addAll(createDisplayPackets(viewer, target, data));
+                // Check if they're in the same world
+                if (!viewer.getWorld().equals(target.getWorld())) {
+                    // Send destroy packet if viewer knew about this entity but is now in different world
+                    sendDestroyIfKnown(viewer, targetId);
+                    continue;
                 }
 
-                if (!packets.isEmpty()) {
-                    packetsPerViewer.put(viewer, packets);
+                // Check visibility (distance-based, using render distance)
+                if (!isVisible(viewer, target)) {
+                    // Send destroy packet if viewer knew about this entity
+                    sendDestroyIfKnown(viewer, targetId);
+                    continue;
                 }
+
+                DisplayData data = entry.getValue();
+                packets.addAll(createDisplayPackets(viewer, target, data));
             }
 
-            // 3. Send packets on main thread
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                for (Map.Entry<Player, List<Object>> entry : packetsPerViewer.entrySet()) {
-                    sendPackets(entry.getKey(), entry.getValue());
-                }
-            });
-        });
+            // Send packets to this viewer
+            if (!packets.isEmpty()) {
+                sendPackets(viewer, packets);
+            }
+        }
 
         // Clean up entities for players who left IN_RUN mode
         cleanupStaleEntities(displayDataMap.keySet());
@@ -257,24 +257,37 @@ public class PlayerDisplayService {
         // Metadata packet
         List<SynchedEntityData.DataValue<?>> dataValues = new ArrayList<>();
 
-        // Text content
+        // === Base Display entity data ===
+
+        // Scale (index 12)
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_SCALE, EntityDataSerializers.VECTOR3, new Vector3f(1.0f, 1.0f, 1.0f)));
+
+        // Billboard mode (index 15) - 3 = CENTER (always face player)
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_BILLBOARD, EntityDataSerializers.BYTE, (byte) 3));
+
+        // View range (index 17) - multiplier for render distance (1.0 = 64 blocks default)
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_VIEW_RANGE, EntityDataSerializers.FLOAT, 1.0f));
+
+        // === TextDisplay specific data ===
+
+        // Text content (index 23)
         net.minecraft.network.chat.Component nmsText = PaperAdventure.asVanilla(displayText);
         dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_TEXT, EntityDataSerializers.COMPONENT, nmsText));
 
-        // Background color (transparent)
-        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_BACKGROUND_COLOR, EntityDataSerializers.INT, 0)); // ARGB 0 = transparent
+        // Line width (index 24) - default 200
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_LINE_WIDTH, EntityDataSerializers.INT, 200));
 
-        // Text opacity (fully opaque)
-        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_TEXT_OPACITY, EntityDataSerializers.BYTE, (byte) -1)); // -1 = 255 = fully opaque
+        // Background color (index 25) - transparent (ARGB 0)
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_BACKGROUND_COLOR, EntityDataSerializers.INT, 0));
 
-        // Style flags (shadowed, see-through, billboard center)
+        // Text opacity (index 26) - fully opaque (-1 = 255)
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_TEXT_OPACITY, EntityDataSerializers.BYTE, (byte) -1));
+
+        // Style flags (index 27) - bit 0: shadow, bit 1: see_through, bit 2: default_background, bits 3-4: alignment
         byte flags = 0;
         flags |= 0x01; // Has shadow
-        flags |= 0x08; // Billboard center (always face viewer)
+        // Alignment is in bits 3-4: 0=CENTER, 1=LEFT, 2=RIGHT - default CENTER (0)
         dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_STYLE_FLAGS, EntityDataSerializers.BYTE, flags));
-
-        // Scale
-        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_SCALE, EntityDataSerializers.VECTOR3, new Vector3f(1.0f, 1.0f, 1.0f)));
 
         ClientboundSetEntityDataPacket metadataPacket = new ClientboundSetEntityDataPacket(entityId, dataValues);
         packets.add(metadataPacket);
