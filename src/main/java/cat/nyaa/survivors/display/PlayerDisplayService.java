@@ -9,10 +9,8 @@ import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.*;
-import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -43,17 +41,15 @@ public class PlayerDisplayService {
     // Default offset above player head (configurable via overheadDisplay.yOffset)
     private static final float DEFAULT_Y_OFFSET = 2.3f;
 
-    // Entity data accessors for TextDisplay
-    private static final EntityDataAccessor<net.minecraft.network.chat.Component> DATA_TEXT =
-            SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.COMPONENT);
-    private static final EntityDataAccessor<Integer> DATA_BACKGROUND_COLOR =
-            SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Byte> DATA_TEXT_OPACITY =
-            SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.BYTE);
-    private static final EntityDataAccessor<Byte> DATA_STYLE_FLAGS =
-            SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.BYTE);
-    private static final EntityDataAccessor<Vector3f> DATA_SCALE =
-            SynchedEntityData.defineId(Display.class, EntityDataSerializers.VECTOR3);
+    // Entity data IDs for TextDisplay (hardcoded to match NMS values)
+    // These are the actual data slot IDs from net.minecraft.world.entity.Display and Display.TextDisplay
+    // Base Display data slots: 0-7 (interpolation_start, interpolation_duration, translation, scale, etc.)
+    // TextDisplay data slots: 23 (TEXT), 24 (LINE_WIDTH), 25 (BACKGROUND_COLOR), 26 (TEXT_OPACITY), 27 (STYLE_FLAGS)
+    private static final int DATA_ID_TEXT = 23;
+    private static final int DATA_ID_BACKGROUND_COLOR = 25;
+    private static final int DATA_ID_TEXT_OPACITY = 26;
+    private static final int DATA_ID_STYLE_FLAGS = 27;
+    private static final int DATA_ID_SCALE = 11;  // Display base class scale vector
 
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService config;
@@ -263,22 +259,22 @@ public class PlayerDisplayService {
 
         // Text content
         net.minecraft.network.chat.Component nmsText = PaperAdventure.asVanilla(displayText);
-        dataValues.add(SynchedEntityData.DataValue.create(DATA_TEXT, nmsText));
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_TEXT, EntityDataSerializers.COMPONENT, nmsText));
 
         // Background color (transparent)
-        dataValues.add(SynchedEntityData.DataValue.create(DATA_BACKGROUND_COLOR, 0)); // ARGB 0 = transparent
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_BACKGROUND_COLOR, EntityDataSerializers.INT, 0)); // ARGB 0 = transparent
 
         // Text opacity (fully opaque)
-        dataValues.add(SynchedEntityData.DataValue.create(DATA_TEXT_OPACITY, (byte) -1)); // -1 = 255 = fully opaque
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_TEXT_OPACITY, EntityDataSerializers.BYTE, (byte) -1)); // -1 = 255 = fully opaque
 
         // Style flags (shadowed, see-through, billboard center)
         byte flags = 0;
         flags |= 0x01; // Has shadow
         flags |= 0x08; // Billboard center (always face viewer)
-        dataValues.add(SynchedEntityData.DataValue.create(DATA_STYLE_FLAGS, flags));
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_STYLE_FLAGS, EntityDataSerializers.BYTE, flags));
 
         // Scale
-        dataValues.add(SynchedEntityData.DataValue.create(DATA_SCALE, new Vector3f(1.0f, 1.0f, 1.0f)));
+        dataValues.add(new SynchedEntityData.DataValue<>(DATA_ID_SCALE, EntityDataSerializers.VECTOR3, new Vector3f(1.0f, 1.0f, 1.0f)));
 
         ClientboundSetEntityDataPacket metadataPacket = new ClientboundSetEntityDataPacket(entityId, dataValues);
         packets.add(metadataPacket);
