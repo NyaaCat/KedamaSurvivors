@@ -69,6 +69,10 @@ info:
   max_level_reward: "§7已达最高等级，获得 §d{amount} §7永久积分"
   overflow_convert: "§7溢出经验转化为 §d{amount} §7永久积分"
 
+  # 选图
+  world_random_fallback: "§e金币不足，已随机选择地图"
+  world_cost_deducted: "§7已扣除 §e{cost} §7金币 (地图: §f{world}§7)"
+
 # ============================================================
 # 升级消息
 # ============================================================
@@ -122,6 +126,7 @@ item:
 starter:
   weapon_selected: "§7武器已选择: §f{weapon}"
   helmet_selected: "§7护甲已选择: §f{helmet}"
+  world_selected: "§a已选择地图: §f{world}"
   selection_complete: "§2装备选择完成，可以准备了"
   help: "§7使用 §f/vrs starter weapon §7或 §f/vrs starter helmet §7选择装备"
   none: "§8无"
@@ -232,6 +237,8 @@ error:
   capture_no_item: "§c请手持要捕获的物品"
   template_exists: "§c模板 §f{id} §c已存在"
   ender_chest_restricted: "§c当前模式下无法打开末影箱"
+  leader_only_world: "§c只有队长可以选择地图"
+  world_selection_disabled: "§c选图功能已禁用"
 
 # ============================================================
 # 警告提示
@@ -347,6 +354,13 @@ gui:
   back: "§7返回"
   confirm: "§a确认"
   cancel: "§c取消"
+
+  # 选图 GUI
+  world_selection_title: "选择地图"
+  world_random: "随机地图"
+  world_random_lore: "§7免费 - 系统自动选择最空闲的地图"
+  world_cost: "§e费用: {cost} 金币"
+  world_free: "§a免费"
 
   # 升级 GUI
   upgrade_current: "§7当前: §f{group} Lv.{level}"
@@ -473,6 +487,21 @@ admin:
   setperma_usage: "§c用法: /vrs admin setperma <player> <amount>"
   perma_set: "§a已设置 §f{player} §a的永久积分为 §f{amount}"
 
+  # 金币命令
+  coin:
+    help: "§7金币管理: /vrs admin coin <add|set|get> <player> [amount]"
+    added: "§a已为 §f{player} §a增加 §e{amount} §a金币，当前余额: §e{balance}"
+    set: "§a已将 §f{player} §a的金币设置为 §e{amount}"
+    get: "§7{player} 的金币余额: §e{balance}"
+    insufficient: "§c操作失败: 金币余额不能为负数"
+
+  # 永久积分命令
+  perma:
+    help: "§7永久积分管理: /vrs admin perma <add|set|get> <player> [amount]"
+    added: "§a已为 §f{player} §a增加 §d{amount} §a永久积分，当前: §d{total}"
+    set: "§a已将 §f{player} §a的永久积分设置为 §d{amount}"
+    get: "§7{player} 的永久积分: §d{amount}"
+
   # 重载
   reload_success: "§a配置已重载"
   reload_failed: "§c配置重载失败: §f{error}"
@@ -496,6 +525,7 @@ admin:
       set_displayname: "§f/vrs admin world set displayname <name> <displayName> §8- §7设置显示名称"
       set_weight: "§f/vrs admin world set weight <name> <weight> §8- §7设置权重"
       set_bounds: "§f/vrs admin world set bounds <name> <minX> <maxX> <minZ> <maxZ> §8- §7设置边界"
+      set_cost: "§f/vrs admin world set cost <name> <金币数量> §8- §7设置选图费用"
       addspawn: "§f/vrs admin world addspawn <name> [x y z [yaw pitch]] §8- §7添加出生点(无参数使用当前位置)"
       removespawn: "§f/vrs admin world removespawn <name> <index> §8- §7移除出生点"
       listspawns: "§f/vrs admin world listspawns <name> §8- §7列出出生点"
@@ -512,6 +542,7 @@ admin:
     displayname_set: "§a世界 §f{name} §a显示名称已设置为: §f{displayName}"
     weight_set: "§a世界 §f{name} §a权重已设置为: §f{weight}"
     bounds_set: "§a世界 §f{name} §a边界已设置: X[§f{minX}§a~§f{maxX}§a] Z[§f{minZ}§a~§f{maxZ}§a]"
+    cost_set: "§a已将 §f{name} §a的选图费用设置为 §e{cost} §a金币"
     # Spawn point management
     spawn_added: "§a已添加出生点 §f#{index} §a到世界 §f{name}§a: §f{x}§a, §f{y}§a, §f{z}"
     spawn_removed: "§a已移除世界 §f{name} §a的出生点 §f#{index}"

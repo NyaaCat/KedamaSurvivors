@@ -43,8 +43,8 @@ public class RunService {
      * Uses Paper's teleportAsync for async chunk loading.
      */
     public CompletableFuture<RunState> startRunAsync(TeamState team) {
-        // Select a random combat world
-        ConfigService.CombatWorldConfig worldConfig = worldService.selectRandomWorld();
+        // Determine world selection: team's selected world or random
+        ConfigService.CombatWorldConfig worldConfig = selectWorldForRun(team);
         if (worldConfig == null) {
             notifyTeam(team, "error.no_combat_worlds");
             resetTeamToLobby(team);
@@ -92,6 +92,84 @@ public class RunService {
                 " in world " + worldConfig.name);
 
         return CompletableFuture.completedFuture(run);
+    }
+
+    /**
+     * Selects the world for a run based on team selection and leader's coins.
+     * If team has selected a world and leader has enough coins, deducts cost and uses selected world.
+     * Otherwise falls back to random world selection.
+     */
+    private ConfigService.CombatWorldConfig selectWorldForRun(TeamState team) {
+        String selectedWorldName = team.getSelectedWorldName();
+
+        // If no selection or world selection disabled, use random
+        if (selectedWorldName == null || !config.isWorldSelectionEnabled()) {
+            return worldService.selectRandomWorld();
+        }
+
+        // Get the selected world config
+        Optional<ConfigService.CombatWorldConfig> worldOpt = config.getCombatWorld(selectedWorldName);
+        if (worldOpt.isEmpty() || !worldOpt.get().enabled) {
+            // Selected world not found or disabled, fall back to random
+            notifyTeam(team, "info.world_random_fallback");
+            return worldService.selectRandomWorld();
+        }
+
+        ConfigService.CombatWorldConfig worldConfig = worldOpt.get();
+
+        // Check if world has a cost
+        if (worldConfig.cost > 0) {
+            // Get the team leader
+            Player leader = Bukkit.getPlayer(team.getLeaderId());
+            if (leader == null) {
+                // Leader offline, fall back to random
+                notifyTeam(team, "info.world_random_fallback");
+                return worldService.selectRandomWorld();
+            }
+
+            // Check if leader has enough coins
+            var economyService = plugin.getEconomyService();
+            double balance = economyService.getBalance(leader);
+
+            if (balance < worldConfig.cost) {
+                // Not enough coins, fall back to random
+                notifyTeam(team, "info.world_random_fallback");
+                return worldService.selectRandomWorld();
+            }
+
+            // Deduct cost from leader
+            economyService.deduct(leader, worldConfig.cost);
+            i18n.send(leader, "info.world_cost_deducted",
+                    "cost", worldConfig.cost,
+                    "world", worldConfig.displayName);
+        }
+
+        // Clear selection after use
+        team.setSelectedWorldName(null);
+
+        return worldConfig;
+    }
+
+    /**
+     * Selects a spawn point for a team, preferring the least loaded spawn point.
+     * Uses SpawnLoadTracker if available, otherwise falls back to random selection.
+     */
+    private Location selectSpawnPointForTeam(ConfigService.CombatWorldConfig worldConfig, World world) {
+        SpawnLoadTracker tracker = plugin.getSpawnLoadTracker();
+
+        if (tracker != null) {
+            // Try to get the least loaded spawn point from the tracker
+            ConfigService.SpawnPointConfig spawnConfig = tracker.selectLeastLoaded(worldConfig.name);
+            if (spawnConfig != null) {
+                Location loc = new Location(world, spawnConfig.x, spawnConfig.y, spawnConfig.z);
+                if (spawnConfig.yaw != null) loc.setYaw(spawnConfig.yaw);
+                if (spawnConfig.pitch != null) loc.setPitch(spawnConfig.pitch);
+                return loc;
+            }
+        }
+
+        // Fall back to random spawn point selection
+        return worldConfig.getRandomSpawnPoint(world);
     }
 
     /**
@@ -251,7 +329,8 @@ public class RunService {
     private void teleportTeamToRunAsync(TeamState team, RunState run,
                                          ConfigService.CombatWorldConfig worldConfig, World world) {
         // Select ONE spawn point for the entire team
-        Location teamSpawnPoint = worldConfig.getRandomSpawnPoint(world);
+        // Try to use SpawnLoadTracker for least loaded spawn point
+        Location teamSpawnPoint = selectSpawnPointForTeam(worldConfig, world);
         if (teamSpawnPoint == null) {
             plugin.getLogger().severe("No spawn point available for team " + team.getName());
             notifyTeam(team, "error.no_spawn_points");

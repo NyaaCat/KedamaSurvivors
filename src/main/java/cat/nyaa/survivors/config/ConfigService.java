@@ -169,6 +169,11 @@ public class ConfigService {
     private List<StarterOptionConfig> starterWeapons;
     private List<StarterOptionConfig> starterHelmets;
 
+    // World selection
+    private boolean worldSelectionEnabled;
+    private boolean autoOpenWorldGui;
+    private double defaultTrackingRadius;
+
     // Equipment pools
     private Map<String, EquipmentGroupConfig> weaponGroups;
     private Map<String, EquipmentGroupConfig> helmetGroups;
@@ -434,6 +439,10 @@ public class ConfigService {
             Object weightVal = worldMap.get("weight");
             world.weight = weightVal != null ? ((Number) weightVal).doubleValue() : 1.0;
 
+            // Load cost for world selection
+            Object costVal = worldMap.get("cost");
+            world.cost = costVal != null ? ((Number) costVal).intValue() : 0;
+
             @SuppressWarnings("unchecked")
             Map<String, Number> bounds = (Map<String, Number>) worldMap.get("spawnBounds");
             if (bounds != null) {
@@ -441,6 +450,25 @@ public class ConfigService {
                 world.maxX = bounds.getOrDefault("maxX", 500).doubleValue();
                 world.minZ = bounds.getOrDefault("minZ", -500).doubleValue();
                 world.maxZ = bounds.getOrDefault("maxZ", 500).doubleValue();
+            }
+
+            // Load spawn points with tracking radius
+            @SuppressWarnings("unchecked")
+            List<Map<?, ?>> spawnPointsList = (List<Map<?, ?>>) worldMap.get("spawnPoints");
+            if (spawnPointsList != null) {
+                for (Map<?, ?> spawnMap : spawnPointsList) {
+                    SpawnPointConfig sp = new SpawnPointConfig();
+                    sp.x = ((Number) spawnMap.get("x")).doubleValue();
+                    sp.y = ((Number) spawnMap.get("y")).doubleValue();
+                    sp.z = ((Number) spawnMap.get("z")).doubleValue();
+                    Object yawVal = spawnMap.get("yaw");
+                    sp.yaw = yawVal != null ? ((Number) yawVal).floatValue() : null;
+                    Object pitchVal = spawnMap.get("pitch");
+                    sp.pitch = pitchVal != null ? ((Number) pitchVal).floatValue() : null;
+                    Object radiusVal = spawnMap.get("trackingRadius");
+                    sp.trackingRadius = radiusVal != null ? ((Number) radiusVal).doubleValue() : 0;
+                    world.spawnPoints.add(sp);
+                }
             }
 
             combatWorlds.add(world);
@@ -453,6 +481,11 @@ public class ConfigService {
 
         starterWeapons = loadStarterList("starterSelection.weapons");
         starterHelmets = loadStarterList("starterSelection.helmets");
+
+        // World selection options
+        worldSelectionEnabled = config.getBoolean("worldSelection.enabled", false);
+        autoOpenWorldGui = config.getBoolean("worldSelection.autoOpenAfterHelmet", true);
+        defaultTrackingRadius = config.getDouble("spawnTracking.defaultRadiusBlocks", 50.0);
     }
 
     private List<StarterOptionConfig> loadStarterList(String path) {
@@ -795,6 +828,29 @@ public class ConfigService {
     public boolean isAutoOpenHelmetGui() { return autoOpenHelmetGui; }
     public List<StarterOptionConfig> getStarterWeapons() { return starterWeapons; }
     public List<StarterOptionConfig> getStarterHelmets() { return starterHelmets; }
+
+    // World selection getters
+    public boolean isWorldSelectionEnabled() { return worldSelectionEnabled; }
+    public boolean isAutoOpenWorldGui() { return autoOpenWorldGui; }
+    public double getDefaultTrackingRadius() { return defaultTrackingRadius; }
+
+    /**
+     * Gets all enabled combat worlds for world selection.
+     */
+    public List<CombatWorldConfig> getEnabledCombatWorlds() {
+        return combatWorlds.stream()
+                .filter(w -> w.enabled)
+                .toList();
+    }
+
+    /**
+     * Gets a combat world by name.
+     */
+    public Optional<CombatWorldConfig> getCombatWorld(String name) {
+        return combatWorlds.stream()
+                .filter(w -> w.name.equals(name))
+                .findFirst();
+    }
     public Map<String, EquipmentGroupConfig> getWeaponGroups() { return weaponGroups; }
     public Map<String, EquipmentGroupConfig> getHelmetGroups() { return helmetGroups; }
     public Map<String, EnemyArchetypeConfig> getEnemyArchetypes() { return enemyArchetypes; }
@@ -1161,6 +1217,9 @@ public class ConfigService {
         public double weight;
         public double minX, maxX, minZ, maxZ;
 
+        // Cost for selecting this world (in coins, 0 = free)
+        public int cost = 0;
+
         // List of spawn points - randomly selected during run start
         public List<SpawnPointConfig> spawnPoints = new ArrayList<>();
 
@@ -1196,6 +1255,9 @@ public class ConfigService {
         public Float yaw;
         public Float pitch;
 
+        // Tracking radius for spawn load tracking (0 = use default)
+        public double trackingRadius = 0;
+
         public SpawnPointConfig() {}
 
         public SpawnPointConfig(double x, double y, double z, Float yaw, Float pitch) {
@@ -1204,6 +1266,11 @@ public class ConfigService {
             this.z = z;
             this.yaw = yaw;
             this.pitch = pitch;
+        }
+
+        public SpawnPointConfig(double x, double y, double z, Float yaw, Float pitch, double trackingRadius) {
+            this(x, y, z, yaw, pitch);
+            this.trackingRadius = trackingRadius;
         }
     }
 

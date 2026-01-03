@@ -1170,6 +1170,21 @@ public class AdminConfigService {
     }
 
     /**
+     * Sets the selection cost for a world.
+     */
+    public boolean setWorldCost(String name, int cost) {
+        for (CombatWorldConfig world : combatWorlds) {
+            if (world.name.equals(name)) {
+                world.cost = cost;
+                saveWorlds();
+                configService.updateCombatWorlds(combatWorlds);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Sets the enabled status for a world.
      */
     public boolean setWorldEnabled(String name, boolean enabled) {

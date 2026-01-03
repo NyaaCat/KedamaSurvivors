@@ -5,6 +5,8 @@ import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.config.ItemTemplateConfig;
 import cat.nyaa.survivors.gui.StarterHelmetGui;
 import cat.nyaa.survivors.gui.StarterWeaponGui;
+import cat.nyaa.survivors.gui.WorldSelectionGui;
+import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
@@ -18,6 +20,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for managing starter equipment selection and granting.
@@ -82,6 +85,46 @@ public class StarterService {
         }
 
         StarterHelmetGui gui = new StarterHelmetGui(plugin, player, playerState);
+        gui.open();
+    }
+
+    /**
+     * Opens the world selection GUI for a player.
+     * Only team leaders can use this.
+     */
+    public void openWorldGui(Player player) {
+        PlayerState playerState = state.getOrCreatePlayer(player.getUniqueId(), player.getName());
+
+        // Allow selection in lobby or cooldown (after death)
+        if (playerState.getMode() != PlayerMode.LOBBY && playerState.getMode() != PlayerMode.COOLDOWN) {
+            i18n.send(player, "error.not_in_lobby");
+            return;
+        }
+
+        // Check if world selection is enabled
+        if (!config.isWorldSelectionEnabled()) {
+            i18n.send(player, "error.world_selection_disabled");
+            return;
+        }
+
+        // Get the player's team
+        TeamService teamService = plugin.getTeamService();
+        Optional<TeamState> teamOpt = teamService.getTeamByPlayer(player.getUniqueId());
+
+        if (teamOpt.isEmpty()) {
+            i18n.send(player, "error.not_in_team");
+            return;
+        }
+
+        TeamState team = teamOpt.get();
+
+        // Check if player is the team leader
+        if (!team.isLeader(player.getUniqueId())) {
+            i18n.send(player, "error.leader_only_world");
+            return;
+        }
+
+        WorldSelectionGui gui = new WorldSelectionGui(plugin, player, team);
         gui.open();
     }
 

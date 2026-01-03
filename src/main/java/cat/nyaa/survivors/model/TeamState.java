@@ -25,6 +25,9 @@ public class TeamState {
     // Run association
     private volatile UUID runId;
 
+    // World selection (null = random)
+    private volatile String selectedWorldName;
+
     // Timing
     private volatile long createdAtMillis;
 
@@ -249,6 +252,7 @@ public class TeamState {
         readyMembers.clear();
         disconnectedMembers.clear();
         runId = null;
+        selectedWorldName = null;
     }
 
     // ==================== Getters and Setters ====================
@@ -263,6 +267,9 @@ public class TeamState {
 
     public UUID getRunId() { return runId; }
     public void setRunId(UUID runId) { this.runId = runId; }
+
+    public String getSelectedWorldName() { return selectedWorldName; }
+    public void setSelectedWorldName(String selectedWorldName) { this.selectedWorldName = selectedWorldName; }
 
     public long getCreatedAtMillis() { return createdAtMillis; }
 }

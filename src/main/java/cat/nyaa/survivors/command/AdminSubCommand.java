@@ -1,9 +1,11 @@
 package cat.nyaa.survivors.command;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
+import cat.nyaa.survivors.command.admin.CoinSubCommand;
 import cat.nyaa.survivors.command.admin.ConfigSubCommand;
 import cat.nyaa.survivors.command.admin.EquipmentSubCommand;
 import cat.nyaa.survivors.command.admin.MerchantSubCommand;
+import cat.nyaa.survivors.command.admin.PermaSubCommand;
 import cat.nyaa.survivors.command.admin.SpawnerSubCommand;
 import cat.nyaa.survivors.command.admin.StarterSubCommand;
 import cat.nyaa.survivors.command.admin.WorldSubCommand;
@@ -43,10 +45,12 @@ public class AdminSubCommand implements SubCommand {
     private final TemplateEngine templateEngine;
 
     // Nested subcommand handlers
+    private CoinSubCommand coinSubCommand;
     private ConfigSubCommand configSubCommand;
     private EquipmentSubCommand equipmentSubCommand;
-    private SpawnerSubCommand spawnerSubCommand;
     private MerchantSubCommand merchantSubCommand;
+    private PermaSubCommand permaSubCommand;
+    private SpawnerSubCommand spawnerSubCommand;
     private StarterSubCommand starterSubCommand;
     private WorldSubCommand worldSubCommand;
 
@@ -65,17 +69,23 @@ public class AdminSubCommand implements SubCommand {
      * Lazily initializes nested subcommands. Called after AdminConfigService is ready.
      */
     private void initSubCommands() {
+        if (coinSubCommand == null) {
+            coinSubCommand = new CoinSubCommand(plugin);
+        }
         if (configSubCommand == null) {
             configSubCommand = new ConfigSubCommand(plugin);
         }
         if (equipmentSubCommand == null) {
             equipmentSubCommand = new EquipmentSubCommand(plugin);
         }
-        if (spawnerSubCommand == null) {
-            spawnerSubCommand = new SpawnerSubCommand(plugin);
-        }
         if (merchantSubCommand == null) {
             merchantSubCommand = new MerchantSubCommand(plugin);
+        }
+        if (permaSubCommand == null) {
+            permaSubCommand = new PermaSubCommand(plugin);
+        }
+        if (spawnerSubCommand == null) {
+            spawnerSubCommand = new SpawnerSubCommand(plugin);
         }
         if (starterSubCommand == null) {
             starterSubCommand = new StarterSubCommand(plugin);
@@ -100,7 +110,22 @@ public class AdminSubCommand implements SubCommand {
             case "forcestart" -> handleForceStart(sender, args);
             case "kick" -> handleKick(sender, args);
             case "reset" -> handleReset(sender, args);
-            case "setperma" -> handleSetPerma(sender, args);
+            case "setperma" -> {
+                // Backwards compatibility: redirect to "perma set"
+                initSubCommands();
+                String[] newArgs = new String[args.length + 1];
+                newArgs[0] = "set";
+                System.arraycopy(args, 1, newArgs, 1, args.length - 1);
+                permaSubCommand.execute(sender, newArgs);
+            }
+            case "perma" -> {
+                initSubCommands();
+                permaSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
+            case "coin" -> {
+                initSubCommands();
+                coinSubCommand.execute(sender, Arrays.copyOfRange(args, 1, args.length));
+            }
             case "join" -> handleJoin(sender, args);
             case "world" -> {
                 initSubCommands();
@@ -139,7 +164,8 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.help.forcestart");
         i18n.send(sender, "admin.help.kick");
         i18n.send(sender, "admin.help.reset");
-        i18n.send(sender, "admin.help.setperma");
+        i18n.send(sender, "admin.help.coin");
+        i18n.send(sender, "admin.help.perma");
         i18n.send(sender, "admin.help.join");
         i18n.send(sender, "admin.help.multiplier");
         i18n.send(sender, "admin.help.world");
@@ -283,36 +309,6 @@ public class AdminSubCommand implements SubCommand {
         i18n.send(sender, "admin.player_reset", "player", playerName);
     }
 
-    private void handleSetPerma(CommandSender sender, String[] args) {
-        if (args.length < 3) {
-            i18n.send(sender, "admin.setperma_usage");
-            return;
-        }
-
-        String playerName = args[1];
-        int amount;
-
-        try {
-            amount = Integer.parseInt(args[2]);
-        } catch (NumberFormatException e) {
-            i18n.send(sender, "error.invalid_number", "value", args[2]);
-            return;
-        }
-
-        Player target = Bukkit.getPlayer(playerName);
-        if (target == null) {
-            i18n.send(sender, "error.player_not_found", "player", playerName);
-            return;
-        }
-
-        PlayerState playerState = state.getOrCreatePlayer(target.getUniqueId(), target.getName());
-        playerState.setPermaScore(amount);
-
-        // Update scoreboard
-        scoreboardService.updatePermaScore(target, amount);
-
-        i18n.send(sender, "admin.perma_set", "player", playerName, "amount", amount);
-    }
 
     // ==================== Join Switch ====================
 
@@ -587,7 +583,7 @@ public class AdminSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "setperma", "join", "multiplier", "world", "starter", "debug", "equipment", "spawner", "merchant", "config")) {
+            for (String sub : List.of("status", "endrun", "forcestart", "kick", "reset", "coin", "perma", "setperma", "join", "multiplier", "world", "starter", "debug", "equipment", "spawner", "merchant", "config")) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }
@@ -595,7 +591,13 @@ public class AdminSubCommand implements SubCommand {
         } else if (args.length >= 2) {
             String action = args[0].toLowerCase();
             // Delegate to nested subcommands
-            if (action.equals("equipment")) {
+            if (action.equals("coin")) {
+                initSubCommands();
+                return coinSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("perma")) {
+                initSubCommands();
+                return permaSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
+            } else if (action.equals("equipment")) {
                 initSubCommands();
                 return equipmentSubCommand.tabComplete(sender, Arrays.copyOfRange(args, 1, args.length));
             } else if (action.equals("spawner")) {

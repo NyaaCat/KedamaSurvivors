@@ -66,6 +66,7 @@ public class WorldSubCommand implements SubCommand {
         i18n.send(sender, "admin.world.help.set_displayname");
         i18n.send(sender, "admin.world.help.set_weight");
         i18n.send(sender, "admin.world.help.set_bounds");
+        i18n.send(sender, "admin.world.help.set_cost");
         i18n.send(sender, "admin.world.help.addspawn");
         i18n.send(sender, "admin.world.help.removespawn");
         i18n.send(sender, "admin.world.help.listspawns");
@@ -210,6 +211,22 @@ public class WorldSubCommand implements SubCommand {
                     }
                 } catch (NumberFormatException e) {
                     i18n.send(sender, "error.invalid_number", "value", "bounds");
+                }
+            }
+            case "cost" -> {
+                if (args.length < 4) {
+                    i18n.send(sender, "admin.world.help.set_cost");
+                    return;
+                }
+                try {
+                    int cost = Integer.parseInt(args[3]);
+                    if (cost < 0) throw new NumberFormatException();
+                    boolean success = adminConfig.setWorldCost(name, cost);
+                    if (success) {
+                        i18n.send(sender, "admin.world.cost_set", "name", name, "cost", cost);
+                    }
+                } catch (NumberFormatException e) {
+                    i18n.send(sender, "error.invalid_number", "value", args[3]);
                 }
             }
             default -> showHelp(sender);
@@ -416,7 +433,7 @@ public class WorldSubCommand implements SubCommand {
             String partial = args[1].toLowerCase();
 
             if (action.equals("set")) {
-                for (String prop : List.of("displayname", "weight", "bounds")) {
+                for (String prop : List.of("displayname", "weight", "bounds", "cost")) {
                     if (prop.startsWith(partial)) {
                         completions.add(prop);
                     }

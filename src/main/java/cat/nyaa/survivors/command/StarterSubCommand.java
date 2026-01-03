@@ -5,12 +5,15 @@ import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
+import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.StateService;
+import cat.nyaa.survivors.service.TeamService;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Handles /vrs starter commands for selecting starter equipment.
@@ -51,6 +54,7 @@ public class StarterSubCommand implements SubCommand {
         switch (action) {
             case "weapon" -> handleWeaponSelection(player, playerState, args);
             case "helmet" -> handleHelmetSelection(player, playerState, args);
+            case "world" -> handleWorldSelection(player, playerState);
             case "status" -> showStatus(player, playerState);
             case "clear" -> clearSelections(player, playerState);
             default -> i18n.send(sender, "error.unknown_command", "command", action);
@@ -122,6 +126,35 @@ public class StarterSubCommand implements SubCommand {
         i18n.send(player, "starter.helmet_selected", "helmet", selected.displayName);
     }
 
+    private void handleWorldSelection(Player player, PlayerState playerState) {
+        // Check if world selection is enabled
+        if (!config.isWorldSelectionEnabled()) {
+            i18n.send(player, "error.world_selection_disabled");
+            return;
+        }
+
+        // Get the player's team
+        TeamService teamService = plugin.getTeamService();
+        Optional<TeamState> teamOpt = teamService.getTeamByPlayer(player.getUniqueId());
+
+        if (teamOpt.isEmpty()) {
+            // Player not in a team - create a solo team or error
+            i18n.send(player, "error.not_in_team");
+            return;
+        }
+
+        TeamState team = teamOpt.get();
+
+        // Check if player is the team leader
+        if (!team.isLeader(player.getUniqueId())) {
+            i18n.send(player, "error.leader_only_world");
+            return;
+        }
+
+        // Open the world selection GUI
+        plugin.getStarterService().openWorldGui(player);
+    }
+
     private void showAvailableWeapons(Player player) {
         i18n.send(player, "starter.weapon_header");
         for (var weapon : config.getStarterWeapons()) {
@@ -177,7 +210,11 @@ public class StarterSubCommand implements SubCommand {
 
         if (args.length == 1) {
             String partial = args[0].toLowerCase();
-            for (String sub : List.of("weapon", "helmet", "status", "clear")) {
+            List<String> subs = new ArrayList<>(List.of("weapon", "helmet", "status", "clear"));
+            if (config.isWorldSelectionEnabled()) {
+                subs.add("world");
+            }
+            for (String sub : subs) {
                 if (sub.startsWith(partial)) {
                     completions.add(sub);
                 }

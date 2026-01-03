@@ -27,6 +27,8 @@ import cat.nyaa.survivors.service.ActionBarRewardService;
 import cat.nyaa.survivors.service.StatsService;
 import cat.nyaa.survivors.service.UpgradeService;
 import cat.nyaa.survivors.service.WorldService;
+import cat.nyaa.survivors.service.SpawnLoadTracker;
+import cat.nyaa.survivors.display.PlayerDisplayService;
 import cat.nyaa.survivors.task.CooldownDisplay;
 import cat.nyaa.survivors.task.DisconnectChecker;
 import cat.nyaa.survivors.task.UpgradeReminderTask;
@@ -71,6 +73,8 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private DamageContributionService damageContributionService;
     private InventoryValidationService inventoryValidationService;
     private CommandQueue commandQueue;
+    private SpawnLoadTracker spawnLoadTracker;
+    private PlayerDisplayService playerDisplayService;
 
     @Override
     public void onEnable() {
@@ -183,6 +187,14 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
         // Upgrade reminder task for chat-based upgrades
         upgradeReminderTask = new UpgradeReminderTask(this);
+
+        // Spawn load tracker for intelligent spawn point selection
+        spawnLoadTracker = new SpawnLoadTracker(this);
+        spawnLoadTracker.initialize();
+
+        // Player display service for overhead text displays
+        playerDisplayService = new PlayerDisplayService(this);
+        playerDisplayService.initialize();
     }
 
     private void registerCommands() {
@@ -321,6 +333,16 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
             inventoryValidationService.stop();
         }
 
+        // Shutdown spawn load tracker
+        if (spawnLoadTracker != null) {
+            spawnLoadTracker.shutdown();
+        }
+
+        // Shutdown player display service
+        if (playerDisplayService != null) {
+            playerDisplayService.shutdown();
+        }
+
         // Cancel all scheduled tasks
         getServer().getScheduler().cancelTasks(this);
     }
@@ -443,5 +465,13 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public InventoryValidationService getInventoryValidationService() {
         return inventoryValidationService;
+    }
+
+    public SpawnLoadTracker getSpawnLoadTracker() {
+        return spawnLoadTracker;
+    }
+
+    public PlayerDisplayService getPlayerDisplayService() {
+        return playerDisplayService;
     }
 }
