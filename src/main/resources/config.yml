@@ -104,6 +104,31 @@ starterSelection:
   autoOpenHelmetGui: true
 
 # ============================================================
+# World Selection
+# ============================================================
+# Allows team leaders to select a specific combat world before starting
+# Worlds can have costs - set via /vrs admin world set cost <name> <amount>
+worldSelection:
+  enabled: false  # Set to true to enable world selection feature
+  autoOpenAfterHelmet: true  # Automatically open world selection GUI after helmet selection
+
+# ============================================================
+# Spawn Point Tracking
+# ============================================================
+# Tracks player/mob density at spawn points for intelligent spawn distribution
+spawnTracking:
+  defaultRadiusBlocks: 50.0  # Default radius to check for entities around spawn points
+
+# ============================================================
+# Overhead Display
+# ============================================================
+# Shows class name and level above players' heads during combat
+overheadDisplay:
+  enabled: true  # Enable/disable overhead player displays
+  yOffset: 2.3  # Height above player head (blocks)
+  updateIntervalTicks: 1  # How often to update displays (1 = every tick)
+
+# ============================================================
 # Inventory Rules
 # ============================================================
 # Note: Drop/pickup prevention is now hardcoded for all modes except LOBBY

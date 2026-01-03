@@ -174,6 +174,11 @@ public class ConfigService {
     private boolean autoOpenWorldGui;
     private double defaultTrackingRadius;
 
+    // Overhead display
+    private boolean overheadDisplayEnabled;
+    private double overheadDisplayYOffset;
+    private int overheadDisplayUpdateTicks;
+
     // Equipment pools
     private Map<String, EquipmentGroupConfig> weaponGroups;
     private Map<String, EquipmentGroupConfig> helmetGroups;
@@ -486,6 +491,11 @@ public class ConfigService {
         worldSelectionEnabled = config.getBoolean("worldSelection.enabled", false);
         autoOpenWorldGui = config.getBoolean("worldSelection.autoOpenAfterHelmet", true);
         defaultTrackingRadius = config.getDouble("spawnTracking.defaultRadiusBlocks", 50.0);
+
+        // Overhead display options
+        overheadDisplayEnabled = config.getBoolean("overheadDisplay.enabled", true);
+        overheadDisplayYOffset = config.getDouble("overheadDisplay.yOffset", 2.3);
+        overheadDisplayUpdateTicks = config.getInt("overheadDisplay.updateIntervalTicks", 1);
     }
 
     private List<StarterOptionConfig> loadStarterList(String path) {
@@ -833,6 +843,19 @@ public class ConfigService {
     public boolean isWorldSelectionEnabled() { return worldSelectionEnabled; }
     public boolean isAutoOpenWorldGui() { return autoOpenWorldGui; }
     public double getDefaultTrackingRadius() { return defaultTrackingRadius; }
+
+    // Overhead display getters and setters
+    public boolean isOverheadDisplayEnabled() { return overheadDisplayEnabled; }
+    public void setOverheadDisplayEnabled(boolean enabled) { this.overheadDisplayEnabled = enabled; }
+    public double getOverheadDisplayYOffset() { return overheadDisplayYOffset; }
+    public void setOverheadDisplayYOffset(double offset) { this.overheadDisplayYOffset = offset; }
+    public int getOverheadDisplayUpdateTicks() { return overheadDisplayUpdateTicks; }
+    public void setOverheadDisplayUpdateTicks(int ticks) { this.overheadDisplayUpdateTicks = ticks; }
+
+    // World selection setters
+    public void setWorldSelectionEnabled(boolean enabled) { this.worldSelectionEnabled = enabled; }
+    public void setAutoOpenWorldGui(boolean enabled) { this.autoOpenWorldGui = enabled; }
+    public void setDefaultTrackingRadius(double radius) { this.defaultTrackingRadius = radius; }
 
     /**
      * Gets all enabled combat worlds for world selection.

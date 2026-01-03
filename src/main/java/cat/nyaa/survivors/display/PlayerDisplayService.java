@@ -40,8 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class PlayerDisplayService {
 
-    // Offset above player head
-    private static final float Y_OFFSET = 2.3f;
+    // Default offset above player head (configurable via overheadDisplay.yOffset)
+    private static final float DEFAULT_Y_OFFSET = 2.3f;
 
     // Entity data accessors for TextDisplay
     private static final EntityDataAccessor<net.minecraft.network.chat.Component> DATA_TEXT =
@@ -99,6 +99,15 @@ public class PlayerDisplayService {
      * Called every tick to update display entities.
      */
     private void tickUpdate() {
+        // Check if overhead display is enabled
+        if (!config.isOverheadDisplayEnabled()) {
+            // Clean up any existing displays if feature was disabled
+            if (!playerToEntityId.isEmpty()) {
+                cleanupStaleEntities(Collections.emptySet());
+            }
+            return;
+        }
+
         // 1. Collect display data for all IN_RUN players (on main thread)
         Map<UUID, DisplayData> displayDataMap = collectDisplayData();
 
@@ -226,7 +235,7 @@ public class PlayerDisplayService {
 
         Location loc = data.location();
         double x = loc.getX();
-        double y = loc.getY() + Y_OFFSET;
+        double y = loc.getY() + config.getOverheadDisplayYOffset();
         double z = loc.getZ();
 
         if (isNew) {

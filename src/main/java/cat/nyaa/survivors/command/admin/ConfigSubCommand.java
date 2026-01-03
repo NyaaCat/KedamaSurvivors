@@ -114,6 +114,16 @@ public class ConfigSubCommand implements SubCommand {
                 entry("scoreboardTitle", new StringProperty(config::getScoreboardTitle, config::setScoreboardTitle)),
                 entry("scoreboardUpdateInterval", new IntProperty(config::getScoreboardUpdateInterval, config::setScoreboardUpdateInterval)),
 
+                // World Selection
+                entry("worldSelectionEnabled", new BooleanProperty(config::isWorldSelectionEnabled, config::setWorldSelectionEnabled)),
+                entry("autoOpenWorldGui", new BooleanProperty(config::isAutoOpenWorldGui, config::setAutoOpenWorldGui)),
+                entry("defaultTrackingRadius", new DoubleProperty(config::getDefaultTrackingRadius, config::setDefaultTrackingRadius)),
+
+                // Overhead Display
+                entry("overheadDisplayEnabled", new BooleanProperty(config::isOverheadDisplayEnabled, config::setOverheadDisplayEnabled)),
+                entry("overheadDisplayYOffset", new DoubleProperty(config::getOverheadDisplayYOffset, config::setOverheadDisplayYOffset)),
+                entry("overheadDisplayUpdateTicks", new IntProperty(config::getOverheadDisplayUpdateTicks, config::setOverheadDisplayUpdateTicks)),
+
                 // Feedback - display modes
                 entry("rewardDisplayMode", new StringProperty(config::getRewardDisplayMode, config::setRewardDisplayMode)),
                 entry("rewardStackingEnabled", new BooleanProperty(config::isRewardStackingEnabled, config::setRewardStackingEnabled)),
@@ -250,6 +260,8 @@ public class ConfigSubCommand implements SubCommand {
                 "wanderingMerchantPoolId", "wanderingMerchantType", "wanderingMerchantMaxCount"));
         categories.put("upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"));
         categories.put("scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval"));
+        categories.put("worldSelection", List.of("worldSelectionEnabled", "autoOpenWorldGui", "defaultTrackingRadius"));
+        categories.put("overheadDisplay", List.of("overheadDisplayEnabled", "overheadDisplayYOffset", "overheadDisplayUpdateTicks"));
         categories.put("feedback", List.of("rewardDisplayMode", "rewardStackingEnabled", "rewardStackingTimeoutSeconds",
                 "upgradeReminderDisplayMode", "upgradeReminderFlashIntervalTicks",
                 "soundXpGained", "soundCoinGained", "soundPermaScoreGained",
@@ -296,7 +308,7 @@ public class ConfigSubCommand implements SubCommand {
                     }
                 }
             } else if (action.equals("list")) {
-                for (String cat : List.of("teleport", "timing", "spawning", "rewards", "progression", "teams", "merchants", "upgrade", "scoreboard", "feedback")) {
+                for (String cat : List.of("teleport", "timing", "spawning", "rewards", "progression", "teams", "merchants", "upgrade", "scoreboard", "worldSelection", "overheadDisplay", "feedback")) {
                     if (cat.startsWith(partial)) {
                         completions.add(cat);
                     }
