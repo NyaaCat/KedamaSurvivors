@@ -976,6 +976,7 @@ public class AdminConfigService {
             map.put("displayName", world.displayName);
             map.put("enabled", world.enabled);
             map.put("weight", world.weight);
+            map.put("cost", world.cost);
 
             Map<String, Double> bounds = new LinkedHashMap<>();
             bounds.put("minX", world.minX);

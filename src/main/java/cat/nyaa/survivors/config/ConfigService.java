@@ -1123,6 +1123,8 @@ public class ConfigService {
         config.set("spawning.positioning.losValidation", losValidationEnabled);
         config.set("spawning.loop.tickInterval", spawnTickInterval);
         config.set("spawning.limits.targetMobsPerPlayer", targetMobsPerPlayer);
+        config.set("spawning.limits.targetMobsPerPlayerIncreasePerLevel", targetMobsPerPlayerIncreasePerLevel);
+        config.set("spawning.limits.targetMobsPerPlayerMax", targetMobsPerPlayerMax);
         config.set("spawning.limits.maxSpawnsPerTick", maxSpawnsPerTick);
 
         // Rewards
@@ -1180,6 +1182,16 @@ public class ConfigService {
         config.set("scoreboard.enabled", scoreboardEnabled);
         config.set("scoreboard.title", scoreboardTitle);
         config.set("scoreboard.updateInterval", scoreboardUpdateInterval);
+
+        // World Selection
+        config.set("worldSelection.enabled", worldSelectionEnabled);
+        config.set("worldSelection.autoOpenAfterHelmet", autoOpenWorldGui);
+        config.set("spawnTracking.defaultRadiusBlocks", defaultTrackingRadius);
+
+        // Overhead Display
+        config.set("overheadDisplay.enabled", overheadDisplayEnabled);
+        config.set("overheadDisplay.yOffset", overheadDisplayYOffset);
+        config.set("overheadDisplay.updateIntervalTicks", overheadDisplayUpdateTicks);
 
         // Feedback
         config.set("feedback.rewards.displayMode", rewardDisplayMode);
