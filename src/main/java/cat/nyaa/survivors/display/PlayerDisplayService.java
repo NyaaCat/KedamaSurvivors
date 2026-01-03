@@ -193,7 +193,7 @@ public class PlayerDisplayService {
 
         // Look up display name from config
         var helmetGroups = config.getHelmetGroups();
-        for (var group : helmetGroups) {
+        for (var group : helmetGroups.values()) {
             if (group.groupId.equals(helmetGroup)) {
                 return group.displayName != null ? group.displayName : helmetGroup;
             }
@@ -278,7 +278,7 @@ public class PlayerDisplayService {
         if (!isNew) {
             ClientboundTeleportEntityPacket teleportPacket = new ClientboundTeleportEntityPacket(
                     entityId,
-                    net.minecraft.world.entity.PositionMoveRotation.of(
+                    new net.minecraft.world.entity.PositionMoveRotation(
                             new net.minecraft.world.phys.Vec3(x, y, z),
                             net.minecraft.world.phys.Vec3.ZERO,
                             0f, 0f

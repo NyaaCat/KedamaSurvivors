@@ -108,8 +108,7 @@ public class StarterService {
         }
 
         // Get the player's team
-        TeamService teamService = plugin.getTeamService();
-        Optional<TeamState> teamOpt = teamService.getTeamByPlayer(player.getUniqueId());
+        Optional<TeamState> teamOpt = state.getPlayerTeam(player.getUniqueId());
 
         if (teamOpt.isEmpty()) {
             i18n.send(player, "error.not_in_team");

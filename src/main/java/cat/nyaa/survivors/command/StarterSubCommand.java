@@ -7,7 +7,6 @@ import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.StateService;
-import cat.nyaa.survivors.service.TeamService;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -134,8 +133,7 @@ public class StarterSubCommand implements SubCommand {
         }
 
         // Get the player's team
-        TeamService teamService = plugin.getTeamService();
-        Optional<TeamState> teamOpt = teamService.getTeamByPlayer(player.getUniqueId());
+        Optional<TeamState> teamOpt = state.getPlayerTeam(player.getUniqueId());
 
         if (teamOpt.isEmpty()) {
             // Player not in a team - create a solo team or error

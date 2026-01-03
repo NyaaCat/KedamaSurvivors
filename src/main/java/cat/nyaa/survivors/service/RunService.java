@@ -138,7 +138,7 @@ public class RunService {
             }
 
             // Deduct cost from leader
-            economyService.deduct(leader, worldConfig.cost);
+            economyService.deduct(leader, worldConfig.cost, "world_selection");
             i18n.send(leader, "info.world_cost_deducted",
                     "cost", worldConfig.cost,
                     "world", worldConfig.displayName);
