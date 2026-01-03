@@ -175,8 +175,8 @@ public class PlayerDisplayService {
                 // View range - 1.0 means default (64 blocks * entityDistanceScaling)
                 entity.setViewRange(1.0f);
 
-                // No interpolation for position updates
-                entity.setInterpolationDuration(0);
+                // Enable smooth teleport interpolation (1 tick = smooth following)
+                entity.setTeleportDuration(1);
 
                 // Make persistent = false so it doesn't save to world
                 entity.setPersistent(false);
