@@ -1,162 +1,140 @@
 # KedamaSurvivors
 
-A Vampire Survivors-style roguelite minigame plugin for Paper/Spigot 1.21.8+, blending elements of Vampire Survivors and CS: Arms Race.
+KedamaSurvivors is a Paper 1.21.8+ co-op roguelite plugin built around **segmented runs** instead of endless survival.
 
-**[Quick Start Guide](Docs/Quick-Start.md)** | [Configuration Reference](Docs/Configuration-Reference.md) | [Commands Reference](Docs/Commands-Reference.md)
+The current core loop is:
 
-## Overview
+1. Team up and pick starter weapon/helmet in prep area.
+2. `/vrs ready` to enter a stage group ("World Fragment").
+3. Fight, locate batteries, charge objectives, extract.
+4. Return to prep with progress preserved.
+5. Re-enter to continue the next stage group.
+6. Final stage clear grants final bonus, then the team is auto-disbanded.
 
-KedamaSurvivors is a standalone Paper plugin that provides a complete roguelite game loop:
+If the team wipes/disbands/loses all valid members, progression is reset.
 
-- **Select starter equipment** → **Ready up** → **Teleport to combat world** → **Fight enemies** → **Level up** → **Upgrade equipment** → **Survive!**
+## Documentation
 
-Players choose their starting weapon and helmet, then enter pre-generated combat worlds where enemies spawn around them. Killing enemies grants XP and coins. Filling the XP bar prompts an upgrade choice between weapon or helmet, progressing through equipment tiers with roguelike randomization.
+- [Quick Start](Docs/Quick-Start.md)
+- [Quick Start (zh_CN)](Docs/Quick-Start.zh_CN.md)
+- [Commands Reference](Docs/Commands-Reference.md)
+- [Commands Reference (zh_CN)](Docs/Commands-Reference.zh_CN.md)
+- [Configuration Reference](Docs/Configuration-Reference.md)
+- [Configuration Reference (zh_CN)](Docs/Configuration-Reference.zh_CN.md)
+- [Design Overview](Docs/Design-Overview.md)
+- [Development Spec](Docs/Development-Spec.md)
+- [TODO](Docs/TODO.md)
 
-### Key Features
+## What Changed (Current Gameplay Model)
 
-- **Team System**: Create teams of up to 5 players, explore together, respawn to teammates
-- **Equipment Progression**: Multiple equipment groups with leveled item pools
-- **Scaling Difficulty**: Enemy level based on average player level and player count in radius
-- **PVP Protection**: Player damage disabled by default (configurable)
-- **Perma-Score**: Persistent score stored in vanilla scoreboard for cross-server rewards
-- **Wandering Merchants**: Vanilla villager traders spawn randomly with configurable trades
-- **No Dependencies**: Works standalone, integrates with other plugins via command templates
+- Endless score farming was replaced by **stage progression** (`stageProgression.groups`).
+- Each stage group defines:
+  - stage id/display name
+  - world list (can contain multiple worlds)
+  - start enemy level
+  - required battery count
+  - clear rewards (coins/perma-score)
+- A combat world can only belong to **one** stage group (validated in code, load and runtime update).
+- Battery objective is now a first-class run objective:
+  - low-probability spawn at a distance from players
+  - charge radius with progress state (idle/charging/blocked/full)
+  - charging pauses if VRS mobs are inside the radius
+  - extra players in radius increase charge speed
+  - when full, all online in-run members must interact to complete one battery objective
+- Stage clear returns team to prep area without resetting progression.
+- Final stage clear grants extra bonus (`stageProgression.finalBonus`) and auto-disbands the team.
+- Team progression lock prevents changing starters/inviting new members after progression advances.
 
-## Game Flow
+## High-Level Runtime Flow
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Join Prep  │ ──▶ │   Select    │ ──▶ │    Ready    │
-│    Area     │     │  Equipment  │     │    Check    │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                               │
-                    ┌──────────────────────────┘
-                    ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Teleport   │ ──▶ │   Combat    │ ──▶ │   Level Up  │
-│  to Arena   │     │    Loop     │     │   Upgrade   │
-└─────────────┘     └─────────────┘     └─────────────┘
-                          │                    │
-                          ▼                    │
-                    ┌─────────────┐            │
-                    │    Death    │ ◀──────────┘
-                    │  → Prep     │
-                    └─────────────┘
-```
+### Team and Progression
 
-## Commands
+- `TeamState.stageIndex` decides which stage group the next run uses.
+- `TeamState.progressionLocked` blocks recruit + starter changes once progression has advanced.
+- On stage clear:
+  - stage reward granted
+  - next stage unlocked
+  - run ends back to prep
+- On final clear:
+  - final bonus granted
+  - team progression reset
+  - team disbanded
+- On wipe/disconnect-timeout/forced failure:
+  - run ends as failed
+  - team progression reset
 
-### Player Commands
+### World Selection
 
-| Command | Description |
-|---------|-------------|
-| `/vrs starter` | Open starter equipment selection GUI |
-| `/vrs ready` | Toggle ready status to enter combat |
-| `/vrs quit` | Leave current run (no death penalty) |
-| `/vrs status` | Show current game status |
-| `/vrs upgrade power\|defense` | Choose upgrade during gameplay |
+- With stage groups enabled, world selection comes from the stage group world set.
+- World selection strategy is load-aware:
+  - prefer worlds with zero in-run players
+  - if all occupied, weight by spawn-point capacity and active player load
 
-### Team Commands
+### Stats and Persistence
 
-| Command | Description |
-|---------|-------------|
-| `/vrs team create [name]` | Create a new team (auto-generates name if not provided) |
-| `/vrs team invite <player>` | Invite a player to your team |
-| `/vrs team join <team>` | Join a team you're invited to |
-| `/vrs team leave` | Leave your current team |
-| `/vrs team kick <player>` | Kick a player from your team |
-| `/vrs team disband` | Disband your team |
-| `/vrs team list` | List team members and status |
+Persistent data is stored in `plugins/KedamaSurvivors/data/runtime`:
 
-### Admin Commands
+- `players/<uuid>.json`: player state + stats
+- `teams.json`: team membership + stage progression state
+- `fixed_merchants.json`: fixed merchant runtime data
 
-| Command | Description |
-|---------|-------------|
-| `/vrs join enable\|disable` | Toggle global game entry |
-| `/vrs world enable\|disable <world>` | Enable/disable combat worlds |
-| `/vrs reload` | Reload configuration |
-| `/vrs force start\|stop <target>` | Force start/stop runs |
-| `/vrs item capture <type> <group> <level> <id>` | Capture held item as template |
-| `/vrs merchant spawn [world] [template]` | Spawn a merchant |
-| `/vrs spawner pause\|resume [world]` | Control enemy spawning |
-| `/vrs debug player\|perf\|run` | Debug information |
+Tracked progression stats include (non-exhaustive):
 
-## Permissions
+- run count / failed run count
+- total batteries completed
+- total stage clears / highest stage cleared
+- campaign completions
+- total stage reward coins / perma-score
 
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `vrs.player` | Basic player commands | true |
-| `vrs.team.*` | Team management | true |
-| `vrs.admin` | All admin commands | op |
-| `vrs.cooldown.bypass` | Bypass death cooldown | op |
+## Commands (Short Index)
 
-## Configuration
+Player:
 
-See [Configuration Reference](Docs/Configuration-Reference.md) for complete configuration options.
+- `/vrs starter [weapon|helmet|world|status|clear]`
+- `/vrs ready [solo]`
+- `/vrs team ...`
+- `/vrs quit`
+- `/vrs status`
+- `/vrs upgrade <power|defense>`
 
-Key configuration files:
-- `config.yml` - Main plugin configuration
-- `lang/zh_CN.yml` - Chinese language file (default)
-- `data/items/*.yml` - Captured item NBT templates
-- `data/runtime/*.json` - Player/team state persistence
+Admin:
 
-## Development
+- `/vrs admin ...` (status/run control/world/spawner/merchant/starter/equipment/config/economy)
+- `/vrs reload`
 
-### Requirements
+See full syntax: [Commands Reference](Docs/Commands-Reference.md)
 
-- Java 21+
-- Gradle 8.5+
-- Paper API 1.21.4+
+## Hot Update Capabilities
 
-### Building
+The following are designed for runtime updates via commands:
+
+- Stage dynamic fields (including world list)
+  - `/vrs admin config set stage.<groupId>.worlds <w1,w2,...>`
+- Battery parameters
+  - `/vrs admin config set battery...`
+  - battery tasks are rebound at runtime for active runs
+- Spawner archetype world restrictions (multi-world list)
+  - `/vrs admin spawner archetype set worlds <id> <world1[,world2...] ...|any>`
+- Multi-category config listing:
+  - `/vrs admin config list <category...>`
+
+## Build
+
+Requirements:
+
+- Java 21
+- Paper 1.21.8 API target
+
+Build:
 
 ```bash
 ./gradlew build
 ```
 
-The compiled plugin JAR will be in `build/libs/`.
+Primary artifact:
 
-### Project Structure
-
-```
-src/main/java/cat/nyaa/survivors/
-├── KedamaSurvivorsPlugin.java  # Main plugin class
-├── config/                      # Configuration handling
-├── command/                     # Command implementations
-├── service/                     # Game logic services
-├── model/                       # Data models
-├── listener/                    # Event listeners
-├── scoreboard/                  # Sidebar display
-├── i18n/                        # Internationalization
-└── util/                        # Utilities
-```
-
-### Documentation
-
-- [Development Specification](Docs/Development-Spec.md) - Technical design document
-- [Configuration Reference](Docs/Configuration-Reference.md) - All config options
-- [Commands Reference](Docs/Commands-Reference.md) - Complete command documentation
-- [Design Overview](Docs/Design-Overview.md) - High-level design document
-
-## Integration
-
-KedamaSurvivors is designed to work standalone but integrates well with:
-
-- **RPGItems-reloaded**: Custom weapons and armor (via NBT capture)
-- **Multiverse**: World management (via command templates)
-- **EssentialsX**: Spawn management (external to this plugin)
-
-All integration is done through configurable command templates with placeholder variables:
-```yaml
-teleport:
-  enterCommand: "mv tp ${player} ${world}:${x},${y},${z}"
-```
+- `build/libs/KedamaSurvivors-<version>.jar`
 
 ## License
 
-MIT License
-
-## Credits
-
-- NyaaCat Development Team
-- Claude Code (AI-assisted development)
+MIT

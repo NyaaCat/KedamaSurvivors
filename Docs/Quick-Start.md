@@ -1,619 +1,193 @@
-# Quick Start Guide
+# KedamaSurvivors Quick Start
 
-This guide walks you through setting up KedamaSurvivors from scratch and starting your first game.
+This guide sets up the current segmented gameplay model:
 
-## Prerequisites
+- stage groups ("World Fragments")
+- battery extraction objective
+- progression rewards and final bonus reset
 
-### Required
+If you are migrating from old endless mode configs, start from this guide.
 
-- **Prep Area (Lobby)**: Any world where players can join and select equipment before entering combat. This can be your server's main spawn world.
-- **Combat World(s)**: At least one world with defined spawn boundaries where the roguelite gameplay takes place.
+## 1. Requirements
 
-### Optional Plugins
+- Paper `1.21.8+`
+- Java `21`
+- Plugin jar built from this repository
 
-| Plugin | Benefit |
-|--------|---------|
-| **Multiverse-Core** | Manage multiple combat worlds easily |
-| **RPGItems-reloaded** | Create custom weapons and armor with special abilities |
-| **EssentialsX** | Convenient spawn/teleport management |
-| **Vault** | External economy integration (optional - plugin has built-in economy) |
+## 2. Install
 
----
+1. Put the plugin jar into `plugins/`.
+2. Start server once.
+3. Stop server.
 
-## Step-by-Step Setup
+This creates default files:
 
-### Step 1: Configure Combat World(s)
+- `plugins/KedamaSurvivors/config.yml`
+- `plugins/KedamaSurvivors/data/worlds.yml`
+- `plugins/KedamaSurvivors/data/starters.yml`
+- `plugins/KedamaSurvivors/data/archetypes.yml`
+- `plugins/KedamaSurvivors/data/equipment/*.yml`
 
-Combat worlds are where players fight enemies. You need at least one configured.
+## 3. Prepare Combat Worlds
 
-**Option A: Edit `data/worlds.yml` directly:**
+Register each world and add spawn points:
+
+```text
+/vrs admin world create <world>
+/vrs admin world addspawn <world>
+/vrs admin world set bounds <world> <minX> <maxX> <minZ> <maxZ>
+```
+
+Repeat for every world you want in rotation.
+
+## 4. Configure Stage Groups (World Fragments)
+
+Edit `config.yml` -> `stageProgression.groups`.
+
+Recommended baseline:
+
+- at least 5 groups
+- names like `World Fragment - Extension 1`
+- each group uses unique worlds (one world cannot appear in multiple groups)
+
+Example:
 
 ```yaml
-worlds:
-  - name: "combat_arena"
-    displayName: "§2Forest Arena"
-    enabled: true
-    weight: 1.0
-    spawnBounds:
-      minX: -500
-      maxX: 500
-      minZ: -500
-      maxZ: 500
+stageProgression:
+  groups:
+    - id: "fragment_1"
+      displayName: "World Fragment - Extension 1"
+      worlds: ["arena_a", "arena_b"]
+      startEnemyLevel: 1
+      requiredBatteries: 1
+      clearRewardCoins: 100
+      clearRewardPermaScore: 10
+    - id: "fragment_2"
+      displayName: "World Fragment - Extension 2"
+      worlds: ["arena_c"]
+      startEnemyLevel: 5
+      requiredBatteries: 3
+      clearRewardCoins: 300
+      clearRewardPermaScore: 30
+  finalBonus:
+    coins: 1000
+    permaScore: 100
 ```
 
-**Option B: Use admin commands:**
+Important:
 
-```
-/vrs admin world create combat_arena "Forest Arena"
-/vrs admin world set bounds combat_arena -500 500 -500 500
-/vrs admin world enable combat_arena
-```
+- Duplicate world assignment across groups is rejected at load/runtime update.
+- If a group `worlds` is empty, it can draw from global enabled worlds.
 
-**Configuration Fields:**
+## 5. Configure Battery Objective
 
-| Field | Description |
-|-------|-------------|
-| `name` | Bukkit world name (must exist) |
-| `displayName` | Name shown to players (supports color codes) |
-| `enabled` | Whether this world can be selected |
-| `weight` | Selection probability (higher = more likely) |
-| `spawnBounds` | Rectangle defining valid spawn area (minX, maxX, minZ, maxZ) |
+In `config.yml` -> `battery`:
 
-#### Step 1b: Configure Spawn Points
+- spawn interval/chance/distance
+- charge radius and speed
+- display model and name
+- surge interval/count
 
-Each combat world needs **at least one spawn point**. Players spawn at random locations from this list.
+Defaults already implement:
 
-**Option A: Use admin commands (Recommended):**
+- base `1%/s`
+- extra `+0.1%/s` per additional player in radius
+- charging pauses when VRS mobs are inside radius
 
-```
-# Stand at the spawn location and run:
-/vrs admin world addspawn combat_arena
+## 6. Create Starter and Upgrade Data
 
-# Or specify coordinates with optional rotation:
-/vrs admin world addspawn combat_arena 100 64 200 0 0
+Use admin commands to configure content:
 
-# Add multiple spawn points for variety:
-/vrs admin world addspawn combat_arena -100 64 -200 180 0
+- equipment groups/items
+- starter weapon/helmet choices
+- archetypes and spawn commands
 
-# List all spawn points:
-/vrs admin world listspawns combat_arena
+Typical order:
 
-# Remove a spawn point by index (1-based):
-/vrs admin world removespawn combat_arena 2
-```
-
-**Option B: Edit `data/worlds.yml` directly:**
-
-```yaml
-worlds:
-  - name: "combat_arena"
-    displayName: "§2Forest Arena"
-    enabled: true
-    weight: 1.0
-    spawnBounds:
-      minX: -500
-      maxX: 500
-      minZ: -500
-      maxZ: 500
-    spawnPoints:
-      - x: 100
-        y: 64
-        z: 200
-        yaw: 0
-        pitch: 0
-      - x: -100
-        y: 64
-        z: -200
-        yaw: 180
-        pitch: 0
+```text
+/vrs admin equipment group create weapon <group>
+/vrs admin equipment group create helmet <group>
+/vrs admin equipment item add weapon <group> <level>
+/vrs admin equipment item add helmet <group> <level>
+/vrs admin starter create weapon <optionId> <templateId> <group> <level>
+/vrs admin starter create helmet <optionId> <templateId> <group> <level>
+/vrs admin spawner archetype create <id> <entityType> [weight]
+/vrs admin spawner archetype addcommand <id> <command...>
 ```
 
-**Fallback Spawn (optional):**
+## 7. Smoke Test the Flow
 
-If random spawn sampling fails, configure a guaranteed safe spawn:
+1. Create team and select starters:
+   - `/vrs team create`
+   - `/vrs starter`
+2. Start run:
+   - `/vrs ready`
+3. Verify in-run behavior:
+   - mobs spawn near players
+   - battery appears after spawn checks
+   - battery blocks charging when mobs enter radius
+4. Finish battery objective and return to prep.
+5. Re-enter and confirm next stage group world is used.
+6. Clear final group and confirm:
+   - final bonus granted
+   - team auto-disbanded
+   - progression reset for next campaign
 
-```
-/vrs admin world setfallback combat_arena 0 64 0
-/vrs admin world clearfallback combat_arena  # Remove fallback
-```
+## 8. Runtime Hot Update Examples
 
----
+### Update stage world list
 
-### Step 2: Set Up Enemy Archetypes
-
-Archetypes define the enemy types that spawn during combat.
-
-**Edit `data/archetypes.yml`:**
-
-```yaml
-archetypes:
-  zombie:
-    enemyType: "minecraft:zombie"
-    weight: 3.0
-    minSpawnLevel: 1  # Available from start
-    spawnCommands:
-      - "summon zombie {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
-    rewards:
-      xpAmount: 10        # Fixed XP amount
-      xpChance: 1.0       # 100% chance to award XP
-      coinAmount: 1       # Fixed coin amount
-      coinChance: 1.0     # 100% chance to award coins
-      permaScoreAmount: 1
-      permaScoreChance: 0.01  # 1% chance for perma-score
-
-  skeleton:
-    enemyType: "minecraft:skeleton"
-    weight: 2.0
-    minSpawnLevel: 5  # Only spawns at enemy level 5+
-    spawnCommands:
-      - "summon skeleton {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
-    rewards:
-      xpAmount: 15
-      xpChance: 1.0
-      coinAmount: 2
-      coinChance: 0.8     # 80% chance for coins
-      permaScoreAmount: 1
-      permaScoreChance: 0.02
-
-  spider:
-    enemyType: "minecraft:spider"
-    weight: 2.0
-    minSpawnLevel: 1
-    spawnCommands:
-      - "summon spider {sx} {sy} {sz} {Tags:[\"vrs_mob\",\"vrs_lvl_{enemyLevel}\",\"vrs_arch_{archetypeId}\"]}"
-    rewards:
-      xpAmount: 12
-      xpChance: 1.0
-      coinAmount: 1
-      coinChance: 1.0
-      permaScoreAmount: 1
-      permaScoreChance: 0.01
+```text
+/vrs admin config set stage.fragment_2.worlds arena_x,arena_y
 ```
 
-**Available Placeholders:**
+### Update battery behavior
 
-| Placeholder | Description |
-|-------------|-------------|
-| `{sx}`, `{sy}`, `{sz}` | Spawn coordinates |
-| `{enemyLevel}` | Calculated enemy level |
-| `{player}` | Target player name |
-| `{runWorld}` | Combat world name |
-| `{enemyType}` | Entity type from archetype config |
-| `{archetypeId}` | Archetype ID (use in Tags for reward lookup) |
-
-**Level Gating:** The `minSpawnLevel` property controls when an archetype becomes available. Only archetypes where `minSpawnLevel <= currentEnemyLevel` are considered for spawning.
-
-**Important:** Enemies must have the `vrs_mob` tag to be tracked by the plugin. Include `vrs_arch_{archetypeId}` tag for proper reward lookup.
-
----
-
-### Step 3: Capture and Configure Starter Equipment
-
-Players select their starting weapon and helmet before entering combat.
-
-#### 3a: Capture Item Templates
-
-First, create equipment groups, then add items to them by holding the item in your hand:
-
-```
-# Create equipment groups first
-/vrs admin equipment group create weapon sword "Sword Path"
-/vrs admin equipment group create helmet light "Light Armor"
-
-# Hold the item you want to add, then run:
-/vrs admin equipment item add weapon <groupId> <level>
-/vrs admin equipment item add helmet <groupId> <level>
+```text
+/vrs admin config set batterySpawnChance 0.08
+/vrs admin config set batteryChargeRadius 10
 ```
 
-**Examples:**
+### Restrict archetype to multiple worlds
 
-```
-# Hold an iron sword, then run:
-/vrs admin equipment item add weapon sword 1
-
-# Hold a leather helmet, then run:
-/vrs admin equipment item add helmet light 1
+```text
+/vrs admin spawner archetype set worlds elite arena_x,arena_y arena_z
 ```
 
-This captures the item's NBT data and auto-generates a template ID.
+### List multiple config categories in one command
 
-#### 3b: Configure Starter Options
-
-**Edit `data/starters.yml`:**
-
-```yaml
-weapons:
-  - optionId: "starter_sword"
-    displayName: "§fIron Sword"
-    displayItem:
-      material: IRON_SWORD
-      name: "§fIron Sword"
-      lore:
-        - "§7Basic melee weapon"
-        - "§7Good for beginners"
-    templateId: "sword_iron_1"
-    group: "sword"
-    level: 1
-
-  - optionId: "starter_bow"
-    displayName: "§fBow"
-    displayItem:
-      material: BOW
-      name: "§fBow"
-      lore:
-        - "§7Ranged weapon"
-        - "§7Keep your distance"
-    templateId: "bow_basic_1"
-    group: "bow"
-    level: 1
-
-helmets:
-  - optionId: "starter_leather"
-    displayName: "§fLeather Cap"
-    displayItem:
-      material: LEATHER_HELMET
-      name: "§fLeather Cap"
-      lore:
-        - "§7Light armor"
-        - "§7Low protection, high mobility"
-    templateId: "helmet_leather_1"
-    group: "light"
-    level: 1
-
-  - optionId: "starter_chain"
-    displayName: "§7Chainmail Helmet"
-    displayItem:
-      material: CHAINMAIL_HELMET
-      name: "§7Chainmail Helmet"
-      lore:
-        - "§7Medium armor"
-        - "§7Balanced protection"
-    templateId: "helmet_chain_1"
-    group: "chain"
-    level: 1
+```text
+/vrs admin config list stage battery rewards
 ```
 
----
+## 9. Progression Reset Rules (Operational)
 
-### Step 4: Set Up Equipment Progression
+Progress resets for campaign progression when:
 
-Define the equipment pools for each level of progression.
+- team wipe
+- team disband
+- team has no valid remaining members
+- final stage clear (campaign complete)
 
-**Edit `data/equipment/weapons.yml`:**
+A single player is detached/reset from team progression when they effectively leave:
 
-```yaml
-groups:
-  sword:
-    displayName: "Sword"
-    levelItems:
-      1:
-        - "sword_iron_1"
-      2:
-        - "sword_iron_2"
-        - "sword_diamond_1"
-      3:
-        - "sword_diamond_2"
-      4:
-        - "sword_diamond_3"
-      5:
-        - "sword_netherite_1"
+- `/vrs quit` during run
+- disconnect grace timeout
 
-  bow:
-    displayName: "Bow"
-    levelItems:
-      1:
-        - "bow_basic_1"
-      2:
-        - "bow_power_1"
-      3:
-        - "bow_power_2"
-      4:
-        - "bow_flame_1"
-      5:
-        - "bow_infinity_1"
+Their persistent currencies and long-term stats remain saved.
+
+## 10. Persistence Checklist
+
+Verify these after restart:
+
+- `players/<uuid>.json` keeps per-player stats and balances
+- `teams.json` keeps stage index and lock state for active teams
+- stage reward/battery/campaign stats continue accumulating
+
+If needed, run:
+
+```text
+/vrs status
+/vrs admin debug player <name>
+/vrs admin debug run list
 ```
-
-**Edit `data/equipment/helmets.yml`:**
-
-```yaml
-groups:
-  light:
-    displayName: "Light Armor"
-    levelItems:
-      1:
-        - "helmet_leather_1"
-      2:
-        - "helmet_leather_2"
-      3:
-        - "helmet_gold_1"
-      4:
-        - "helmet_gold_2"
-      5:
-        - "helmet_gold_3"
-
-  chain:
-    displayName: "Chain Armor"
-    levelItems:
-      1:
-        - "helmet_chain_1"
-      2:
-        - "helmet_chain_2"
-      3:
-        - "helmet_iron_1"
-      4:
-        - "helmet_iron_2"
-      5:
-        - "helmet_diamond_1"
-```
-
-**Note:** Each `templateId` must have a corresponding item file in `data/items/` (created via `/vrs item capture`).
-
----
-
-### Step 5: Configure Teleport Commands
-
-Configure how players are teleported between areas.
-
-**Edit `config.yml` teleport section:**
-
-```yaml
-teleport:
-  # Command to run before entering combat (e.g., clear inventory, heal)
-  prepCommand: "tp ${player} world 0 64 0"
-
-  # Command to teleport player into combat world
-  enterCommand: "tp ${player} ${world} ${x} ${y} ${z} ${yaw} ${pitch}"
-
-  # Command to respawn player to teammate
-  respawnCommand: "tp ${player} ${world} ${x} ${y} ${z}"
-```
-
-**For Multiverse:**
-
-```yaml
-teleport:
-  prepCommand: "mv tp ${player} lobby"
-  enterCommand: "mv tp ${player} ${world}:${x},${y},${z}"
-  respawnCommand: "mv tp ${player} ${world}:${x},${y},${z}"
-```
-
-**Available Placeholders:**
-
-| Placeholder | Description |
-|-------------|-------------|
-| `${player}` | Player name |
-| `${world}` | Target world name |
-| `${x}`, `${y}`, `${z}` | Coordinates |
-| `${yaw}`, `${pitch}` | Rotation (enter command only) |
-
----
-
-### Step 6: (Optional) Configure Economy
-
-The plugin supports three economy modes for handling coins:
-
-**Edit `config.yml` economy section:**
-
-```yaml
-economy:
-  # Mode: VAULT (external economy), INTERNAL (plugin-managed per-player), ITEM (physical items)
-  mode: INTERNAL
-
-  coin:
-    material: EMERALD
-    customModelData: 0
-    displayName: "§e金币"
-    nbtTag: "vrs_coin"           # NBT tag to identify VRS coins (for ITEM mode)
-```
-
-**Economy Modes:**
-
-| Mode | Description |
-|------|-------------|
-| `VAULT` | Uses external Vault-compatible economy plugin. Falls back to INTERNAL if Vault not installed. |
-| `INTERNAL` | Plugin stores coin balance per-player internally (default). |
-| `ITEM` | Physical coin items in player inventory. Coins have NBT tag for identification. |
-
----
-
-### Step 7: (Optional) Configure Notifications & Sounds
-
-Customize how players receive reward notifications and sounds.
-
-**Edit `config.yml` feedback section:**
-
-```yaml
-feedback:
-  rewards:
-    displayMode: ACTIONBAR    # ACTIONBAR (stacked) or CHAT (individual)
-    stacking:
-      timeoutSeconds: 3       # Stack rewards within 3 seconds
-
-  upgradeReminder:
-    displayMode: CHAT         # CHAT (clickable) or SCOREBOARD (flashing line)
-
-  sounds:
-    xpGained: "minecraft:entity.experience_orb.pickup 0.5 1.2"
-    coinGained: "minecraft:entity.item.pickup 0.6 1.0"
-    upgradeAvailable: "minecraft:block.note_block.pling 1.0 1.2"
-```
-
-**Display Modes:**
-
-| Mode | Description |
-|------|-------------|
-| `ACTIONBAR` | Rewards stack and show aggregated totals (e.g., "+50 XP | +5 coins"). Less chat spam. |
-| `CHAT` | Individual messages for each reward (legacy behavior). |
-
-**Upgrade Reminder Modes:**
-
-| Mode | Description |
-|------|-------------|
-| `CHAT` | Clickable chat messages with [Power] and [Defense] options |
-| `SCOREBOARD` | Flashing ">>> Upgrade Available <<<" line on scoreboard. More subtle. |
-
-**Sound Format:** `"sound_name volume pitch"` - Leave empty (`""`) to disable a sound.
-
----
-
-### Step 8: (Optional) Customize Merchants
-
-Merchants appear as animated armor stands that float and spin. They spawn periodically during runs and offer trades for coins.
-
-#### 8a: Create Merchant Item Pools
-
-Merchant stock is managed through item pools. Each pool contains weighted items with prices.
-
-**Using Admin Commands (Recommended):**
-
-```bash
-# 1. Create a merchant pool
-/vrs admin merchant pool create common_items
-
-# 2. Hold the item you want to sell in your hand
-# 3. Add it to the pool with price and weight
-/vrs admin merchant pool additem common_items 25 1.0
-# Result: Adds held item for 25 coins with weight 1.0
-
-# 4. Add more items by holding different items
-/vrs admin merchant pool additem common_items 50 0.5
-
-# 5. List pool contents
-/vrs admin merchant pool list common_items
-```
-
-**Manual Configuration (Alternative):**
-
-Edit `data/merchant_pools.yml`:
-
-```yaml
-pools:
-  common_items:
-    items:
-      - templateId: "golden_apple_1"
-        weight: 10.0
-        price: 25
-      - templateId: "speed_potion_1"
-        weight: 5.0
-        price: 50
-
-  rare_items:
-    items:
-      - templateId: "enchanted_apple_1"
-        weight: 1.0
-        price: 100
-```
-
-#### 8b: Configure Merchant Behavior
-
-Merchants use invisible armor stands with floating/spinning animation. Configure their behavior in `config.yml`:
-
-```yaml
-merchants:
-  enabled: true
-
-  wandering:
-    spawnIntervalSeconds: 120    # How often to attempt spawning
-    spawnChance: 0.5             # Probability of spawn per interval (0-1)
-    stayTime:
-      minSeconds: 60             # Minimum stay duration
-      maxSeconds: 120            # Maximum stay duration
-    distance:
-      min: 20.0                  # Min distance from players
-      max: 50.0                  # Max distance from players
-
-  stock:
-    limited: true                # Items disappear when purchased
-    minItems: 3                  # Min items in shop
-    maxItems: 6                  # Max items in shop
-
-  display:
-    rotationSpeed: 3.0           # Degrees per tick (spinning)
-    bobHeight: 0.15              # Floating amplitude (blocks)
-    bobSpeed: 0.01               # Floating speed
-```
-
-#### 8c: Create Merchant Templates (Legacy)
-
-You can also create named merchant templates with specific trades:
-
-```bash
-# Create a merchant template
-/vrs admin merchant template create potions "§dPotion Merchant"
-
-# Hold an item and add as trade (25 coins, max 5 uses)
-/vrs admin merchant trade add potions 25 5
-
-# List trades
-/vrs admin merchant trade list potions
-```
-
----
-
-## Minimal Viable Setup Checklist
-
-At minimum, you need:
-
-- [ ] **1 combat world** configured in `data/worlds.yml` with **at least 1 spawn point**
-- [ ] **1+ enemy archetype** configured in `data/archetypes.yml`
-- [ ] **1+ starter weapon** in `data/starters.yml` with matching item template
-- [ ] **1+ starter helmet** in `data/starters.yml` with matching item template
-- [ ] **Equipment groups** in `data/equipment/weapons.yml` and `helmets.yml`
-- [ ] **Teleport commands** configured in `config.yml` (optional if using default API teleport)
-- [ ] **Economy mode** configured in `config.yml` (defaults to INTERNAL)
-- [ ] **Merchant pools** configured in `data/merchant_pools.yml` (optional, for merchant trades)
-
----
-
-## Starting Your First Game
-
-### As an Admin
-
-1. Start the server with the plugin installed
-2. Verify configuration loaded: `/vrs reload`
-3. Check worlds are registered: `/vrs admin world list`
-4. Enable game entry: `/vrs admin join enable`
-
-### As a Player
-
-1. **Select equipment**: `/vrs starter`
-   - Choose your starting weapon from the GUI
-   - Choose your starting helmet from the GUI
-
-2. **Create or join a team**:
-   - Solo: `/vrs team create MyTeam`
-   - Join existing: `/vrs team accept TeamName` (after receiving invite)
-
-3. **Ready up**: `/vrs ready`
-   - All team members must be ready
-   - 5-second countdown begins
-
-4. **Fight!**
-   - You're teleported to the combat world
-   - Kill enemies to gain XP and coins
-   - When XP bar fills, choose weapon or helmet upgrade
-   - Survive as long as possible!
-
-5. **After death**:
-   - All deaths return player to prep area (regardless of teammate status)
-   - 60-second cooldown applies
-   - Player must re-select equipment and ready up to rejoin
-   - If teammates are still alive, player can rejoin the same run after cooldown
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| "No combat worlds available" | Check `data/worlds.yml` has at least one enabled world with spawn points |
-| "No spawn points configured" | Add spawn points via `/vrs admin world addspawn <name>` |
-| "Cannot ready" | Ensure you have selected starter equipment and are in a team |
-| Enemies not spawning | Verify `data/archetypes.yml` has entries and spawner is not paused |
-| Items not giving | Check item templates exist in `data/items/` directory |
-| Players spawning in wrong location | Configure fallback spawn with `/vrs admin world setfallback` |
-
-For more details, see:
-- [Configuration Reference](Configuration-Reference.md)
-- [Commands Reference](Commands-Reference.md)
-- [Design Overview](Design-Overview.md)

@@ -1,644 +1,124 @@
-# KedamaSurvivors - Commands Reference
+# KedamaSurvivors Commands Reference
 
-Complete reference for all commands in the KedamaSurvivors plugin.
+This reference describes the **current implemented command tree**.
 
----
+Root command:
 
-## Command Structure
-
-All commands use the root command `/vrs` (short for "Vampire Rogue Survivors").
-
-```
-/vrs <subcommand> [arguments]
+```text
+/vrs
 ```
 
----
+## 1. Permission Model (Current Behavior)
 
-## Table of Contents
+- `/vrs` is registered with base permission `vrs.player`.
+- `/vrs admin ...` is guarded by `vrs.admin` at the top-level admin subcommand.
+- `/vrs reload` is also admin-only.
 
-1. [Player Commands](#1-player-commands)
-2. [Team Commands](#2-team-commands)
-3. [Admin Commands](#3-admin-commands)
-4. [Debug Commands](#4-debug-commands)
+Note: nested admin modules have dedicated permission strings in code, but entry is still via `/vrs admin`.
 
----
+## 2. Player Commands
 
-## 1. Player Commands
+## 2.1 Starter
 
-### `/vrs starter`
-
-Opens the starter equipment selection GUI.
-
-**Usage:**
-```
+```text
 /vrs starter
-/vrs starter weapon
-/vrs starter helmet
+/vrs starter weapon [optionId]
+/vrs starter helmet [optionId]
+/vrs starter world
+/vrs starter status
 /vrs starter clear
 ```
 
-**Subcommands:**
-| Subcommand | Description |
-|------------|-------------|
-| *(none)* | Opens weapon selection GUI (then automatically opens helmet) |
-| `weapon` | Opens weapon selection GUI only |
-| `helmet` | Opens helmet selection GUI only |
-| `clear` | Clears current selections and removes starter items |
+Behavior:
 
-**Permission:** `vrs.player` (default: true)
+- `weapon` / `helmet` without id opens GUI.
+- `world` opens world-selection GUI only if enabled and player is team leader.
+- starter changes are blocked when team progression is locked.
 
-**Requirements:**
-- Must be in LOBBY mode
-- Helmet selection requires weapon selection first (configurable)
+## 2.2 Ready
 
-**Examples:**
-```
-/vrs starter           # Start selection process
-/vrs starter weapon    # Re-select weapon only
-/vrs starter helmet    # Re-select helmet only
-/vrs starter clear     # Clear selections to start over
-```
-
----
-
-### `/vrs ready`
-
-Toggles ready status for entering combat.
-
-**Usage:**
-```
+```text
 /vrs ready
 /vrs ready solo
 ```
 
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| *(none)* | Toggle ready status (requires existing team) |
-| `solo` | Auto-create a solo team and toggle ready |
+Behavior:
 
-**Permission:** `vrs.player` (default: true)
+- `solo` auto-creates a solo team if needed.
+- team countdown starts when all members are ready.
 
-**Requirements:**
-- Join switch must be enabled
-- Not on cooldown (or have bypass permission)
-- Starter weapon and helmet must be selected
-- Not already in a run
-- Must be in a team (use `solo` argument to auto-create)
+## 2.3 Team
 
-**Behavior:**
-- **Solo (`/vrs ready solo`):** Creates a team named `Team_{PlayerName}_{random4digits}` and marks ready
-- **Team:** Waits for all online team members to be ready, then starts countdown
-- **Toggle:** Running again while ready will cancel ready status
-
-**Examples:**
-```
-/vrs ready         # Mark yourself ready (requires team)
-/vrs ready solo    # Create solo team and mark ready
-```
-
----
-
-### `/vrs quit`
-
-Voluntarily leaves the current run.
-
-**Usage:**
-```
-/vrs quit
-```
-
-**Permission:** `vrs.player` (default: true)
-
-**Requirements:**
-- Must be in an active run (IN_RUN mode)
-
-**Effects:**
-- Does NOT apply death penalty (equipment kept)
-- Returns to prep area
-- May apply quit cooldown (configurable)
-
-**Examples:**
-```
-/vrs quit    # Leave current run and return to prep area
-```
-
----
-
-### `/vrs status`
-
-Shows your current game status.
-
-**Usage:**
-```
-/vrs status
-```
-
-**Permission:** `vrs.player` (default: true)
-
-**Output includes:**
-- Current mode (LOBBY, READY, IN_RUN, etc.)
-- Run world (if in run)
-- Team name and members (if in team)
-- Cooldown remaining (if on cooldown)
-- Weapon group and level
-- Helmet group and level
-- XP progress and held XP
-- Coin balance
-- Perma-score
-
-**Example output:**
-```
-§7========== §6武生状态 §7==========
-§7模式: §aIN_RUN
-§7世界: §f森林竞技场
-§7队伍: §fAlpha §7(3/5 在线)
-§6武器: §f剑系 Lv.3
-§b护甲: §f中甲系 Lv.2
-§a经验: §f150/300 (50%)
-§e金币: §f42
-§d永久积分: §f1,250
-```
-
----
-
-### `/vrs upgrade`
-
-Choose power or defense upgrade during gameplay.
-
-**Usage:**
-```
-/vrs upgrade power
-/vrs upgrade defense
-```
-
-**Permission:** `vrs.player` (default: true)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `power` | Choose weapon upgrade |
-| `defense` | Choose helmet upgrade |
-
-**Requirements:**
-- Must be in active run (IN_RUN mode)
-- Must have pending upgrade prompt
-
-**Examples:**
-```
-/vrs upgrade power     # Upgrade weapon
-/vrs upgrade defense   # Upgrade helmet
-```
-
----
-
-## 2. Team Commands
-
-### `/vrs team create [name]`
-
-Creates a new team.
-
-**Usage:**
-```
+```text
+/vrs team
 /vrs team create [name]
-```
-
-**Permission:** `vrs.team.create` (default: true)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `name` | Team name (optional - auto-generates if not provided) |
-
-**Team Name Rules:**
-- If no name provided, auto-generates: `playername-XXXX` (4 random alphanumeric chars)
-- Valid characters: alphanumeric, dash (`-`), underscore (`_`)
-- Spaces not allowed in team names
-
-**Requirements:**
-- Must not be in a team already
-- Must be in LOBBY mode
-
-**Examples:**
-```
-/vrs team create Alpha        # Create team named "Alpha"
-/vrs team create              # Auto-generate name like "Steve-A1B2"
-/vrs team create my_team_1    # Valid with underscores
-```
-
----
-
-### `/vrs team invite <player>`
-
-Invites a player to your team.
-
-**Usage:**
-```
 /vrs team invite <player>
-```
-
-**Permission:** `vrs.team.invite` (default: true)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `player` | Target player name |
-
-**Requirements:**
-- Must be team owner
-- Team must not be full (max 5 by default)
-- Target must not be in a team
-
-**Behavior:**
-- Invite expires after 60 seconds (configurable)
-- Target receives clickable message to join
-
-**Examples:**
-```
-/vrs team invite Steve
-/vrs team invite Notch
-```
-
----
-
-### `/vrs team accept <team>`
-
-Accepts a team invitation you've received.
-
-**Usage:**
-```
 /vrs team accept <team>
-```
-
-**Permission:** `vrs.team.join` (default: true)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `team` | Team name to accept invitation for |
-
-**Requirements:**
-- Must have valid invite to the team
-- Team must not be full
-- Must not be in a team already
-
-**Examples:**
-```
-/vrs team accept Alpha
-```
-
----
-
-### `/vrs team decline <team>`
-
-Declines a team invitation.
-
-**Usage:**
-```
-/vrs team decline <teamName>
-```
-
-**Permission:** `vrs.team` (default: true)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `team` | Team name to decline invitation for |
-
-**Requirements:**
-- Must have valid invite to the team
-
-**Examples:**
-```
-/vrs team decline Alpha
-```
-
----
-
-### `/vrs team leave`
-
-Leaves your current team.
-
-**Usage:**
-```
+/vrs team decline <team>
 /vrs team leave
-```
-
-**Permission:** `vrs.team.leave` (default: true)
-
-**Requirements:**
-- Must be in a team
-- If owner, must transfer ownership first or disband
-
-**Behavior:**
-- If in run, immediately triggers respawn check
-- Team is notified
-
-**Examples:**
-```
-/vrs team leave
-```
-
----
-
-### `/vrs team kick <player>`
-
-Kicks a player from your team.
-
-**Usage:**
-```
 /vrs team kick <player>
-```
-
-**Permission:** `vrs.team.kick` (default: true)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `player` | Player to kick |
-
-**Requirements:**
-- Must be team owner
-- Target must be in your team
-
-**Examples:**
-```
-/vrs team kick Steve
-```
-
----
-
-### `/vrs team disband`
-
-Disbands your team.
-
-**Usage:**
-```
 /vrs team disband
-```
-
-**Permission:** `vrs.team.disband` (default: true)
-
-**Requirements:**
-- Must be team owner
-- Should not be in active run (warning if so)
-
-**Behavior:**
-- All members removed from team
-- If in run, run continues as solo for each member
-
-**Examples:**
-```
-/vrs team disband
-```
-
----
-
-### `/vrs team list`
-
-Lists your team members and their status.
-
-**Usage:**
-```
+/vrs team transfer <player>
 /vrs team list
 ```
 
-**Permission:** `vrs.team` (default: true)
+Notes:
 
-**Output includes:**
-- Team name
-- Owner
-- Member list with online/ready status
-- Active run info (if applicable)
+- progression-locked teams cannot invite/accept new members.
+- leaving/kicking resets that player's campaign attachment.
 
----
+## 2.4 Run Control
 
-### `/vrs team transfer <player>`
-
-Transfers team ownership to another member.
-
-**Usage:**
-```
-/vrs team transfer <player>
+```text
+/vrs quit
+/vrs status
+/vrs upgrade <power|defense>
 ```
 
-**Permission:** `vrs.team` (default: true)
+- `quit` works in `COUNTDOWN` and `IN_RUN`.
+- `upgrade` only works when upgrade is pending.
 
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `player` | New owner (must be team member) |
+## 3. Core Admin Commands
 
-**Requirements:**
-- Must be team owner
-- Target must be in the team
-
----
-
-## 3. Admin Commands
-
-All admin commands are under `/vrs admin` or `/vrs reload`.
-
-### `/vrs reload`
-
-Reloads all plugin configuration.
-
-**Usage:**
+```text
+/vrs admin status
+/vrs admin endrun [team]
+/vrs admin forcestart <team>
+/vrs admin kick <player>
+/vrs admin reset <player>
+/vrs admin setperma <player> <amount>   # compatibility alias -> perma set
+/vrs admin join <enable|disable>
+/vrs admin multiplier [on|off|set <n>|perma <on|off>]
+/vrs admin debug <player|perf|templates|run> ...
 ```
+
+Also available:
+
+```text
 /vrs reload
 ```
 
-**Permission:** `vrs.admin` (default: op)
+## 4. Admin Module Commands
 
-**Behavior:**
-- Reloads config.yml, language files, item templates, and all data files
-- Active runs are not affected
+## 4.1 Coin
 
----
-
-### `/vrs admin`
-
-Root command for all administration functions.
-
-**Usage:**
-```
-/vrs admin <subcommand>
+```text
+/vrs admin coin add <player> <amount>
+/vrs admin coin set <player> <amount>
+/vrs admin coin get <player>
 ```
 
-**Permission:** `vrs.admin` (default: op)
+## 4.2 Perma Score
 
-**Available Subcommands:**
-| Subcommand | Description |
-|------------|-------------|
-| `status` | Show server status |
-| `endrun` | End active runs |
-| `forcestart` | Force start a team's run |
-| `kick` | Kick player from game |
-| `reset` | Reset player state |
-| `setperma` | Set player's perma-score |
-| `join` | Toggle global join switch |
-| `world` | World management |
-| `starter` | Starter option management |
-| `equipment` | Equipment group management |
-| `spawner` | Enemy archetype management |
-| `merchant` | Merchant template management |
-| `config` | Runtime config management |
-| `debug` | Debug commands |
-
----
-
-### `/vrs admin status`
-
-Shows server game status.
-
-**Usage:**
-```
-/vrs admin status
+```text
+/vrs admin perma add <player> <amount>
+/vrs admin perma set <player> <amount>
+/vrs admin perma get <player>
 ```
 
-**Output includes:**
-- Total players tracked
-- Active teams
-- Active runs
-- Players currently in runs
+## 4.3 World Management
 
----
-
-### `/vrs admin join enable|disable`
-
-Toggles the global join switch.
-
-**Usage:**
-```
-/vrs admin join enable
-/vrs admin join disable
-/vrs admin join
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Behavior:**
-- Without argument: shows current status
-- `enable`: allows new players to enter combat
-- `disable`: prevents new games, active players receive grace warning and are ejected
-
----
-
-### `/vrs admin forcestart <team>`
-
-Force starts a run for a team.
-
-**Usage:**
-```
-/vrs admin forcestart <teamName>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `teamName` | Name of the team to start |
-
-**Requirements:**
-- Team must exist
-- Team must not already be in a run
-
-**Examples:**
-```
-/vrs admin forcestart Alpha
-```
-
----
-
-### `/vrs admin endrun [team]`
-
-Ends active runs.
-
-**Usage:**
-```
-/vrs admin endrun
-/vrs admin endrun <teamName>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Behavior:**
-- Without argument: ends ALL active runs
-- With team name: ends only that team's run
-
-**Examples:**
-```
-/vrs admin endrun           # End all runs
-/vrs admin endrun Alpha     # End Alpha team's run
-```
-
----
-
-### `/vrs admin kick <player>`
-
-Kicks a player from the game system.
-
-**Usage:**
-```
-/vrs admin kick <player>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Behavior:**
-- Removes player from their team
-- Resets all player state
-
----
-
-### `/vrs admin reset <player>`
-
-Resets a player's game state.
-
-**Usage:**
-```
-/vrs admin reset <player>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Behavior:**
-- Resets player state to defaults
-- Does not remove from team
-
----
-
-### `/vrs admin setperma <player> <amount>`
-
-Sets a player's perma-score.
-
-**Usage:**
-```
-/vrs admin setperma <player> <amount>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `player` | Target player |
-| `amount` | Score value (integer) |
-
-**Examples:**
-```
-/vrs admin setperma Steve 1000
-```
-
----
-
-### `/vrs admin world`
-
-Manages combat world configurations.
-
-**Subcommands:**
-```
+```text
 /vrs admin world list
 /vrs admin world create <name> [displayName]
 /vrs admin world delete <name>
@@ -647,53 +127,16 @@ Manages combat world configurations.
 /vrs admin world set displayname <name> <displayName>
 /vrs admin world set weight <name> <weight>
 /vrs admin world set bounds <name> <minX> <maxX> <minZ> <maxZ>
-
-# Spawn Point Management
+/vrs admin world set cost <name> <cost>
 /vrs admin world addspawn <name> [x y z [yaw pitch]]
 /vrs admin world removespawn <name> <index>
 /vrs admin world listspawns <name>
 /vrs admin world clearspawns <name>
-
-# Fallback Spawn
-/vrs admin world setfallback <name> [x y z [yaw pitch]]
-/vrs admin world clearfallback <name>
 ```
 
-**Permission:** `vrs.admin` (default: op)
+## 4.4 Starter Option Management
 
-**Spawn Point Commands:**
-| Command | Description |
-|---------|-------------|
-| `addspawn <name> [coords]` | Add spawn point (uses player location if no coords) |
-| `removespawn <name> <index>` | Remove spawn point by index (1-based) |
-| `listspawns <name>` | List all spawn points for world |
-| `clearspawns <name>` | Remove all spawn points |
-| `setfallback <name> [coords]` | Set fallback spawn for failed sampling |
-| `clearfallback <name>` | Remove fallback spawn |
-
-**Examples:**
-```
-/vrs admin world create combat_arena "Forest Arena"
-/vrs admin world set bounds combat_arena -500 500 -500 500
-/vrs admin world enable combat_arena
-/vrs admin world list
-
-# Spawn point management
-/vrs admin world addspawn arena                    # Add at current location
-/vrs admin world addspawn arena 100 64 200 0 0    # Add with coordinates
-/vrs admin world listspawns arena                  # List all spawns
-/vrs admin world removespawn arena 2               # Remove 2nd spawn point
-/vrs admin world setfallback arena 0 64 0          # Set fallback
-```
-
----
-
-### `/vrs admin starter`
-
-Manages starter equipment options.
-
-**Subcommands:**
-```
+```text
 /vrs admin starter create <weapon|helmet> <optionId> <templateId> <group> <level> [displayName]
 /vrs admin starter delete <weapon|helmet> <optionId>
 /vrs admin starter list [weapon|helmet]
@@ -703,514 +146,128 @@ Manages starter equipment options.
 /vrs admin starter set level <weapon|helmet> <optionId> <level>
 ```
 
-**Permission:** `vrs.admin` (default: op)
+## 4.5 Equipment Group/Pool Management
 
----
-
-### `/vrs admin equipment`
-
-Manages equipment groups and items.
-
-**Group Subcommands:**
-```
+```text
 /vrs admin equipment group create <weapon|helmet> <groupId> [displayName]
 /vrs admin equipment group delete <weapon|helmet> <groupId>
 /vrs admin equipment group list [weapon|helmet]
 /vrs admin equipment group set displayname <weapon|helmet> <groupId> <displayName>
-```
 
-**Item Subcommands:**
-```
 /vrs admin equipment item add <weapon|helmet> <groupId> <level>
 /vrs admin equipment item remove <weapon|helmet> <groupId> <level> <index>
 /vrs admin equipment item list <weapon|helmet> <groupId> [level]
 ```
 
-**Permission:** `vrs.admin.capture` (default: op)
+`item add` captures the item in main hand.
 
-**Note:** The `item add` command captures the NBT of the item in your main hand and auto-generates a template ID.
+## 4.6 Spawner / Archetype Management
 
-**Examples:**
-```
-# Create a sword equipment group
-/vrs admin equipment group create weapon sword "Sword Path"
-
-# Hold an iron sword, then add it to level 1
-/vrs admin equipment item add weapon sword 1
-
-# List items in the sword group
-/vrs admin equipment item list weapon sword
-```
-
----
-
-### `/vrs admin spawner`
-
-Manages enemy archetypes.
-
-**Subcommands:**
-```
-/vrs admin spawner archetype list
+```text
 /vrs admin spawner archetype create <id> <entityType> [weight]
 /vrs admin spawner archetype delete <id>
+/vrs admin spawner archetype list
 /vrs admin spawner archetype addcommand <id> <command...>
 /vrs admin spawner archetype removecommand <id> <index>
+/vrs admin spawner archetype reward <id> <xpAmount> <xpChance> <coinAmount> <coinChance> <permaAmount> <permaChance>
 /vrs admin spawner archetype set weight <id> <weight>
 /vrs admin spawner archetype set entitytype <id> <entityType>
 /vrs admin spawner archetype set minspawnlevel <id> <level>
-/vrs admin spawner archetype set worlds <id> <world1,world2,...|any>
-/vrs admin spawner archetype reward <id> <xpAmount> <xpChance> <coinAmount> <coinChance> <permaAmount> <permaChance>
+/vrs admin spawner archetype set worlds <id> <world1[,world2...] [world3...]|any>
 ```
 
-**Permission:** `vrs.admin.spawner` (default: op)
+`set worlds` accepts comma-separated and/or space-separated world lists.
 
-**Set Commands:**
-| Command | Description |
-|---------|-------------|
-| `set weight <id> <weight>` | Set spawn weight (selection probability) |
-| `set entitytype <id> <type>` | Set entity type |
-| `set minspawnlevel <id> <level>` | Set minimum enemy level required to spawn |
-| `set worlds <id> <worlds>` | Set allowed combat worlds (comma-separated list or "any") |
+## 4.7 Merchant Management
 
-**Reward Command Arguments:**
-| Argument | Description |
-|----------|-------------|
-| `xpAmount` | Fixed XP reward amount |
-| `xpChance` | Probability (0.0-1.0) to award XP |
-| `coinAmount` | Fixed coin reward amount |
-| `coinChance` | Probability (0.0-1.0) to award coins |
-| `permaAmount` | Fixed perma-score reward amount |
-| `permaChance` | Probability (0.0-1.0) to award perma-score |
+```text
+/vrs admin merchant template create <templateId> [displayName]
+/vrs admin merchant template delete <templateId>
+/vrs admin merchant template list
+/vrs admin merchant template set displayname <templateId> <displayName>
 
-**Examples:**
-```
-# Create a zombie archetype
-/vrs admin spawner archetype create zombie ZOMBIE 3.0
+/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
+/vrs admin merchant trade remove <templateId> <index>
+/vrs admin merchant trade list <templateId>
 
-# Add spawn command with archetypeId tag for reward lookup
-/vrs admin spawner archetype addcommand zombie summon zombie {sx} {sy} {sz} {Tags:["vrs_mob","vrs_lvl_{enemyLevel}","vrs_arch_{archetypeId}"]}
+/vrs admin merchant pool create <poolId>
+/vrs admin merchant pool delete <poolId>
+/vrs admin merchant pool additem <poolId> <price> [weight]
+/vrs admin merchant pool removeitem <poolId> <index>
+/vrs admin merchant pool list [poolId]
 
-# Set minimum spawn level (only spawns at enemy level 5+)
-/vrs admin spawner archetype set minspawnlevel skeleton 5
-
-# Restrict archetype to specific worlds (comma-separated)
-/vrs admin spawner archetype set worlds wither_skeleton arena_nether,arena_hell
-
-# Allow archetype in all combat worlds
-/vrs admin spawner archetype set worlds zombie any
-
-# Set rewards (xpAmount xpChance coinAmount coinChance permaAmount permaChance)
-/vrs admin spawner archetype reward zombie 10 1.0 1 1.0 1 0.01
-```
-
----
-
-### `/vrs admin merchant`
-
-Manages merchants - animated armor stands that sell items to players.
-
-**Permission:** `vrs.admin` (default: op)
-
-#### Merchant System Overview
-
-Merchants appear as invisible armor stands with a floating/spinning animation. There are two merchant **types** and two **behaviors**:
-
-**Merchant Types:**
-
-| Type | Description |
-|------|-------------|
-| `MULTI` | Opens a shop GUI with multiple items. Player clicks items to purchase. Stock is randomly selected from the pool. |
-| `SINGLE` | Direct purchase - right-click to buy immediately. Shows one item floating above the merchant. |
-
-**Merchant Behaviors:**
-
-| Behavior | Description |
-|----------|-------------|
-| `FIXED` | Permanent merchant at a fixed location. Created via admin commands. Does not despawn automatically. |
-| `WANDERING` | Temporary merchant that spawns randomly near players during runs. Despawns after a configured time. |
-
-**Stock Modes:**
-
-| Mode | Description |
-|------|-------------|
-| `limited` | Items disappear after purchase. Merchant becomes empty when all items sold. |
-| `unlimited` | Items respawn after purchase. Merchant never runs out of stock. |
-
----
-
-#### Spawn Subcommands
-
-Commands to spawn, despawn, and list active merchants:
-
-```
 /vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random]
 /vrs admin merchant despawn [radius]
 /vrs admin merchant active
 ```
 
-| Command | Description |
-|---------|-------------|
-| `spawn <poolId> <type> [stock] [items]` | Spawn a fixed merchant at your location using the specified pool |
-| `despawn [radius]` | Remove the nearest merchant within radius (default: 5 blocks) |
-| `active` | List all active merchants with their type, behavior, pool, and location |
+## 4.8 Runtime Config Management
 
-**Spawn Arguments:**
-| Argument | Options | Description |
-|----------|---------|-------------|
-| `poolId` | pool name | The item pool to use for this merchant |
-| `type` | `multi` / `single` | `multi` = shop GUI with multiple items, `single` = direct purchase |
-| `stock` | `limited` / `unlimited` | Whether items disappear after purchase (default: config value) |
-| `items` | `all` / `random` | `all` = show all pool items, `random` = use minItems/maxItems config (default: `random`) |
-
-**Spawn Examples:**
-```
-# Spawn a multi-item shop merchant using "common_shop" pool
-/vrs admin merchant spawn common_shop multi
-
-# Spawn a single-item merchant with unlimited stock
-/vrs admin merchant spawn rare_items single unlimited
-
-# Spawn with limited stock (items disappear when purchased)
-/vrs admin merchant spawn potions multi limited
-
-# Spawn a full shop showing ALL items from the pool
-/vrs admin merchant spawn weapons_pool multi all
-
-# Spawn with limited stock and random selection
-/vrs admin merchant spawn rare_items multi limited random
-
-# Spawn with unlimited stock and all items
-/vrs admin merchant spawn consumables multi unlimited all
-
-# Remove the nearest merchant
-/vrs admin merchant despawn
-
-# Remove merchants within 20 blocks
-/vrs admin merchant despawn 20
-
-# List all active merchants
-/vrs admin merchant active
-```
-
----
-
-#### Pool Subcommands
-
-Pools define weighted item collections that merchants draw stock from:
-
-```
-/vrs admin merchant pool create <poolId>
-/vrs admin merchant pool delete <poolId>
-/vrs admin merchant pool list [poolId]
-/vrs admin merchant pool additem <poolId> <price> [weight]
-/vrs admin merchant pool removeitem <poolId> <index>
-```
-
-| Command | Description |
-|---------|-------------|
-| `pool create <poolId>` | Create a new empty pool |
-| `pool delete <poolId>` | Delete a pool and all its items |
-| `pool list` | List all pools |
-| `pool list <poolId>` | List items in a specific pool |
-| `pool additem <poolId> <price> [weight]` | Add held item to pool (weight defaults to 1.0) |
-| `pool removeitem <poolId> <index>` | Remove item by index (1-based) |
-
-**Note:** The `pool additem` command captures the NBT of the item in your main hand. Higher weight = higher chance of being selected.
-
-**Pool Examples:**
-```
-# Create a merchant pool
-/vrs admin merchant pool create common_shop
-
-# Hold a golden apple, add with price 25 and weight 1.0
-/vrs admin merchant pool additem common_shop 25 1.0
-
-# Hold a speed potion, add with price 50 and weight 0.5 (less common)
-/vrs admin merchant pool additem common_shop 50 0.5
-
-# List all pools
-/vrs admin merchant pool list
-
-# List items in a pool
-/vrs admin merchant pool list common_shop
-
-# Remove item at index 2
-/vrs admin merchant pool removeitem common_shop 2
-```
-
----
-
-#### Template Subcommands (Legacy)
-
-Templates are for fixed-trade merchants with predefined trades:
-
-```
-/vrs admin merchant template create <templateId> [displayName]
-/vrs admin merchant template delete <templateId>
-/vrs admin merchant template list
-/vrs admin merchant template set displayname <templateId> <displayName>
-```
-
-**Trade Subcommands:**
-```
-/vrs admin merchant trade add <templateId> <costAmount> [maxUses]
-/vrs admin merchant trade remove <templateId> <index>
-/vrs admin merchant trade list <templateId>
-```
-
-**Template Examples:**
-```
-# Create a merchant template
-/vrs admin merchant template create potions "§dPotion Merchant"
-
-# Hold a health potion, add as trade for 25 coins, max 5 uses
-/vrs admin merchant trade add potions 25 5
-
-# List trades
-/vrs admin merchant trade list potions
-```
-
----
-
-#### Complete Merchant Setup Workflow
-
-**Step 1: Create a pool**
-```
-/vrs admin merchant pool create weapons_shop
-```
-
-**Step 2: Add items to the pool** (hold each item in hand)
-```
-# Diamond sword, 100 coins, weight 0.5 (rare)
-/vrs admin merchant pool additem weapons_shop 100 0.5
-
-# Iron sword, 50 coins, weight 1.0 (common)
-/vrs admin merchant pool additem weapons_shop 50 1.0
-
-# Bow, 75 coins, weight 0.8
-/vrs admin merchant pool additem weapons_shop 75 0.8
-```
-
-**Step 3: Spawn the merchant**
-```
-# Multi-item shop with limited stock and random selection
-/vrs admin merchant spawn weapons_shop multi limited random
-
-# Or spawn a full shop showing all items
-/vrs admin merchant spawn weapons_shop multi limited all
-```
-
-**Step 4: Manage merchants**
-```
-# See all active merchants
-/vrs admin merchant active
-
-# Remove a nearby merchant
-/vrs admin merchant despawn
-```
-
-**Step 5: Enable wandering merchants** (optional)
-
-Wandering merchants require explicit pool configuration. By default, they are disabled.
-
-```
-# Set the pool for wandering merchants (required to enable)
-/vrs admin config set wanderingMerchantPoolId weapons_shop
-
-# Set wandering merchant type (single or multi, default: single)
-/vrs admin config set wanderingMerchantType single
-
-# Set spawn interval to 60 seconds
-/vrs admin config set merchantSpawnInterval 60
-
-# Set spawn chance to 75%
-/vrs admin config set merchantSpawnChance 0.75
-
-# See all merchant config options
-/vrs admin config list merchants
-```
-
-**Note:** If `wanderingMerchantPoolId` is empty, wandering merchants will not spawn during runs.
-
----
-
-### `/vrs admin config`
-
-Manages runtime configuration values.
-
-**Subcommands:**
-```
+```text
 /vrs admin config get <property>
 /vrs admin config set <property> <value>
-/vrs admin config list [category]
+/vrs admin config list [category...]
 ```
 
-**Permission:** `vrs.admin.config` (default: op)
+Supported `list` categories:
 
-**Available Categories and Properties:**
+- `teleport`, `timing`, `spawning`, `rewards`, `stage`, `battery`, `progression`, `teams`, `merchants`, `upgrade`, `scoreboard`, `worldSelection`, `overheadDisplay`, `feedback`, `all`
 
-**Teleport:**
-- `lobbyWorld` (string), `lobbyX`, `lobbyY`, `lobbyZ` (doubles)
-- `prepCommand`, `enterCommand`, `respawnCommand` (strings)
+### Stage Dynamic Properties
 
-**Timing:**
-- `deathCooldownSeconds`, `respawnInvulnerabilitySeconds`, `disconnectGraceSeconds`, `countdownSeconds` (integers)
+Format:
 
-**Spawning:**
-- `minSpawnDistance`, `maxSpawnDistance` (doubles)
-- `maxSampleAttempts`, `spawnTickInterval`, `targetMobsPerPlayer`, `maxSpawnsPerTick` (integers)
-
-**Rewards:**
-- `xpShareRadius`, `xpSharePercent` (doubles)
-
-**Progression:**
-- `baseXpRequired`, `xpPerLevelIncrease`, `weaponLevelWeight`, `helmetLevelWeight` (integers)
-- `xpMultiplierPerLevel` (double)
-
-**Teams:**
-- `maxTeamSize`, `inviteExpirySeconds` (integers)
-
-**Merchants:**
-- `merchantsEnabled` (boolean)
-- `merchantSpawnInterval`, `merchantLifetime` (integers)
-- `merchantMinDistance`, `merchantMaxDistance` (doubles)
-
-**Upgrade:**
-- `upgradeTimeoutSeconds`, `upgradeReminderIntervalSeconds` (integers)
-
-**Scoreboard:**
-- `scoreboardEnabled` (boolean)
-- `scoreboardTitle` (string)
-- `scoreboardUpdateInterval` (integer)
-
-**Examples:**
-```
-/vrs admin config list timing
-/vrs admin config get deathCooldownSeconds
-/vrs admin config set deathCooldownSeconds 120
+```text
+stage.<groupId>.<field>
 ```
 
----
+Supported fields:
 
-## 4. Debug Commands
+- `displayName`
+- `worlds`
+- `startEnemyLevel`
+- `requiredBatteries`
+- `clearRewardCoins`
+- `clearRewardPermaScore`
 
-All debug commands are under `/vrs admin debug`.
+Examples:
 
-### `/vrs admin debug player <player>`
-
-Shows detailed player state information.
-
-**Usage:**
+```text
+/vrs admin config get stage.fragment_2.worlds
+/vrs admin config set stage.fragment_2.worlds arena_x,arena_y arena_z
+/vrs admin config set stage.fragment_2.requiredBatteries 4
 ```
+
+`worlds` supports multi-arg values and accepts `any`/`none` to clear list.
+
+## 5. Debug Commands
+
+```text
 /vrs admin debug player <player>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
-**Output includes:**
-- All PlayerState fields
-- Team membership details
-- Active run details
-- Pending rewards count
-- Internal timers
-
----
-
-### `/vrs admin debug perf`
-
-Shows performance statistics.
-
-**Usage:**
-```
 /vrs admin debug perf
+/vrs admin debug templates <templateText> <player>
+/vrs admin debug run [list|<runIdPrefix>]
 ```
 
-**Permission:** `vrs.admin` (default: op)
+## 6. Typical Operator Snippets
 
-**Output includes:**
-- Players tracked, teams, active runs
-- Memory usage
-- TPS
+Toggle multiplier mode:
 
----
-
-### `/vrs admin debug templates <name> <player>`
-
-Tests template expansion with a player's context.
-
-**Usage:**
-```
-/vrs admin debug templates <templateName> <player>
+```text
+/vrs admin multiplier on
+/vrs admin multiplier set 3
+/vrs admin multiplier perma on
 ```
 
-**Permission:** `vrs.admin` (default: op)
+Hot-update battery pressure:
 
-**Examples:**
-```
-/vrs admin debug templates enterCommand Steve
-```
-
-**Output:**
-```
-Template: tp ${player} ${world} ${x} ${y} ${z}
-Expanded: tp Steve arena_forest 100 64 100
+```text
+/vrs admin config set batterySpawnChance 0.06
+/vrs admin config set batterySurgeMobCount 10
 ```
 
----
+Inspect stage + battery categories together:
 
-### `/vrs admin debug run [runId|list]`
-
-Shows detailed run state information.
-
-**Usage:**
+```text
+/vrs admin config list stage battery
 ```
-/vrs admin debug run list
-/vrs admin debug run <runId>
-```
-
-**Permission:** `vrs.admin` (default: op)
-
----
-
-## Permission Summary
-
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `vrs.player` | Basic player commands | true |
-| `vrs.team` | Team-related commands | true |
-| `vrs.team.create` | Create teams | true |
-| `vrs.team.invite` | Invite to team | true |
-| `vrs.team.join` | Accept team invitations | true |
-| `vrs.team.leave` | Leave teams | true |
-| `vrs.team.kick` | Kick from team | true |
-| `vrs.team.disband` | Disband teams | true |
-| `vrs.admin` | All admin commands | op |
-| `vrs.admin.world` | World management | op |
-| `vrs.admin.spawner` | Enemy archetype management | op |
-| `vrs.admin.starter` | Starter option management | op |
-| `vrs.admin.config` | Runtime configuration | op |
-| `vrs.admin.capture` | Equipment capture/management | op |
-| `vrs.cooldown.bypass` | Bypass death cooldown | op |
-
----
-
-## Tab Completion
-
-All commands support tab completion:
-
-- Player names auto-complete for team/admin commands
-- Team names auto-complete for accept/forcestart commands
-- World names auto-complete for world commands
-- Subcommands auto-complete at each level
-
----
-
-## Command Aliases
-
-| Alias | Full Command |
-|-------|--------------|
-| `/vrs s` | `/vrs starter` |
-| `/vrs r` | `/vrs ready` |
-| `/vrs t` | `/vrs team` |
-| `/vrs st` | `/vrs status` |
-| `/vrs u` | `/vrs upgrade` |
