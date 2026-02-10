@@ -48,8 +48,10 @@ info:
   # 电池目标
   battery_spawned: "§b侦测到能量电池，前往充能并撤离"
   battery_charged: "§a能量电池已充满，全员交互即可完成目标"
+  battery_activate_subtitle: "§b电池已充满，立即前往启动"
   battery_not_ready: "§c电池尚未充满"
   battery_interacted: "§7已与电池同步，等待队友完成交互"
+  battery_waiting_teammates_subtitle: "§7已启动，等待其他队友 §f({current}/{required})"
 
   # 死亡与重生
   died: "§7你已阵亡"

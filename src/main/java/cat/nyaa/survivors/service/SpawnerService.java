@@ -179,10 +179,11 @@ public class SpawnerService {
     }
 
     /**
-     * Temporarily suppresses spawning inside a circular area in the run world.
+     * Temporarily suppresses spawning inside a circular area.
+     * If runId is null, suppression is global for all runs in that world.
      */
     public void addSuppressionZone(UUID runId, Location center, double radius, long durationMs) {
-        if (runId == null || center == null || center.getWorld() == null || durationMs <= 0L || radius <= 0.0) {
+        if (center == null || center.getWorld() == null || durationMs <= 0L || radius <= 0.0) {
             return;
         }
 
@@ -194,6 +195,13 @@ public class SpawnerService {
                 radius,
                 expiresAt
         ));
+    }
+
+    /**
+     * Temporarily suppresses spawning inside a circular area for all runs.
+     */
+    public void addGlobalSuppressionZone(Location center, double radius, long durationMs) {
+        addSuppressionZone(null, center, radius, durationMs);
     }
 
     /**
@@ -312,7 +320,7 @@ public class SpawnerService {
             if (playerStateOpt.isEmpty() || playerStateOpt.get().getMode() != PlayerMode.IN_RUN) return false;
             UUID runId = playerStateOpt.get().getRunId();
             if (runId != null && isPlayerSuppressed(runId, plan.targetPlayerId(), now)) return false;
-            if (runId != null && isLocationSuppressed(runId, plan.spawnLocation(), now)) return false;
+            if (isLocationSuppressed(runId, plan.spawnLocation(), now)) return false;
 
             // Check player hasn't moved too far from the planned spawn location
             if (player.getLocation().distance(plan.spawnLocation()) > maxDistance) return false;
@@ -654,7 +662,7 @@ public class SpawnerService {
                 if (losChecker != null && !losChecker.hasLineOfSight(candidate, playerLoc)) {
                     continue; // Blocked, try another location
                 }
-                if (runId != null && isLocationSuppressed(runId, candidate, System.currentTimeMillis())) {
+                if (isLocationSuppressed(runId, candidate, System.currentTimeMillis())) {
                     continue; // Suppressed zone, try another location
                 }
                 return candidate;
@@ -865,7 +873,8 @@ public class SpawnerService {
                     it.remove();
                     continue;
                 }
-                if (!Objects.equals(zone.runId(), runId)) continue;
+                UUID zoneRunId = zone.runId();
+                if (zoneRunId != null && !Objects.equals(zoneRunId, runId)) continue;
                 if (!zone.worldName().equalsIgnoreCase(worldName)) continue;
 
                 double dx = x - zone.center().getX();

@@ -161,7 +161,6 @@ public class BatteryService {
         }
 
         battery.interactedPlayers.add(player.getUniqueId());
-        applyChargeCompletePlayerSuppression(run, battery, player.getUniqueId());
         plugin.getI18nService().send(player, "info.battery_interacted");
 
         int requiredCount = getRequiredInteractCount(run);
@@ -169,6 +168,7 @@ public class BatteryService {
         updateBatteryName(battery, true, 0, 0, currentCount, requiredCount);
 
         if (currentCount < requiredCount) {
+            notifyWaitingForTeammatesSubtitle(run, battery, currentCount, requiredCount);
             return;
         }
 
@@ -278,7 +278,6 @@ public class BatteryService {
         if (!battery.charged && battery.progress >= 100.0) {
             battery.progress = 100.0;
             battery.charged = true;
-            battery.chargedAtMillis = System.currentTimeMillis();
             notifyRunPlayers(run, "info.battery_charged");
             onBatteryCharged(run, battery);
         }
@@ -427,9 +426,50 @@ public class BatteryService {
     }
 
     private void onBatteryCharged(RunState run, BatteryInstance battery) {
+        notifyBatteryActivateSubtitle(run, getRequiredInteractCount(run));
         applyChargeCompleteSpawnSuppression(run, battery.location);
         triggerChargeCompleteRewardBurst(run, battery.location);
         triggerChargeCompleteEffects(run, battery.location);
+    }
+
+    private void notifyBatteryActivateSubtitle(RunState run, int requiredCount) {
+        for (UUID participantId : getOnlineRunParticipants(run)) {
+            Player p = Bukkit.getPlayer(participantId);
+            if (p == null || !p.isOnline()) continue;
+            plugin.getI18nService().sendTitle(
+                    p,
+                    null,
+                    "info.battery_activate_subtitle",
+                    2, 40, 8,
+                    "required", requiredCount
+            );
+        }
+    }
+
+    private void notifyWaitingForTeammatesSubtitle(RunState run, BatteryInstance battery,
+                                                   int currentCount, int requiredCount) {
+        int remaining = Math.max(0, requiredCount - currentCount);
+
+        for (UUID participantId : battery.interactedPlayers) {
+            if (!run.isParticipant(participantId)) continue;
+
+            Optional<PlayerState> psOpt = state.getPlayer(participantId);
+            if (psOpt.isEmpty() || psOpt.get().getMode() != PlayerMode.IN_RUN) continue;
+
+            Player p = Bukkit.getPlayer(participantId);
+            if (p == null || !p.isOnline()) continue;
+            if (!p.getWorld().getName().equalsIgnoreCase(run.getWorldName())) continue;
+
+            plugin.getI18nService().sendTitle(
+                    p,
+                    null,
+                    "info.battery_waiting_teammates_subtitle",
+                    2, 30, 8,
+                    "remaining", remaining,
+                    "current", currentCount,
+                    "required", requiredCount
+            );
+        }
     }
 
     private void applyChargeCompleteSpawnSuppression(RunState run, Location center) {
@@ -449,37 +489,16 @@ public class BatteryService {
         }
 
         double radius = Math.max(0.1, cfg.getBatteryChargeCompleteSpawnSuppressionRadius());
-        spawner.addSuppressionZone(run.getRunId(), center, radius, durationMs);
-    }
+        // Full-area suppression: no team can spawn mobs inside this charged battery zone.
+        spawner.addGlobalSuppressionZone(center, radius, durationMs);
 
-    private void applyChargeCompletePlayerSuppression(RunState run, BatteryInstance battery, UUID playerId) {
-        if (playerId == null || battery == null || !battery.charged) {
-            return;
+        if (cfg.isBatteryChargeCompleteSuppressParticipants()) {
+            List<UUID> participants = getOnlineRunParticipants(run);
+            if (!participants.isEmpty()) {
+                // Team-wide suppression applies regardless of battery interaction state.
+                spawner.suppressPlayersForRun(run.getRunId(), participants, durationMs);
+            }
         }
-
-        ConfigService cfg = plugin.getConfigService();
-        if (!cfg.isBatteryChargeCompleteSpawnSuppressionEnabled() || !cfg.isBatteryChargeCompleteSuppressParticipants()) {
-            return;
-        }
-
-        long durationMs = Math.max(0, cfg.getBatteryChargeCompleteSpawnSuppressionSeconds()) * 1000L;
-        if (durationMs <= 0L) {
-            return;
-        }
-
-        SpawnerService spawner = plugin.getSpawnerService();
-        if (spawner == null) {
-            return;
-        }
-
-        long chargedAt = battery.chargedAtMillis > 0L ? battery.chargedAtMillis : System.currentTimeMillis();
-        long elapsed = Math.max(0L, System.currentTimeMillis() - chargedAt);
-        long remaining = durationMs - elapsed;
-        if (remaining <= 0L) {
-            return;
-        }
-
-        spawner.suppressPlayersForRun(run.getRunId(), List.of(playerId), remaining);
     }
 
     private void triggerChargeCompleteRewardBurst(RunState run, Location center) {
@@ -732,7 +751,6 @@ public class BatteryService {
 
         private double progress;
         private boolean charged;
-        private long chargedAtMillis;
         private long lastUpdateMillis;
 
         private BatteryInstance(UUID batteryId, UUID runId, ArmorStand stand, Location location) {
