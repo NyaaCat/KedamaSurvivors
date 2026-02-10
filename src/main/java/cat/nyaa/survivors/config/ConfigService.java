@@ -163,6 +163,11 @@ public class ConfigService {
     // Combat worlds
     private List<CombatWorldConfig> combatWorlds;
 
+    // Stage progression (segmented runs)
+    private List<StageGroupConfig> stageGroups;
+    private int finalStageBonusCoins;
+    private int finalStageBonusPermaScore;
+
     // Starter options
     private boolean requireWeaponFirst;
     private boolean autoOpenHelmetGui;
@@ -231,6 +236,25 @@ public class ConfigService {
     private int merchantVerticalRange;
     private boolean merchantSpawnNotification;
 
+    // Battery objective config
+    private boolean batteryEnabled;
+    private int batterySpawnIntervalSeconds;
+    private double batterySpawnChance;
+    private double batteryMinDistanceFromPlayers;
+    private double batteryMaxDistanceFromPlayers;
+    private int batteryVerticalRange;
+    private double batteryChargeRadius;
+    private double batteryBaseChargePercentPerSecond;
+    private double batteryExtraPlayerChargePercentPerSecond;
+    private int batteryProgressUpdateTicks;
+    private Material batteryDisplayMaterial;
+    private int batteryDisplayCustomModelData;
+    private String batteryDisplayName;
+    private boolean batteryShowRangeParticles;
+    private boolean batterySurgeEnabled;
+    private int batterySurgeIntervalSeconds;
+    private int batterySurgeMobCount;
+
     public ConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
     }
@@ -264,10 +288,12 @@ public class ConfigService {
         loadTeleport();
         loadTemplates();
         loadCombatWorlds();
+        loadStageProgression();
         loadStarterOptions();
         loadEquipmentPools();
         loadEnemyArchetypes();
         loadMerchants();
+        loadBatteryObjective();
         loadFeedback();
     }
 
@@ -480,6 +506,62 @@ public class ConfigService {
         }
     }
 
+    private void loadStageProgression() {
+        stageGroups = new ArrayList<>();
+        Map<String, String> worldAssignedGroup = new HashMap<>();
+
+        List<Map<?, ?>> groupList = config.getMapList("stageProgression.groups");
+        int index = 0;
+        for (Map<?, ?> groupMap : groupList) {
+            StageGroupConfig group = new StageGroupConfig();
+            group.groupId = Objects.toString(groupMap.get("id"), "group_" + index);
+            group.displayName = Objects.toString(groupMap.get("displayName"), group.groupId);
+
+            @SuppressWarnings("unchecked")
+            List<String> worlds = (List<String>) groupMap.get("worlds");
+            group.worldNames = worlds != null ? new ArrayList<>(worlds) : new ArrayList<>();
+            validateAndRegisterStageWorlds(worldAssignedGroup, group.groupId, group.worldNames);
+
+            Object startLevel = groupMap.get("startEnemyLevel");
+            group.startEnemyLevel = startLevel instanceof Number ? ((Number) startLevel).intValue() : 1;
+
+            Object requiredBatteries = groupMap.get("requiredBatteries");
+            group.requiredBatteries = requiredBatteries instanceof Number ? ((Number) requiredBatteries).intValue() : 1;
+
+            Object coinReward = groupMap.get("clearRewardCoins");
+            group.clearRewardCoins = coinReward instanceof Number ? ((Number) coinReward).intValue() : 0;
+
+            Object permaReward = groupMap.get("clearRewardPermaScore");
+            group.clearRewardPermaScore = permaReward instanceof Number ? ((Number) permaReward).intValue() : 0;
+
+            stageGroups.add(group);
+            index++;
+        }
+
+        finalStageBonusCoins = config.getInt("stageProgression.finalBonus.coins", 0);
+        finalStageBonusPermaScore = config.getInt("stageProgression.finalBonus.permaScore", 0);
+    }
+
+    static void validateAndRegisterStageWorlds(Map<String, String> worldAssignedGroup, String groupId, List<String> worldNames) {
+        if (worldNames == null || worldNames.isEmpty()) {
+            return;
+        }
+
+        for (String worldNameRaw : worldNames) {
+            if (worldNameRaw == null) continue;
+            String worldName = worldNameRaw.trim();
+            if (worldName.isEmpty()) continue;
+
+            String normalized = worldName.toLowerCase(Locale.ROOT);
+            String previousGroup = worldAssignedGroup.putIfAbsent(normalized, groupId);
+            if (previousGroup != null) {
+                throw new ConfigException("Duplicate stage world assignment detected: world '" + worldName
+                        + "' is configured in both stage groups '" + previousGroup + "' and '"
+                        + groupId + "'. A world can only be assigned to one stage group.");
+            }
+        }
+    }
+
     private void loadStarterOptions() {
         requireWeaponFirst = config.getBoolean("starterSelection.requireWeaponFirst", true);
         autoOpenHelmetGui = config.getBoolean("starterSelection.autoOpenHelmetGui", true);
@@ -664,6 +746,29 @@ public class ConfigService {
         merchantSpawnNotification = config.getBoolean("merchants.wandering.notifications.spawn", true);
     }
 
+    private void loadBatteryObjective() {
+        batteryEnabled = config.getBoolean("battery.enabled", true);
+        batterySpawnIntervalSeconds = config.getInt("battery.spawn.intervalSeconds", 20);
+        batterySpawnChance = config.getDouble("battery.spawn.chance", 0.05);
+        batteryMinDistanceFromPlayers = config.getDouble("battery.spawn.minDistance", 35.0);
+        batteryMaxDistanceFromPlayers = config.getDouble("battery.spawn.maxDistance", 90.0);
+        batteryVerticalRange = config.getInt("battery.spawn.verticalRange", 10);
+
+        batteryChargeRadius = config.getDouble("battery.charge.radius", 8.0);
+        batteryBaseChargePercentPerSecond = config.getDouble("battery.charge.basePercentPerSecond", 1.0);
+        batteryExtraPlayerChargePercentPerSecond = config.getDouble("battery.charge.extraPlayerPercentPerSecond", 0.1);
+        batteryProgressUpdateTicks = config.getInt("battery.charge.updateTicks", 10);
+
+        batteryDisplayMaterial = parseMaterial(config.getString("battery.display.material", "BEACON"));
+        batteryDisplayCustomModelData = config.getInt("battery.display.customModelData", 0);
+        batteryDisplayName = config.getString("battery.display.name", "§b能量电池");
+        batteryShowRangeParticles = config.getBoolean("battery.display.showRangeParticles", true);
+
+        batterySurgeEnabled = config.getBoolean("battery.surge.enabled", true);
+        batterySurgeIntervalSeconds = config.getInt("battery.surge.intervalSeconds", 5);
+        batterySurgeMobCount = config.getInt("battery.surge.mobCount", 6);
+    }
+
     // ==================== Utility Methods ====================
 
     private Sound parseSound(String name) {
@@ -834,6 +939,21 @@ public class ConfigService {
     public String getMissingPlaceholderMode() { return missingPlaceholderMode; }
 
     public List<CombatWorldConfig> getCombatWorlds() { return combatWorlds; }
+    public List<StageGroupConfig> getStageGroups() { return stageGroups; }
+    public int getStageGroupCount() { return stageGroups != null ? stageGroups.size() : 0; }
+    public Optional<StageGroupConfig> getStageGroup(int index) {
+        if (stageGroups == null || index < 0 || index >= stageGroups.size()) return Optional.empty();
+        return Optional.of(stageGroups.get(index));
+    }
+    public Optional<StageGroupConfig> getStageGroupById(String groupId) {
+        if (groupId == null || stageGroups == null) return Optional.empty();
+        return stageGroups.stream()
+                .filter(group -> group.groupId != null && group.groupId.equalsIgnoreCase(groupId))
+                .findFirst();
+    }
+    public int getFinalStageBonusCoins() { return finalStageBonusCoins; }
+    public int getFinalStageBonusPermaScore() { return finalStageBonusPermaScore; }
+
     public boolean isRequireWeaponFirst() { return requireWeaponFirst; }
     public boolean isAutoOpenHelmetGui() { return autoOpenHelmetGui; }
     public List<StarterOptionConfig> getStarterWeapons() { return starterWeapons; }
@@ -901,6 +1021,27 @@ public class ConfigService {
     public int getWanderingMerchantMaxCount() { return wanderingMerchantMaxCount; }
     public int getMerchantVerticalRange() { return merchantVerticalRange; }
     public boolean isMerchantSpawnNotification() { return merchantSpawnNotification; }
+
+    public boolean isBatteryEnabled() { return batteryEnabled; }
+    public int getBatterySpawnIntervalSeconds() { return batterySpawnIntervalSeconds; }
+    public double getBatterySpawnChance() { return batterySpawnChance; }
+    public double getBatteryMinDistanceFromPlayers() { return batteryMinDistanceFromPlayers; }
+    public double getBatteryMaxDistanceFromPlayers() { return batteryMaxDistanceFromPlayers; }
+    public int getBatteryVerticalRange() { return batteryVerticalRange; }
+    public double getBatteryChargeRadius() { return batteryChargeRadius; }
+    public double getBatteryBaseChargePercentPerSecond() { return batteryBaseChargePercentPerSecond; }
+    public double getBatteryExtraPlayerChargePercentPerSecond() { return batteryExtraPlayerChargePercentPerSecond; }
+    public int getBatteryProgressUpdateTicks() { return batteryProgressUpdateTicks; }
+    public Material getBatteryDisplayMaterial() { return batteryDisplayMaterial; }
+    public String getBatteryDisplayMaterialName() {
+        return batteryDisplayMaterial != null ? batteryDisplayMaterial.name() : Material.STONE.name();
+    }
+    public int getBatteryDisplayCustomModelData() { return batteryDisplayCustomModelData; }
+    public String getBatteryDisplayName() { return batteryDisplayName; }
+    public boolean isBatteryShowRangeParticles() { return batteryShowRangeParticles; }
+    public boolean isBatterySurgeEnabled() { return batterySurgeEnabled; }
+    public int getBatterySurgeIntervalSeconds() { return batterySurgeIntervalSeconds; }
+    public int getBatterySurgeMobCount() { return batterySurgeMobCount; }
 
     // Feedback getters
     public String getRewardDisplayMode() { return rewardDisplayMode; }
@@ -1065,6 +1206,86 @@ public class ConfigService {
     public void setMerchantVerticalRange(int range) { this.merchantVerticalRange = range; }
     public void setMerchantSpawnNotification(boolean notify) { this.merchantSpawnNotification = notify; }
 
+    // Stage progression
+    public void setFinalStageBonusCoins(int coins) { this.finalStageBonusCoins = Math.max(0, coins); }
+    public void setFinalStageBonusPermaScore(int permaScore) { this.finalStageBonusPermaScore = Math.max(0, permaScore); }
+
+    public boolean setStageGroupDisplayName(String groupId, String displayName) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+        StageGroupConfig group = groupOpt.get();
+        group.displayName = displayName != null ? displayName : group.groupId;
+        return true;
+    }
+
+    public boolean setStageGroupStartEnemyLevel(String groupId, int startEnemyLevel) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+        groupOpt.get().startEnemyLevel = Math.max(1, startEnemyLevel);
+        return true;
+    }
+
+    public boolean setStageGroupRequiredBatteries(String groupId, int requiredBatteries) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+        groupOpt.get().requiredBatteries = Math.max(1, requiredBatteries);
+        return true;
+    }
+
+    public boolean setStageGroupClearRewardCoins(String groupId, int clearRewardCoins) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+        groupOpt.get().clearRewardCoins = Math.max(0, clearRewardCoins);
+        return true;
+    }
+
+    public boolean setStageGroupClearRewardPermaScore(String groupId, int clearRewardPermaScore) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+        groupOpt.get().clearRewardPermaScore = Math.max(0, clearRewardPermaScore);
+        return true;
+    }
+
+    public boolean setStageGroupWorldNames(String groupId, List<String> worldNames) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+
+        StageGroupConfig targetGroup = groupOpt.get();
+        List<String> normalizedWorlds = normalizeStageWorldNames(worldNames);
+
+        List<StageGroupConfig> snapshot = new ArrayList<>();
+        for (StageGroupConfig group : stageGroups) {
+            StageGroupConfig copy = copyStageGroup(group);
+            if (group == targetGroup) {
+                copy.worldNames = new ArrayList<>(normalizedWorlds);
+            }
+            snapshot.add(copy);
+        }
+
+        validateStageGroupWorldAssignments(snapshot);
+        targetGroup.worldNames = new ArrayList<>(normalizedWorlds);
+        return true;
+    }
+
+    // Battery objective
+    public void setBatteryEnabled(boolean enabled) { this.batteryEnabled = enabled; }
+    public void setBatterySpawnIntervalSeconds(int seconds) { this.batterySpawnIntervalSeconds = Math.max(1, seconds); }
+    public void setBatterySpawnChance(double chance) { this.batterySpawnChance = clamp(chance, 0.0, 1.0); }
+    public void setBatteryMinDistanceFromPlayers(double distance) { this.batteryMinDistanceFromPlayers = Math.max(0.0, distance); }
+    public void setBatteryMaxDistanceFromPlayers(double distance) { this.batteryMaxDistanceFromPlayers = Math.max(0.0, distance); }
+    public void setBatteryVerticalRange(int range) { this.batteryVerticalRange = Math.max(0, range); }
+    public void setBatteryChargeRadius(double radius) { this.batteryChargeRadius = Math.max(0.1, radius); }
+    public void setBatteryBaseChargePercentPerSecond(double percent) { this.batteryBaseChargePercentPerSecond = Math.max(0.0, percent); }
+    public void setBatteryExtraPlayerChargePercentPerSecond(double percent) { this.batteryExtraPlayerChargePercentPerSecond = Math.max(0.0, percent); }
+    public void setBatteryProgressUpdateTicks(int ticks) { this.batteryProgressUpdateTicks = Math.max(1, ticks); }
+    public void setBatteryDisplayMaterial(String materialName) { this.batteryDisplayMaterial = parseMaterial(materialName); }
+    public void setBatteryDisplayCustomModelData(int customModelData) { this.batteryDisplayCustomModelData = Math.max(0, customModelData); }
+    public void setBatteryDisplayName(String displayName) { this.batteryDisplayName = displayName; }
+    public void setBatteryShowRangeParticles(boolean showRangeParticles) { this.batteryShowRangeParticles = showRangeParticles; }
+    public void setBatterySurgeEnabled(boolean enabled) { this.batterySurgeEnabled = enabled; }
+    public void setBatterySurgeIntervalSeconds(int seconds) { this.batterySurgeIntervalSeconds = Math.max(1, seconds); }
+    public void setBatterySurgeMobCount(int mobCount) { this.batterySurgeMobCount = Math.max(0, mobCount); }
+
     // Upgrade
     public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
     public void setUpgradeReminderIntervalSeconds(int seconds) { this.upgradeReminderIntervalSeconds = seconds; }
@@ -1092,6 +1313,43 @@ public class ConfigService {
     public void setSoundTeleport(String sound) { this.soundTeleport = parseSoundConfig(sound); }
     public void setSoundDeath(String sound) { this.soundDeath = parseSoundConfig(sound); }
     public void setSoundRunStart(String sound) { this.soundRunStart = parseSoundConfig(sound); }
+
+    private static StageGroupConfig copyStageGroup(StageGroupConfig source) {
+        StageGroupConfig copy = new StageGroupConfig();
+        copy.groupId = source.groupId;
+        copy.displayName = source.displayName;
+        copy.worldNames = source.worldNames != null ? new ArrayList<>(source.worldNames) : new ArrayList<>();
+        copy.startEnemyLevel = source.startEnemyLevel;
+        copy.requiredBatteries = source.requiredBatteries;
+        copy.clearRewardCoins = source.clearRewardCoins;
+        copy.clearRewardPermaScore = source.clearRewardPermaScore;
+        return copy;
+    }
+
+    private static List<String> normalizeStageWorldNames(List<String> worldNames) {
+        List<String> normalized = new ArrayList<>();
+        if (worldNames == null) return normalized;
+
+        for (String worldNameRaw : worldNames) {
+            if (worldNameRaw == null) continue;
+            String worldName = worldNameRaw.trim();
+            if (!worldName.isEmpty()) {
+                normalized.add(worldName);
+            }
+        }
+        return normalized;
+    }
+
+    private static void validateStageGroupWorldAssignments(List<StageGroupConfig> groups) {
+        Map<String, String> worldAssignedGroup = new HashMap<>();
+        for (StageGroupConfig group : groups) {
+            validateAndRegisterStageWorlds(worldAssignedGroup, group.groupId, group.worldNames);
+        }
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
 
     // ==================== Config Save ====================
 
@@ -1133,6 +1391,9 @@ public class ConfigService {
         config.set("rewards.xpShare.sharePercent", xpSharePercent);
         config.set("rewards.damageContribution.enabled", damageContributionEnabled);
         config.set("rewards.damageContribution.sharePercent", damageContributionPercent);
+        config.set("rewards.multiplier.value", scoreMultiplier);
+        config.set("rewards.multiplier.enabled", scoreMultiplierEnabled);
+        config.set("rewards.multiplier.affectsPermaScore", scoreMultiplierAffectsPerma);
         config.set("progression.overflow.enabled", overflowEnabled);
         config.set("progression.overflow.xpPerPermaScore", overflowXpPerPermaScore);
         config.set("progression.overflow.notifyPlayer", overflowNotifyPlayer);
@@ -1160,6 +1421,7 @@ public class ConfigService {
         config.set("merchants.wandering.spawnChance", merchantSpawnChance);
         config.set("merchants.stock.limited", merchantLimited);
         config.set("merchants.wandering.stayTime.minSeconds", merchantMinStaySeconds);
+        config.set("merchants.wandering.stayTime.maxSeconds", merchantMaxStaySeconds);
         config.set("merchants.wandering.particles.spawn", merchantSpawnParticles);
         config.set("merchants.wandering.particles.despawn", merchantDespawnParticles);
         config.set("merchants.stock.minItems", merchantMinItems);
@@ -1187,6 +1449,30 @@ public class ConfigService {
         config.set("worldSelection.enabled", worldSelectionEnabled);
         config.set("worldSelection.autoOpenAfterHelmet", autoOpenWorldGui);
         config.set("spawnTracking.defaultRadiusBlocks", defaultTrackingRadius);
+
+        // Stage progression
+        config.set("stageProgression.groups", stageGroupsToMapList());
+        config.set("stageProgression.finalBonus.coins", finalStageBonusCoins);
+        config.set("stageProgression.finalBonus.permaScore", finalStageBonusPermaScore);
+
+        // Battery objective
+        config.set("battery.enabled", batteryEnabled);
+        config.set("battery.spawn.intervalSeconds", batterySpawnIntervalSeconds);
+        config.set("battery.spawn.chance", batterySpawnChance);
+        config.set("battery.spawn.minDistance", batteryMinDistanceFromPlayers);
+        config.set("battery.spawn.maxDistance", batteryMaxDistanceFromPlayers);
+        config.set("battery.spawn.verticalRange", batteryVerticalRange);
+        config.set("battery.charge.radius", batteryChargeRadius);
+        config.set("battery.charge.basePercentPerSecond", batteryBaseChargePercentPerSecond);
+        config.set("battery.charge.extraPlayerPercentPerSecond", batteryExtraPlayerChargePercentPerSecond);
+        config.set("battery.charge.updateTicks", batteryProgressUpdateTicks);
+        config.set("battery.display.material", batteryDisplayMaterial != null ? batteryDisplayMaterial.name() : null);
+        config.set("battery.display.customModelData", batteryDisplayCustomModelData);
+        config.set("battery.display.name", batteryDisplayName);
+        config.set("battery.display.showRangeParticles", batteryShowRangeParticles);
+        config.set("battery.surge.enabled", batterySurgeEnabled);
+        config.set("battery.surge.intervalSeconds", batterySurgeIntervalSeconds);
+        config.set("battery.surge.mobCount", batterySurgeMobCount);
 
         // Overhead Display
         config.set("overheadDisplay.enabled", overheadDisplayEnabled);
@@ -1218,6 +1504,24 @@ public class ConfigService {
         } catch (java.io.IOException e) {
             plugin.getLogger().severe("Failed to save config.yml: " + e.getMessage());
         }
+    }
+
+    private List<Map<String, Object>> stageGroupsToMapList() {
+        List<Map<String, Object>> groups = new ArrayList<>();
+        if (stageGroups == null) return groups;
+
+        for (StageGroupConfig group : stageGroups) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", group.groupId);
+            map.put("displayName", group.displayName);
+            map.put("worlds", group.worldNames != null ? new ArrayList<>(group.worldNames) : new ArrayList<>());
+            map.put("startEnemyLevel", group.startEnemyLevel);
+            map.put("requiredBatteries", group.requiredBatteries);
+            map.put("clearRewardCoins", group.clearRewardCoins);
+            map.put("clearRewardPermaScore", group.clearRewardPermaScore);
+            groups.add(map);
+        }
+        return groups;
     }
 
     // ==================== Config Upgrade ====================
@@ -1277,6 +1581,20 @@ public class ConfigService {
          */
         public boolean hasSpawnPoints() {
             return !spawnPoints.isEmpty();
+        }
+    }
+
+    public static class StageGroupConfig {
+        public String groupId;
+        public String displayName;
+        public List<String> worldNames = new ArrayList<>();
+        public int startEnemyLevel = 1;
+        public int requiredBatteries = 1;
+        public int clearRewardCoins = 0;
+        public int clearRewardPermaScore = 0;
+
+        public boolean hasWorld(String worldName) {
+            return worldNames != null && worldNames.stream().anyMatch(w -> w.equalsIgnoreCase(worldName));
         }
     }
 

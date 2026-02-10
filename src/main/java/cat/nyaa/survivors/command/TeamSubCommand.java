@@ -113,6 +113,12 @@ public class TeamSubCommand implements SubCommand {
             return;
         }
 
+        // Progressed teams are locked - no new invites
+        if (team.isProgressionLocked()) {
+            i18n.send(player, "error.team_progress_locked");
+            return;
+        }
+
         if (args.length < 2) {
             i18n.send(player, "error.specify_player");
             return;
@@ -175,6 +181,11 @@ public class TeamSubCommand implements SubCommand {
         }
 
         TeamState team = teamOpt.get();
+
+        if (team.isProgressionLocked()) {
+            i18n.send(player, "error.team_progress_locked");
+            return;
+        }
 
         if (!team.hasInvite(player.getUniqueId())) {
             i18n.send(player, "error.no_invite");
@@ -240,6 +251,7 @@ public class TeamSubCommand implements SubCommand {
 
         String teamName = team.getName();
         state.removePlayerFromTeam(player.getUniqueId());
+        resetPlayerProgress(player.getUniqueId());
 
         i18n.send(player, "team.left", "team", teamName);
 
@@ -297,6 +309,7 @@ public class TeamSubCommand implements SubCommand {
         }
 
         state.removePlayerFromTeam(targetId);
+        resetPlayerProgress(targetId);
         i18n.send(player, "team.kicked", "player", targetName);
 
         if (target != null) {
@@ -326,6 +339,10 @@ public class TeamSubCommand implements SubCommand {
 
         String teamName = team.getName();
         Set<UUID> members = team.getMembers();
+
+        for (UUID memberId : members) {
+            resetPlayerProgress(memberId);
+        }
 
         state.disbandTeam(team.getTeamId());
 
@@ -418,6 +435,16 @@ public class TeamSubCommand implements SubCommand {
                     "player", name,
                     "status", status);
         }
+    }
+
+    private void resetPlayerProgress(UUID playerId) {
+        state.getPlayer(playerId).ifPresent(ps -> {
+            ps.clearStarterSelections();
+            ps.setReady(false);
+            if (ps.getMode() != PlayerMode.IN_RUN) {
+                ps.setMode(PlayerMode.LOBBY);
+            }
+        });
     }
 
     @Override

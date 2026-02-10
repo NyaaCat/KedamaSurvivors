@@ -32,6 +32,15 @@ public class PlayerStats {
     private int totalDeaths = 0;
     private int mostDeathsInRun = 0;
     private int runCount = 0;
+    private int failedRunCount = 0;
+
+    // Segmented progression tracking
+    private int totalBatteriesCompleted = 0;
+    private int totalStageClears = 0;
+    private int highestStageCleared = 0;
+    private int campaignCompletions = 0;
+    private long totalStageRewardCoins = 0;
+    private long totalStageRewardPermaScore = 0;
 
     // ==================== Time Stats ====================
 
@@ -189,13 +198,78 @@ public class PlayerStats {
         runCount++;
     }
 
+    public int getFailedRunCount() {
+        return failedRunCount;
+    }
+
+    public void incrementFailedRunCount() {
+        failedRunCount++;
+    }
+
+    // ==================== Segmented Progression Stats ====================
+
+    public int getTotalBatteriesCompleted() {
+        return totalBatteriesCompleted;
+    }
+
+    public void incrementTotalBatteriesCompleted() {
+        totalBatteriesCompleted++;
+    }
+
+    public int getTotalStageClears() {
+        return totalStageClears;
+    }
+
+    public void incrementTotalStageClears() {
+        totalStageClears++;
+    }
+
+    public int getHighestStageCleared() {
+        return highestStageCleared;
+    }
+
+    public void updateHighestStageCleared(int stageIndexOneBased) {
+        if (stageIndexOneBased > highestStageCleared) {
+            highestStageCleared = stageIndexOneBased;
+        }
+    }
+
+    public int getCampaignCompletions() {
+        return campaignCompletions;
+    }
+
+    public void incrementCampaignCompletions() {
+        campaignCompletions++;
+    }
+
+    public long getTotalStageRewardCoins() {
+        return totalStageRewardCoins;
+    }
+
+    public void addStageRewardCoins(int coins) {
+        if (coins > 0) {
+            totalStageRewardCoins += coins;
+        }
+    }
+
+    public long getTotalStageRewardPermaScore() {
+        return totalStageRewardPermaScore;
+    }
+
+    public void addStageRewardPermaScore(int permaScore) {
+        if (permaScore > 0) {
+            totalStageRewardPermaScore += permaScore;
+        }
+    }
+
     // ==================== Utility ====================
 
     /**
      * Checks if the player has any recorded stats (i.e., has played at least one run).
      */
     public boolean hasStats() {
-        return runCount > 0 || totalKills > 0 || totalDeaths > 0;
+        return runCount > 0 || totalKills > 0 || totalDeaths > 0
+                || totalStageClears > 0 || campaignCompletions > 0;
     }
 
     /**
@@ -218,6 +292,13 @@ public class PlayerStats {
         copy.totalDeaths = this.totalDeaths;
         copy.mostDeathsInRun = this.mostDeathsInRun;
         copy.runCount = this.runCount;
+        copy.failedRunCount = this.failedRunCount;
+        copy.totalBatteriesCompleted = this.totalBatteriesCompleted;
+        copy.totalStageClears = this.totalStageClears;
+        copy.highestStageCleared = this.highestStageCleared;
+        copy.campaignCompletions = this.campaignCompletions;
+        copy.totalStageRewardCoins = this.totalStageRewardCoins;
+        copy.totalStageRewardPermaScore = this.totalStageRewardPermaScore;
         return copy;
     }
 
@@ -281,5 +362,33 @@ public class PlayerStats {
 
     public void setRunCount(int runCount) {
         this.runCount = runCount;
+    }
+
+    public void setFailedRunCount(int failedRunCount) {
+        this.failedRunCount = failedRunCount;
+    }
+
+    public void setTotalBatteriesCompleted(int totalBatteriesCompleted) {
+        this.totalBatteriesCompleted = totalBatteriesCompleted;
+    }
+
+    public void setTotalStageClears(int totalStageClears) {
+        this.totalStageClears = totalStageClears;
+    }
+
+    public void setHighestStageCleared(int highestStageCleared) {
+        this.highestStageCleared = highestStageCleared;
+    }
+
+    public void setCampaignCompletions(int campaignCompletions) {
+        this.campaignCompletions = campaignCompletions;
+    }
+
+    public void setTotalStageRewardCoins(long totalStageRewardCoins) {
+        this.totalStageRewardCoins = totalStageRewardCoins;
+    }
+
+    public void setTotalStageRewardPermaScore(long totalStageRewardPermaScore) {
+        this.totalStageRewardPermaScore = totalStageRewardPermaScore;
     }
 }

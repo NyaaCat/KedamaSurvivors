@@ -16,6 +16,13 @@ public class RunState {
     private final UUID teamId;
     private final String worldName;
 
+    // Stage progression snapshot for this run
+    private volatile int stageIndex;
+    private volatile String stageGroupId;
+    private volatile int stageStartEnemyLevel = 1;
+    private volatile int stageRequiredBatteries = 1;
+    private volatile int stageCompletedBatteries;
+
     // Status
     private volatile RunStatus status = RunStatus.STARTING;
 
@@ -283,4 +290,30 @@ public class RunState {
     public int getTotalCoinsCollected() { return totalCoinsCollected; }
     public int getTotalXpCollected() { return totalXpCollected; }
     public int getWaveNumber() { return waveNumber; }
+
+    public int getStageIndex() { return stageIndex; }
+    public void setStageIndex(int stageIndex) { this.stageIndex = Math.max(0, stageIndex); }
+
+    public String getStageGroupId() { return stageGroupId; }
+    public void setStageGroupId(String stageGroupId) { this.stageGroupId = stageGroupId; }
+
+    public int getStageStartEnemyLevel() { return stageStartEnemyLevel; }
+    public void setStageStartEnemyLevel(int stageStartEnemyLevel) {
+        this.stageStartEnemyLevel = Math.max(1, stageStartEnemyLevel);
+    }
+
+    public int getStageRequiredBatteries() { return stageRequiredBatteries; }
+    public void setStageRequiredBatteries(int stageRequiredBatteries) {
+        this.stageRequiredBatteries = Math.max(1, stageRequiredBatteries);
+    }
+
+    public int getStageCompletedBatteries() { return stageCompletedBatteries; }
+    public void setStageCompletedBatteries(int stageCompletedBatteries) {
+        this.stageCompletedBatteries = Math.max(0, stageCompletedBatteries);
+    }
+    public void incrementStageCompletedBatteries() { this.stageCompletedBatteries++; }
+
+    public boolean isStageObjectiveComplete() {
+        return stageCompletedBatteries >= stageRequiredBatteries;
+    }
 }

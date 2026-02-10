@@ -1016,15 +1016,17 @@ public class AdminConfigService {
      * Updates ConfigService with current data for runtime use.
      */
     private void updateConfigService() {
-        plugin.getLogger().info("[AdminConfigService] updateConfigService() - syncing " +
-            starterWeapons.size() + " weapons, " + starterHelmets.size() + " helmets to ConfigService");
-        for (StarterOptionConfig w : starterWeapons) {
-            plugin.getLogger().info("[AdminConfigService] Syncing weapon: optionId=" + w.optionId +
-                ", group=" + w.group + ", level=" + w.level);
-        }
-        for (StarterOptionConfig h : starterHelmets) {
-            plugin.getLogger().info("[AdminConfigService] Syncing helmet: optionId=" + h.optionId +
-                ", group=" + h.group + ", level=" + h.level);
+        if (configService.isVerbose()) {
+            plugin.getLogger().info("[AdminConfigService] updateConfigService() - syncing " +
+                    starterWeapons.size() + " weapons, " + starterHelmets.size() + " helmets to ConfigService");
+            for (StarterOptionConfig w : starterWeapons) {
+                plugin.getLogger().info("[AdminConfigService] Syncing weapon: optionId=" + w.optionId +
+                        ", group=" + w.group + ", level=" + w.level);
+            }
+            for (StarterOptionConfig h : starterHelmets) {
+                plugin.getLogger().info("[AdminConfigService] Syncing helmet: optionId=" + h.optionId +
+                        ", group=" + h.group + ", level=" + h.level);
+            }
         }
 
         configService.updateWeaponGroups(weaponGroups);
@@ -1032,6 +1034,16 @@ public class AdminConfigService {
         configService.updateEnemyArchetypes(archetypes);
         configService.updateCombatWorlds(combatWorlds);
         configService.updateStarters(starterWeapons, starterHelmets);
+
+        WorldService worldService = plugin.getWorldService();
+        if (worldService != null) {
+            worldService.refreshEnabledWorlds();
+        }
+
+        SpawnLoadTracker spawnLoadTracker = plugin.getSpawnLoadTracker();
+        if (spawnLoadTracker != null) {
+            spawnLoadTracker.rebuildSpawnPointList();
+        }
     }
 
     // ==================== Equipment Group Set Operations ====================
@@ -1106,7 +1118,7 @@ public class AdminConfigService {
 
         combatWorlds.add(config);
         saveWorlds();
-        configService.updateCombatWorlds(combatWorlds);
+        updateConfigService();
         return true;
     }
 
@@ -1117,7 +1129,7 @@ public class AdminConfigService {
         boolean removed = combatWorlds.removeIf(w -> w.name.equals(name));
         if (removed) {
             saveWorlds();
-            configService.updateCombatWorlds(combatWorlds);
+            updateConfigService();
         }
         return removed;
     }
@@ -1130,7 +1142,7 @@ public class AdminConfigService {
             if (world.name.equals(name)) {
                 world.displayName = displayName;
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }
@@ -1145,7 +1157,7 @@ public class AdminConfigService {
             if (world.name.equals(name)) {
                 world.weight = weight;
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }
@@ -1163,7 +1175,7 @@ public class AdminConfigService {
                 world.minZ = minZ;
                 world.maxZ = maxZ;
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }
@@ -1178,7 +1190,7 @@ public class AdminConfigService {
             if (world.name.equals(name)) {
                 world.cost = cost;
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }
@@ -1193,7 +1205,7 @@ public class AdminConfigService {
             if (world.name.equals(name)) {
                 world.enabled = enabled;
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }
@@ -1209,7 +1221,7 @@ public class AdminConfigService {
                 SpawnPointConfig sp = new SpawnPointConfig(x, y, z, yaw, pitch);
                 world.spawnPoints.add(sp);
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }
@@ -1225,7 +1237,7 @@ public class AdminConfigService {
                 if (index >= 0 && index < world.spawnPoints.size()) {
                     world.spawnPoints.remove(index);
                     saveWorlds();
-                    configService.updateCombatWorlds(combatWorlds);
+                    updateConfigService();
                     return true;
                 }
                 return false;
@@ -1242,7 +1254,7 @@ public class AdminConfigService {
             if (world.name.equals(name)) {
                 world.spawnPoints.clear();
                 saveWorlds();
-                configService.updateCombatWorlds(combatWorlds);
+                updateConfigService();
                 return true;
             }
         }

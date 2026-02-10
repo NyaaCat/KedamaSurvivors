@@ -5,7 +5,9 @@ import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.RunState;
+import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.RunService;
+import cat.nyaa.survivors.service.StatsService;
 import cat.nyaa.survivors.service.StateService;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -14,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Handles /vrs quit command for leaving the current run.
@@ -86,6 +89,8 @@ public class QuitSubCommand implements SubCommand {
     }
 
     private void handleRunQuit(Player player, PlayerState playerState) {
+        Optional<TeamState> teamOpt = state.getPlayerTeam(player.getUniqueId());
+
         // Get the run
         if (playerState.getRunId() == null) {
             i18n.send(player, "error.not_in_run");
@@ -103,15 +108,32 @@ public class QuitSubCommand implements SubCommand {
         // Mark player as leaving (triggers death-like handling)
         runService.handleLeave(player.getUniqueId(), run);
 
+        // Finalize this player's run stats as a failure (quit).
+        StatsService statsService = plugin.getStatsService();
+        if (statsService != null) {
+            statsService.recordRunFailure(player.getUniqueId());
+        }
+
         // Apply quit cooldown
         long cooldownEnd = System.currentTimeMillis() +
                 plugin.getConfigService().getQuitCooldownSeconds() * 1000L;
         playerState.setCooldownUntilMillis(cooldownEnd);
         playerState.setMode(PlayerMode.COOLDOWN);
 
-        // Clear starter selections so player must re-select next run
-        playerState.setStarterWeaponOptionId(null);
-        playerState.setStarterHelmetOptionId(null);
+        // Quit counts as player progression reset and team exit
+        playerState.clearStarterSelections();
+        playerState.setReady(false);
+        playerState.setRunId(null);
+        state.removePlayerFromTeam(player.getUniqueId());
+
+        teamOpt.ifPresent(team -> {
+            for (UUID memberId : team.getMembers()) {
+                Player member = org.bukkit.Bukkit.getPlayer(memberId);
+                if (member != null && member.isOnline()) {
+                    i18n.send(member, "team.member_left", "player", player.getName());
+                }
+            }
+        });
 
         // Teleport to lobby
         org.bukkit.Location lobby = plugin.getConfigService().getLobbyLocation();

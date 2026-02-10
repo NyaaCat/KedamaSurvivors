@@ -63,6 +63,11 @@ public class StarterService {
             return;
         }
 
+        if (isStarterSelectionLocked(player.getUniqueId())) {
+            i18n.send(player, "error.starter_locked");
+            return;
+        }
+
         StarterWeaponGui gui = new StarterWeaponGui(plugin, player, playerState);
         gui.open();
     }
@@ -76,6 +81,11 @@ public class StarterService {
         // Allow selection in lobby or cooldown (after death)
         if (playerState.getMode() != PlayerMode.LOBBY && playerState.getMode() != PlayerMode.COOLDOWN) {
             i18n.send(player, "error.not_in_lobby");
+            return;
+        }
+
+        if (isStarterSelectionLocked(player.getUniqueId())) {
+            i18n.send(player, "error.starter_locked");
             return;
         }
 
@@ -417,6 +427,11 @@ public class StarterService {
     public void removeAllVrsEquipment(Player player) {
         removeVrsEquipment(player, "weapon");
         removeVrsEquipment(player, "helmet");
+    }
+
+    private boolean isStarterSelectionLocked(UUID playerId) {
+        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
+        return teamOpt.isPresent() && teamOpt.get().isProgressionLocked();
     }
 
     /**

@@ -9,6 +9,7 @@ import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.PersistenceService;
+import cat.nyaa.survivors.service.RunService;
 import cat.nyaa.survivors.service.StateService;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -35,6 +36,7 @@ public class PlayerListener implements Listener {
     private final I18nService i18n;
     private final StateService state;
     private final DeathService death;
+    private final RunService runService;
     private final PersistenceService persistence;
 
     public PlayerListener(KedamaSurvivorsPlugin plugin) {
@@ -43,6 +45,7 @@ public class PlayerListener implements Listener {
         this.i18n = plugin.getI18nService();
         this.state = plugin.getStateService();
         this.death = plugin.getDeathService();
+        this.runService = plugin.getRunService();
         this.persistence = plugin.getPersistenceService();
     }
 
@@ -318,7 +321,7 @@ public class PlayerListener implements Listener {
         }
 
         // End the run
-        state.endRun(run.getRunId());
+        runService.endRun(run, RunService.EndReason.WIPE);
     }
 
     @EventHandler(priority = EventPriority.HIGH)

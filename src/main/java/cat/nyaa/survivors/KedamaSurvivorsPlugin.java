@@ -6,6 +6,7 @@ import cat.nyaa.survivors.economy.EconomyService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.listener.CombatListener;
 import cat.nyaa.survivors.listener.InventoryListener;
+import cat.nyaa.survivors.listener.BatteryListener;
 import cat.nyaa.survivors.listener.MerchantListener;
 import cat.nyaa.survivors.listener.PlayerListener;
 import cat.nyaa.survivors.listener.SpawnListener;
@@ -14,6 +15,7 @@ import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.DamageContributionService;
 import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.InventoryValidationService;
+import cat.nyaa.survivors.service.BatteryService;
 import cat.nyaa.survivors.service.PersistenceService;
 import cat.nyaa.survivors.service.ReadyService;
 import cat.nyaa.survivors.service.RewardService;
@@ -75,6 +77,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
     private CommandQueue commandQueue;
     private SpawnLoadTracker spawnLoadTracker;
     private PlayerDisplayService playerDisplayService;
+    private BatteryService batteryService;
 
     @Override
     public void onEnable() {
@@ -152,6 +155,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Merchant service for villager traders (must be before RunService)
         merchantService = new MerchantService(this);
 
+        // Battery objective service (must be before RunService)
+        batteryService = new BatteryService(this);
+
         // Ready service for ready/countdown logic
         readyService = new ReadyService(this);
 
@@ -214,6 +220,7 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new CombatListener(this), this);
         getServer().getPluginManager().registerEvents(new SpawnListener(this), this);
         getServer().getPluginManager().registerEvents(new MerchantListener(this), this);
+        getServer().getPluginManager().registerEvents(new BatteryListener(this), this);
     }
 
     private void startTasks() {
@@ -254,6 +261,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
             if (persistenceService != null) {
                 persistenceService.loadFixedMerchants();
             }
+        }
+
+        // Start battery service
+        if (batteryService != null) {
+            batteryService.start();
         }
 
         // Start command queue
@@ -321,6 +333,11 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
         // Stop merchant service
         if (merchantService != null) {
             merchantService.stop();
+        }
+
+        // Stop battery service
+        if (batteryService != null) {
+            batteryService.stop();
         }
 
         // Stop command queue (executes remaining commands)
@@ -473,5 +490,9 @@ public final class KedamaSurvivorsPlugin extends JavaPlugin {
 
     public PlayerDisplayService getPlayerDisplayService() {
         return playerDisplayService;
+    }
+
+    public BatteryService getBatteryService() {
+        return batteryService;
     }
 }

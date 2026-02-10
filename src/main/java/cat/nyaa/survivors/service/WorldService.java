@@ -17,6 +17,7 @@ public class WorldService {
 
     private final KedamaSurvivorsPlugin plugin;
     private final ConfigService config;
+    private final StateService state;
 
     // Enabled worlds cache
     private final Set<String> enabledWorlds = new HashSet<>();
@@ -24,6 +25,7 @@ public class WorldService {
     public WorldService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfigService();
+        this.state = plugin.getStateService();
         refreshEnabledWorlds();
     }
 
@@ -69,41 +71,141 @@ public class WorldService {
     }
 
     /**
-     * Selects a random combat world based on weights.
-     * @return the selected world config, or null if none available
+     * Selects a combat world using load-aware distribution:
+     * 1) Prefer worlds with zero in-run players.
+     * 2) If all worlds have players, distribute by spawn-point capacity and player load.
      */
     public ConfigService.CombatWorldConfig selectRandomWorld() {
         List<ConfigService.CombatWorldConfig> available = new ArrayList<>();
-        double totalWeight = 0;
 
         for (var worldConfig : config.getCombatWorlds()) {
             if (worldConfig.enabled && enabledWorlds.contains(worldConfig.name)) {
                 World world = Bukkit.getWorld(worldConfig.name);
                 if (world != null) {
                     available.add(worldConfig);
-                    totalWeight += worldConfig.weight;
                 }
             }
         }
 
-        if (available.isEmpty() || totalWeight <= 0) {
+        if (available.isEmpty()) {
             return null;
         }
 
-        // Weighted random selection
-        double random = ThreadLocalRandom.current().nextDouble() * totalWeight;
-        double cumulative = 0;
+        return selectDistributedWorld(available);
+    }
 
-        for (var worldConfig : available) {
-            cumulative += worldConfig.weight;
-            if (random < cumulative) {
-                return worldConfig;
+    /**
+     * Selects a random world within a stage group.
+     * If the group has no valid world entries, falls back to global random selection.
+     */
+    public ConfigService.CombatWorldConfig selectRandomWorldForStage(ConfigService.StageGroupConfig stageGroup) {
+        if (stageGroup == null || stageGroup.worldNames == null || stageGroup.worldNames.isEmpty()) {
+            return selectRandomWorld();
+        }
+
+        List<ConfigService.CombatWorldConfig> available = new ArrayList<>();
+
+        for (String worldName : stageGroup.worldNames) {
+            Optional<ConfigService.CombatWorldConfig> configOpt = getWorldConfig(worldName);
+            if (configOpt.isEmpty()) continue;
+
+            ConfigService.CombatWorldConfig worldConfig = configOpt.get();
+            if (!worldConfig.enabled || !enabledWorlds.contains(worldConfig.name)) continue;
+
+            World world = Bukkit.getWorld(worldConfig.name);
+            if (world == null) continue;
+
+            available.add(worldConfig);
+        }
+
+        if (available.isEmpty()) {
+            return selectRandomWorld();
+        }
+
+        return selectDistributedWorld(available);
+    }
+
+    private ConfigService.CombatWorldConfig selectDistributedWorld(List<ConfigService.CombatWorldConfig> worlds) {
+        List<WorldLoadMetric> metrics = new ArrayList<>();
+        for (ConfigService.CombatWorldConfig world : worlds) {
+            int inRunPlayers = countPlayersInActiveRuns(world.name);
+            int spawnPoints = Math.max(1, world.spawnPoints != null ? world.spawnPoints.size() : 0);
+            double baseWeight = Math.max(0.0001, world.weight);
+            metrics.add(new WorldLoadMetric(world, inRunPlayers, spawnPoints, baseWeight));
+        }
+
+        int selectedIndex = selectDistributedIndex(metrics, ThreadLocalRandom.current());
+        if (selectedIndex < 0 || selectedIndex >= metrics.size()) {
+            return worlds.get(ThreadLocalRandom.current().nextInt(worlds.size()));
+        }
+        return metrics.get(selectedIndex).world();
+    }
+
+    private int countPlayersInActiveRuns(String worldName) {
+        if (state == null) {
+            return 0;
+        }
+
+        int count = 0;
+        for (var run : state.getActiveRuns()) {
+            if (worldName.equalsIgnoreCase(run.getWorldName())) {
+                count += run.getParticipantCount();
+            }
+        }
+        return count;
+    }
+
+    static int selectDistributedIndex(List<WorldLoadMetric> metrics, Random random) {
+        if (metrics == null || metrics.isEmpty()) {
+            return -1;
+        }
+
+        List<Integer> candidates = new ArrayList<>();
+        for (int i = 0; i < metrics.size(); i++) {
+            if (metrics.get(i).inRunPlayers() == 0) {
+                candidates.add(i);
             }
         }
 
-        // Fallback to last (shouldn't happen)
-        return available.get(available.size() - 1);
+        // If no empty world exists, use all worlds.
+        if (candidates.isEmpty()) {
+            for (int i = 0; i < metrics.size(); i++) {
+                candidates.add(i);
+            }
+        }
+
+        double totalScore = 0.0;
+        double[] scores = new double[candidates.size()];
+        for (int i = 0; i < candidates.size(); i++) {
+            WorldLoadMetric m = metrics.get(candidates.get(i));
+            double capacityRatio = (double) m.spawnPointCount() / (double) (m.inRunPlayers() + 1);
+            double score = Math.max(0.0001, capacityRatio * m.baseWeight());
+            scores[i] = score;
+            totalScore += score;
+        }
+
+        if (totalScore <= 0.0) {
+            return candidates.get(0);
+        }
+
+        double roll = random.nextDouble() * totalScore;
+        double cumulative = 0.0;
+        for (int i = 0; i < candidates.size(); i++) {
+            cumulative += scores[i];
+            if (roll <= cumulative) {
+                return candidates.get(i);
+            }
+        }
+
+        return candidates.get(candidates.size() - 1);
     }
+
+    static record WorldLoadMetric(
+            ConfigService.CombatWorldConfig world,
+            int inRunPlayers,
+            int spawnPointCount,
+            double baseWeight
+    ) {}
 
 
     /**

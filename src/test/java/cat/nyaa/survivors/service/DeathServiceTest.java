@@ -196,17 +196,16 @@ class DeathServiceTest {
         }
 
         @Test
-        @DisplayName("should reset starter selections on reset for re-selection after death")
-        void shouldResetStarterSelectionsOnReset() {
+        @DisplayName("should preserve starter selections on run reset")
+        void shouldPreserveStarterSelectionsOnReset() {
             PlayerState state = new PlayerState(UUID.randomUUID(), "TestPlayer");
             state.setStarterWeaponOptionId("iron_sword");
             state.setStarterHelmetOptionId("iron_helmet");
 
             state.resetRunState();
 
-            // Starter selections should be reset so player can re-select after death
-            assertNull(state.getStarterWeaponOptionId());
-            assertNull(state.getStarterHelmetOptionId());
+            assertEquals("iron_sword", state.getStarterWeaponOptionId());
+            assertEquals("iron_helmet", state.getStarterHelmetOptionId());
         }
     }
 
@@ -323,8 +322,8 @@ class DeathServiceTest {
         }
 
         @Test
-        @DisplayName("should allow re-selection after run state reset")
-        void shouldAllowReSelectionAfterReset() {
+        @DisplayName("should keep starters after run state reset")
+        void shouldKeepStartersAfterReset() {
             PlayerState state = new PlayerState(UUID.randomUUID(), "TestPlayer");
 
             // Player in run with starters selected
@@ -339,10 +338,9 @@ class DeathServiceTest {
             state.resetRunState();
             state.setMode(PlayerMode.COOLDOWN);
 
-            // Verify starters are cleared for re-selection
-            assertNull(state.getStarterWeaponOptionId());
-            assertNull(state.getStarterHelmetOptionId());
-            assertFalse(state.hasSelectedStarters());
+            assertEquals("iron_sword", state.getStarterWeaponOptionId());
+            assertEquals("iron_helmet", state.getStarterHelmetOptionId());
+            assertTrue(state.hasSelectedStarters());
             assertEquals(PlayerMode.COOLDOWN, state.getMode());
         }
 

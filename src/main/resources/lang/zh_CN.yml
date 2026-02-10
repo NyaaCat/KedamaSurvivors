@@ -40,6 +40,16 @@ info:
   run_started: "§a进入战斗！§7世界: §f{world}"
   run_ended: "§7本轮结束"
   returned_to_lobby: "§7已返回准备区"
+  stage_cleared: "§a阶段目标完成，已撤离至准备区"
+  stage_all_cleared: "§a全部阶段完成！已结算并重置队伍进度"
+  stage_reward: "§7阶段奖励: §e金币+{coins} §7| §d永久积分+{perma}"
+  stage_battery_progress: "§7电池目标进度: §f{current}/{required}"
+
+  # 电池目标
+  battery_spawned: "§b侦测到能量电池，前往充能并撤离"
+  battery_charged: "§a能量电池已充满，全员交互即可完成目标"
+  battery_not_ready: "§c电池尚未充满"
+  battery_interacted: "§7已与电池同步，等待队友完成交互"
 
   # 死亡与重生
   died: "§7你已阵亡"
@@ -239,6 +249,8 @@ error:
   ender_chest_restricted: "§c当前模式下无法打开末影箱"
   leader_only_world: "§c只有队长可以选择地图"
   world_selection_disabled: "§c选图功能已禁用"
+  team_progress_locked: "§c队伍已进入阶段进度，当前不可邀请新成员"
+  starter_locked: "§c队伍阶段进行中，当前不可更改初始武器或头盔"
 
 # ============================================================
 # 警告提示
@@ -627,7 +639,7 @@ admin:
       archetype_set_weight: "§f/vrs admin spawner archetype set weight <id> <weight> §8- §7设置权重"
       archetype_set_entitytype: "§f/vrs admin spawner archetype set entitytype <id> <entityType> §8- §7设置实体类型"
       archetype_set_minspawnlevel: "§f/vrs admin spawner archetype set minspawnlevel <id> <level> §8- §7设置最低生成等级"
-      archetype_set_worlds: "§f/vrs admin spawner archetype set worlds <id> <world1,world2,...|any> §8- §7设置允许生成的世界"
+      archetype_set_worlds: "§f/vrs admin spawner archetype set worlds <id> <world1[,world2...] [world3...]|any> §8- §7设置允许生成的世界"
     invalid_weight: "§c无效的权重，必须大于0"
     invalid_level: "§c无效的等级，必须大于等于1"
     invalid_chance: "§c无效的概率，必须在0到1之间"
@@ -736,7 +748,7 @@ admin:
       header: "§8========== §6配置管理命令 §8=========="
       get: "§f/vrs admin config get <property> §8- §7获取配置值"
       set: "§f/vrs admin config set <property> <value> §8- §7设置配置值"
-      list: "§f/vrs admin config list [category] §8- §7列出配置项"
+      list: "§f/vrs admin config list [category...] §8- §7列出配置项(可同时指定多个分类)"
     property_not_found: "§c找不到配置项: §f{property}"
     property_value: "§7{property} §8= §f{value} §8(§7{type}§8)"
     property_set: "§a已设置 §f{property} §a为: §f{value}"

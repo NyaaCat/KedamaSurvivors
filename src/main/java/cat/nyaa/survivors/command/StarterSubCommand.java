@@ -61,6 +61,11 @@ public class StarterSubCommand implements SubCommand {
     }
 
     private void handleWeaponSelection(Player player, PlayerState playerState, String[] args) {
+        if (isStarterSelectionLocked(player.getUniqueId())) {
+            i18n.send(player, "error.starter_locked");
+            return;
+        }
+
         if (args.length < 2) {
             // Open GUI for weapon selection
             plugin.getStarterService().openWeaponGui(player);
@@ -93,6 +98,11 @@ public class StarterSubCommand implements SubCommand {
     }
 
     private void handleHelmetSelection(Player player, PlayerState playerState, String[] args) {
+        if (isStarterSelectionLocked(player.getUniqueId())) {
+            i18n.send(player, "error.starter_locked");
+            return;
+        }
+
         // Check if weapon must be selected first
         if (config.isRequireWeaponFirst() && playerState.getStarterWeaponOptionId() == null) {
             i18n.send(player, "error.weapon_first");
@@ -197,9 +207,19 @@ public class StarterSubCommand implements SubCommand {
     }
 
     private void clearSelections(Player player, PlayerState playerState) {
+        if (isStarterSelectionLocked(player.getUniqueId())) {
+            i18n.send(player, "error.starter_locked");
+            return;
+        }
+
         playerState.setStarterWeaponOptionId(null);
         playerState.setStarterHelmetOptionId(null);
         i18n.send(player, "starter.cleared");
+    }
+
+    private boolean isStarterSelectionLocked(java.util.UUID playerId) {
+        Optional<TeamState> teamOpt = state.getPlayerTeam(playerId);
+        return teamOpt.isPresent() && teamOpt.get().isProgressionLocked();
     }
 
     @Override

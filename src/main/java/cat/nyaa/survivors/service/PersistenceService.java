@@ -571,6 +571,15 @@ public class PersistenceService {
         public int totalDeaths;
         public int mostDeathsInRun;
         public int runCount;
+        public int failedRunCount;
+
+        // Segmented progression tracking
+        public int totalBatteriesCompleted;
+        public int totalStageClears;
+        public int highestStageCleared;
+        public int campaignCompletions;
+        public long totalStageRewardCoins;
+        public long totalStageRewardPermaScore;
 
         public static PlayerStatsData fromPlayerStats(PlayerStats stats) {
             PlayerStatsData data = new PlayerStatsData();
@@ -589,6 +598,13 @@ public class PersistenceService {
             data.totalDeaths = stats.getTotalDeaths();
             data.mostDeathsInRun = stats.getMostDeathsInRun();
             data.runCount = stats.getRunCount();
+            data.failedRunCount = stats.getFailedRunCount();
+            data.totalBatteriesCompleted = stats.getTotalBatteriesCompleted();
+            data.totalStageClears = stats.getTotalStageClears();
+            data.highestStageCleared = stats.getHighestStageCleared();
+            data.campaignCompletions = stats.getCampaignCompletions();
+            data.totalStageRewardCoins = stats.getTotalStageRewardCoins();
+            data.totalStageRewardPermaScore = stats.getTotalStageRewardPermaScore();
             return data;
         }
 
@@ -608,6 +624,13 @@ public class PersistenceService {
             stats.setTotalDeaths(totalDeaths);
             stats.setMostDeathsInRun(mostDeathsInRun);
             stats.setRunCount(runCount);
+            stats.setFailedRunCount(failedRunCount);
+            stats.setTotalBatteriesCompleted(totalBatteriesCompleted);
+            stats.setTotalStageClears(totalStageClears);
+            stats.setHighestStageCleared(highestStageCleared);
+            stats.setCampaignCompletions(campaignCompletions);
+            stats.setTotalStageRewardCoins(totalStageRewardCoins);
+            stats.setTotalStageRewardPermaScore(totalStageRewardPermaScore);
         }
     }
 
@@ -620,6 +643,8 @@ public class PersistenceService {
         public String leaderId;
         public List<String> members;
         public long createdAtMillis;
+        public int stageIndex;
+        public boolean progressionLocked;
 
         public static TeamStateData fromTeamState(TeamState team) {
             TeamStateData data = new TeamStateData();
@@ -630,6 +655,8 @@ public class PersistenceService {
                     .map(UUID::toString)
                     .collect(Collectors.toList());
             data.createdAtMillis = team.getCreatedAtMillis();
+            data.stageIndex = team.getStageIndex();
+            data.progressionLocked = team.isProgressionLocked();
             return data;
         }
 
@@ -646,6 +673,9 @@ public class PersistenceService {
                     team.addMember(memberId);
                 }
             }
+
+            team.setStageIndex(stageIndex);
+            team.setProgressionLocked(progressionLocked);
 
             return team;
         }

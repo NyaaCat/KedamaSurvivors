@@ -9,6 +9,7 @@ import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
 import cat.nyaa.survivors.service.DeathService;
 import cat.nyaa.survivors.service.RunService;
+import cat.nyaa.survivors.service.StatsService;
 import cat.nyaa.survivors.service.StateService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -93,6 +94,8 @@ public class DisconnectChecker implements Runnable {
      */
     private void handleGraceExpired(PlayerState playerState) {
         UUID playerId = playerState.getUuid();
+        UUID teamId = playerState.getTeamId();
+        UUID runId = playerState.getRunId();
 
         plugin.getLogger().info("Disconnect grace expired for player: " + playerState.getName());
 
@@ -101,15 +104,9 @@ public class DisconnectChecker implements Runnable {
             notifyTeam(playerState, "disconnect.grace_expired");
         }
 
-        // Reset player state (death penalty without full equipment clear since they're offline)
-        playerState.setXpProgress(0);
-        playerState.setXpHeld(0);
-        playerState.setUpgradePending(false);
-        playerState.setWeaponGroup(null);
-        playerState.setWeaponLevel(0);
-        playerState.setHelmetGroup(null);
-        playerState.setHelmetLevel(0);
-        playerState.setOverflowXpAccumulated(0);
+        // Reset player state and personal progression
+        playerState.resetRunState();
+        playerState.clearStarterSelections();
 
         // Set cooldown
         long cooldownEnd = System.currentTimeMillis() + config.getDeathCooldownMs();
@@ -121,7 +118,6 @@ public class DisconnectChecker implements Runnable {
         state.markReconnected(playerId);  // Remove from disconnected set
 
         // Remove from team disconnect tracking
-        UUID teamId = playerState.getTeamId();
         if (teamId != null) {
             Optional<TeamState> teamOpt = state.getTeam(teamId);
             teamOpt.ifPresent(team -> {
@@ -131,12 +127,16 @@ public class DisconnectChecker implements Runnable {
         }
 
         // Remove from run
-        UUID runId = playerState.getRunId();
         if (runId != null) {
             Optional<RunState> runOpt = state.getRun(runId);
             runOpt.ifPresent(run -> {
                 run.markDead(playerId);
                 run.removeParticipant(playerId);
+
+                StatsService statsService = plugin.getStatsService();
+                if (statsService != null) {
+                    statsService.recordRunFailure(playerId);
+                }
 
                 // Check for team wipe
                 checkTeamWipe(run, teamId);
@@ -144,6 +144,9 @@ public class DisconnectChecker implements Runnable {
         }
 
         playerState.setRunId(null);
+
+        // Grace timeout means effective quit: remove from team and reset campaign lock if no members remain.
+        state.removePlayerFromTeam(playerId);
     }
 
     /**

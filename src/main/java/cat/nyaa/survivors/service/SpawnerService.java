@@ -307,6 +307,7 @@ public class SpawnerService {
                         nearbyPlayers,
                         nearbyMobs,
                         run.getElapsedSeconds(),
+                        run.getStageStartEnemyLevel(),
                         losChecker
                 );
 
@@ -470,7 +471,8 @@ public class SpawnerService {
 
         // Clamp to configured bounds
         int result = (int) Math.round(level);
-        return Math.max(config.getMinEnemyLevel(), Math.min(config.getMaxEnemyLevel(), result));
+        int minLevel = Math.max(config.getMinEnemyLevel(), ctx.minEnemyLevel());
+        return Math.max(minLevel, Math.min(config.getMaxEnemyLevel(), result));
     }
 
     /**
@@ -680,6 +682,73 @@ public class SpawnerService {
         }
 
         return count;
+    }
+
+    /**
+     * Spawns an immediate surge around a center location.
+     * Used by battery objective pressure waves.
+     */
+    public void spawnSurgeAround(RunState run, Location center, int mobCount) {
+        if (run == null || center == null || center.getWorld() == null) return;
+        if (!run.isActive()) return;
+        if (mobCount <= 0) return;
+
+        int commandsExecuted = 0;
+        int maxCommands = config.getMaxCommandsPerTick();
+        int level = Math.max(config.getMinEnemyLevel(), run.getStageStartEnemyLevel());
+
+        for (int i = 0; i < mobCount; i++) {
+            if (commandsExecuted >= maxCommands) break;
+
+            EnemyArchetypeConfig archetype = selectArchetype(level, run.getWorldName());
+            if (archetype == null) break;
+
+            Location spawnLoc = sampleSurgeLocation(center, 12.0, 26.0);
+            if (spawnLoc == null) continue;
+
+            for (String cmdTemplate : archetype.spawnCommands) {
+                if (commandsExecuted >= maxCommands) break;
+
+                Map<String, Object> context = new HashMap<>();
+                context.put("sx", spawnLoc.getBlockX());
+                context.put("sy", spawnLoc.getBlockY());
+                context.put("sz", spawnLoc.getBlockZ());
+                context.put("runWorld", run.getWorldName());
+                context.put("enemyLevel", level);
+                context.put("enemyType", archetype.enemyType);
+                context.put("archetypeId", archetype.archetypeId);
+
+                String cmd = templateEngine.expand(cmdTemplate, context);
+                try {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                    commandsExecuted++;
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.WARNING, "Failed to execute surge spawn command: " + cmd, e);
+                }
+            }
+        }
+    }
+
+    private Location sampleSurgeLocation(Location center, double minDist, double maxDist) {
+        World world = center.getWorld();
+        if (world == null) return null;
+
+        int maxAttempts = config.getMaxSampleAttempts();
+        int verticalRange = config.getSpawnVerticalRange();
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            double angle = ThreadLocalRandom.current().nextDouble() * Math.PI * 2;
+            double distance = minDist + ThreadLocalRandom.current().nextDouble() * (maxDist - minDist);
+            double x = center.getX() + Math.cos(angle) * distance;
+            double z = center.getZ() + Math.sin(angle) * distance;
+
+            Location candidate = findSafeYNearPlayer(world, x, z, center.getBlockY(), verticalRange);
+            if (candidate != null) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

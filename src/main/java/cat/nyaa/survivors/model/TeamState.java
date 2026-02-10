@@ -25,6 +25,10 @@ public class TeamState {
     // Run association
     private volatile UUID runId;
 
+    // Segmented progression
+    private volatile int stageIndex = 0;
+    private volatile boolean progressionLocked = false;
+
     // World selection (null = random)
     private volatile String selectedWorldName;
 
@@ -255,6 +259,14 @@ public class TeamState {
         selectedWorldName = null;
     }
 
+    /**
+     * Resets segmented progression. Called on wipe/disband/final completion.
+     */
+    public void resetProgression() {
+        stageIndex = 0;
+        progressionLocked = false;
+    }
+
     // ==================== Getters and Setters ====================
 
     public UUID getTeamId() { return teamId; }
@@ -267,6 +279,13 @@ public class TeamState {
 
     public UUID getRunId() { return runId; }
     public void setRunId(UUID runId) { this.runId = runId; }
+
+    public int getStageIndex() { return stageIndex; }
+    public void setStageIndex(int stageIndex) { this.stageIndex = Math.max(0, stageIndex); }
+    public void advanceStage() { this.stageIndex++; }
+
+    public boolean isProgressionLocked() { return progressionLocked; }
+    public void setProgressionLocked(boolean progressionLocked) { this.progressionLocked = progressionLocked; }
 
     public String getSelectedWorldName() { return selectedWorldName; }
     public void setSelectedWorldName(String selectedWorldName) { this.selectedWorldName = selectedWorldName; }

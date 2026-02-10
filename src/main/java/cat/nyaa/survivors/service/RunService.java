@@ -3,6 +3,7 @@ package cat.nyaa.survivors.service;
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.config.ConfigService.SoundConfig;
+import cat.nyaa.survivors.economy.EconomyService;
 import cat.nyaa.survivors.i18n.I18nService;
 import cat.nyaa.survivors.model.*;
 import cat.nyaa.survivors.util.TemplateEngine;
@@ -27,6 +28,7 @@ public class RunService {
     private final WorldService worldService;
     private final TemplateEngine templateEngine;
     private final MerchantService merchantService;
+    private final BatteryService batteryService;
 
     public RunService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -36,6 +38,7 @@ public class RunService {
         this.worldService = plugin.getWorldService();
         this.templateEngine = plugin.getTemplateEngine();
         this.merchantService = plugin.getMerchantService();
+        this.batteryService = plugin.getBatteryService();
     }
 
     /**
@@ -43,8 +46,10 @@ public class RunService {
      * Uses Paper's teleportAsync for async chunk loading.
      */
     public CompletableFuture<RunState> startRunAsync(TeamState team) {
-        // Determine world selection: team's selected world or random
-        ConfigService.CombatWorldConfig worldConfig = selectWorldForRun(team);
+        ConfigService.StageGroupConfig stageGroup = resolveStageGroupForTeam(team);
+
+        // Determine world selection from stage group
+        ConfigService.CombatWorldConfig worldConfig = selectWorldForRun(team, stageGroup);
         if (worldConfig == null) {
             notifyTeam(team, "error.no_combat_worlds");
             resetTeamToLobby(team);
@@ -69,6 +74,7 @@ public class RunService {
 
         // Create run state
         RunState run = state.createRun(team.getTeamId(), worldConfig.name);
+        applyStageMetadata(run, team, stageGroup);
         run.start();
 
         // Initialize player states
@@ -82,6 +88,11 @@ public class RunService {
         // Start merchant spawning for this run
         if (merchantService != null) {
             merchantService.startForRun(run);
+        }
+
+        // Start battery objective logic for this run
+        if (batteryService != null && stageGroup != null) {
+            batteryService.startForRun(run);
         }
 
         // Notify start and play run start sound
@@ -99,7 +110,11 @@ public class RunService {
      * If team has selected a world and leader has enough coins, deducts cost and uses selected world.
      * Otherwise falls back to random world selection.
      */
-    private ConfigService.CombatWorldConfig selectWorldForRun(TeamState team) {
+    private ConfigService.CombatWorldConfig selectWorldForRun(TeamState team, ConfigService.StageGroupConfig stageGroup) {
+        if (stageGroup != null) {
+            return worldService.selectRandomWorldForStage(stageGroup);
+        }
+
         String selectedWorldName = team.getSelectedWorldName();
 
         // If no selection or world selection disabled, use random
@@ -150,6 +165,42 @@ public class RunService {
         return worldConfig;
     }
 
+    private ConfigService.StageGroupConfig resolveStageGroupForTeam(TeamState team) {
+        int stageCount = config.getStageGroupCount();
+        if (stageCount <= 0) {
+            return null;
+        }
+
+        int index = team.getStageIndex();
+        if (index < 0 || index >= stageCount) {
+            index = 0;
+            team.setStageIndex(0);
+        }
+
+        if (index > 0) {
+            team.setProgressionLocked(true);
+        }
+
+        return config.getStageGroup(index).orElse(null);
+    }
+
+    private void applyStageMetadata(RunState run, TeamState team, ConfigService.StageGroupConfig stageGroup) {
+        if (stageGroup == null) {
+            run.setStageIndex(0);
+            run.setStageGroupId(null);
+            run.setStageStartEnemyLevel(config.getMinEnemyLevel());
+            run.setStageRequiredBatteries(1);
+            run.setStageCompletedBatteries(0);
+            return;
+        }
+
+        run.setStageIndex(team.getStageIndex());
+        run.setStageGroupId(stageGroup.groupId);
+        run.setStageStartEnemyLevel(Math.max(1, stageGroup.startEnemyLevel));
+        run.setStageRequiredBatteries(Math.max(1, stageGroup.requiredBatteries));
+        run.setStageCompletedBatteries(0);
+    }
+
     /**
      * Selects a spawn point for a team, preferring the least loaded spawn point.
      * Uses SpawnLoadTracker if available, otherwise falls back to random selection.
@@ -178,8 +229,10 @@ public class RunService {
      */
     @Deprecated
     public RunState startRun(TeamState team) {
+        ConfigService.StageGroupConfig stageGroup = resolveStageGroupForTeam(team);
+
         // Select a random combat world
-        ConfigService.CombatWorldConfig worldConfig = worldService.selectRandomWorld();
+        ConfigService.CombatWorldConfig worldConfig = selectWorldForRun(team, stageGroup);
         if (worldConfig == null) {
             notifyTeam(team, "error.no_combat_worlds");
             resetTeamToLobby(team);
@@ -204,6 +257,7 @@ public class RunService {
 
         // Create run state
         RunState run = state.createRun(team.getTeamId(), worldConfig.name);
+        applyStageMetadata(run, team, stageGroup);
         run.start();
 
         // Initialize player states
@@ -217,6 +271,11 @@ public class RunService {
         // Start merchant spawning for this run
         if (merchantService != null) {
             merchantService.startForRun(run);
+        }
+
+        // Start battery objective logic for this run
+        if (batteryService != null && stageGroup != null) {
+            batteryService.startForRun(run);
         }
 
         // Notify start and play run start sound
@@ -621,6 +680,112 @@ public class RunService {
     }
 
     /**
+     * Completes one battery objective. If the run reaches its required battery count,
+     * the run ends as stage clear and team progression advances.
+     */
+    public void completeBatteryObjective(RunState run) {
+        if (run == null || !run.isActive()) return;
+        if (config.getStageGroupCount() <= 0) return;
+
+        run.incrementStageCompletedBatteries();
+        StatsService statsService = plugin.getStatsService();
+        if (statsService != null) {
+            for (UUID participantId : run.getParticipants()) {
+                statsService.recordBatteryCompleted(participantId);
+            }
+        }
+
+        if (!run.isStageObjectiveComplete()) {
+            Optional<TeamState> teamOpt = state.getTeam(run.getTeamId());
+            teamOpt.ifPresent(team -> notifyTeam(team, "info.stage_battery_progress",
+                    "current", run.getStageCompletedBatteries(),
+                    "required", run.getStageRequiredBatteries()));
+            return;
+        }
+
+        Optional<TeamState> teamOpt = state.getTeam(run.getTeamId());
+        if (teamOpt.isEmpty()) {
+            endRun(run, EndReason.STAGE_CLEAR);
+            return;
+        }
+
+        TeamState team = teamOpt.get();
+        Optional<ConfigService.StageGroupConfig> stageGroupOpt = config.getStageGroup(team.getStageIndex());
+        int clearedStageIndexOneBased = team.getStageIndex() + 1;
+        stageGroupOpt.ifPresent(group -> {
+            awardTeamProgressRewards(team, group.clearRewardCoins, group.clearRewardPermaScore);
+            StatsService ss = plugin.getStatsService();
+            if (ss != null) {
+                for (UUID memberId : team.getMembers()) {
+                    ss.recordStageClear(memberId, clearedStageIndexOneBased,
+                            group.clearRewardCoins, group.clearRewardPermaScore);
+                }
+            }
+        });
+
+        int nextStage = team.getStageIndex() + 1;
+        boolean hasNextStage = nextStage < config.getStageGroupCount();
+
+        if (hasNextStage) {
+            team.setStageIndex(nextStage);
+            team.setProgressionLocked(true);
+            endRun(run, EndReason.STAGE_CLEAR);
+            return;
+        }
+
+        int bonusCoins = config.getFinalStageBonusCoins();
+        int bonusPerma = config.getFinalStageBonusPermaScore();
+        if (bonusCoins > 0 || bonusPerma > 0) {
+            awardTeamProgressRewards(team, bonusCoins, bonusPerma);
+            StatsService ss = plugin.getStatsService();
+            if (ss != null) {
+                for (UUID memberId : team.getMembers()) {
+                    ss.recordStageReward(memberId, bonusCoins, bonusPerma);
+                }
+            }
+        }
+
+        if (statsService != null) {
+            for (UUID memberId : team.getMembers()) {
+                statsService.recordCampaignCompletion(memberId);
+            }
+        }
+
+        endRun(run, EndReason.FINAL_CLEAR);
+    }
+
+    private void awardTeamProgressRewards(TeamState team, int coinReward, int permaReward) {
+        EconomyService economy = plugin.getEconomyService();
+
+        for (UUID memberId : team.getMembers()) {
+            Optional<PlayerState> psOpt = state.getPlayer(memberId);
+            if (psOpt.isEmpty()) continue;
+
+            PlayerState ps = psOpt.get();
+            Player player = Bukkit.getPlayer(memberId);
+
+            if (coinReward > 0 && player != null) {
+                economy.add(player, coinReward, "stage_clear");
+            } else if (coinReward > 0) {
+                ps.setBalance(ps.getBalance() + coinReward);
+            }
+
+            if (permaReward > 0) {
+                ps.setPermaScore(ps.getPermaScore() + permaReward);
+                if (player != null) {
+                    plugin.getScoreboardService().updatePermaScore(player, ps.getPermaScore());
+                }
+            }
+
+            if (player != null) {
+                i18n.send(player, "info.stage_reward",
+                        "coins", coinReward,
+                        "perma", permaReward);
+            }
+        }
+    }
+
+    /**
      * Ends a run normally or due to team wipe.
      */
     public void endRun(RunState run, EndReason reason) {
@@ -631,6 +796,14 @@ public class RunService {
         UUID teamId = run.getTeamId();
         Optional<TeamState> teamOpt = state.getTeam(teamId);
 
+        Set<UUID> teamMembers = teamOpt.map(TeamState::getMembers).orElse(Collections.emptySet());
+        Set<UUID> affectedPlayers = new HashSet<>();
+        if (!teamMembers.isEmpty()) {
+            affectedPlayers.addAll(teamMembers);
+        } else {
+            affectedPlayers.addAll(run.getParticipants());
+        }
+
         // Calculate rewards
         int totalKills = run.getTotalKills();
         int totalCoins = run.getTotalCoinsCollected();
@@ -638,39 +811,64 @@ public class RunService {
 
         // Record run end for all participants
         StatsService statsService = plugin.getStatsService();
+        boolean failedRun = reason == EndReason.WIPE
+                || reason == EndReason.DEATH
+                || reason == EndReason.DISCONNECT
+                || reason == EndReason.FORCED;
 
         // Notify and teleport players back
-        for (UUID memberId : run.getParticipants()) {
+        for (UUID memberId : affectedPlayers) {
             // Record run end in stats service
             if (statsService != null) {
-                statsService.recordRunEnd(memberId);
+                if (failedRun) {
+                    statsService.recordRunFailure(memberId);
+                } else {
+                    statsService.recordRunEnd(memberId);
+                }
             }
 
             Player player = Bukkit.getPlayer(memberId);
+            Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
+            playerStateOpt.ifPresent(ps -> {
+                boolean keepStarters = reason == EndReason.STAGE_CLEAR;
+                boolean applyCooldown = reason == EndReason.WIPE
+                        || reason == EndReason.DEATH
+                        || reason == EndReason.DISCONNECT;
+
+                if (!keepStarters) {
+                    ps.clearStarterSelections();
+                }
+
+                if (applyCooldown) {
+                    long cooldownEnd = System.currentTimeMillis() + config.getDeathCooldownMs();
+                    ps.setCooldownUntilMillis(cooldownEnd);
+                    ps.setMode(PlayerMode.COOLDOWN);
+                } else {
+                    ps.setCooldownUntilMillis(0);
+                    ps.setMode(PlayerMode.LOBBY);
+                }
+
+                ps.setReady(false);
+                ps.setRunId(null);
+            });
+
             if (player == null) continue;
 
-            // Don't remove scoreboard - let it auto-update to lobby mode
-
-            // Send end message
-            String msgKey = reason == EndReason.WIPE ? "run.ended_wipe" : "run.ended";
+            String msgKey = switch (reason) {
+                case WIPE -> "run.ended_wipe";
+                case STAGE_CLEAR -> "info.stage_cleared";
+                case FINAL_CLEAR -> "info.stage_all_cleared";
+                default -> "run.ended";
+            };
             i18n.send(player, msgKey,
                     "kills", totalKills,
                     "coins", totalCoins,
                     "time", run.getElapsedFormatted());
 
-            // Apply cooldown and clear starter selections
-            Optional<PlayerState> playerStateOpt = state.getPlayer(memberId);
-            playerStateOpt.ifPresent(ps -> {
-                // Clear starter selections so player must re-select next run
-                ps.setStarterWeaponOptionId(null);
-                ps.setStarterHelmetOptionId(null);
-
-                if (reason == EndReason.WIPE || reason == EndReason.DEATH) {
-                    long cooldownEnd = System.currentTimeMillis() + config.getDeathCooldownMs();
-                    ps.setCooldownUntilMillis(cooldownEnd);
-                    ps.setMode(PlayerMode.COOLDOWN);
-                } else {
-                    ps.setMode(PlayerMode.LOBBY);
+            Location lobby = config.getLobbyLocation();
+            player.teleportAsync(lobby).thenAccept(success -> {
+                if (!success) {
+                    Bukkit.getScheduler().runTask(plugin, () -> player.teleport(lobby));
                 }
             });
         }
@@ -683,13 +881,39 @@ public class RunService {
             merchantService.stopForRun(run.getRunId());
         }
 
-        // Reset team
-        teamOpt.ifPresent(TeamState::resetForNewRun);
+        // Stop battery objective logic for this run
+        if (batteryService != null) {
+            batteryService.stopForRun(run.getRunId());
+        }
+
+        // Progression reset on failures
+        if (reason == EndReason.WIPE || reason == EndReason.DEATH || reason == EndReason.DISCONNECT || reason == EndReason.FORCED) {
+            teamOpt.ifPresent(TeamState::resetProgression);
+            teamOpt.ifPresent(team -> team.setProgressionLocked(false));
+        }
+
+        // Final clear ends the campaign: reset and disband team
+        if (reason == EndReason.FINAL_CLEAR && teamOpt.isPresent()) {
+            TeamState team = teamOpt.get();
+            Set<UUID> members = new HashSet<>(team.getMembers());
+
+            for (UUID memberId : members) {
+                state.getPlayer(memberId).ifPresent(ps -> {
+                    ps.resetRunState();
+                    ps.clearStarterSelections();
+                    ps.setMode(PlayerMode.LOBBY);
+                    ps.setReady(false);
+                });
+            }
+
+            team.resetProgression();
+            state.disbandTeam(team.getTeamId());
+        }
 
         // Save player states after run end
         PersistenceService persistence = plugin.getPersistenceService();
         if (persistence != null) {
-            for (UUID memberId : run.getParticipants()) {
+            for (UUID memberId : affectedPlayers) {
                 persistence.savePlayerAsync(memberId);
             }
         }
@@ -781,6 +1005,7 @@ public class RunService {
      */
     public void handleLeave(UUID playerId, RunState run) {
         run.markDead(playerId);
+        run.removeParticipant(playerId);
 
         // Check for team wipe
         Optional<TeamState> teamOpt = state.getTeam(run.getTeamId());
@@ -839,7 +1064,9 @@ public class RunService {
      * Reason for run ending.
      */
     public enum EndReason {
-        NORMAL,     // Completed objectives (future)
+        NORMAL,     // Legacy normal completion
+        STAGE_CLEAR, // Cleared current stage objective, return to prep
+        FINAL_CLEAR, // Cleared final stage, disband and reset
         WIPE,       // All players dead
         DEATH,      // Single player death in solo
         FORCED,     // Admin forced end

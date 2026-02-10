@@ -146,6 +146,36 @@ class PersistenceServiceTest {
             assertEquals(data.starterWeaponOptionId, restored.starterWeaponOptionId);
             assertEquals(data.starterHelmetOptionId, restored.starterHelmetOptionId);
         }
+
+        @Test
+        @DisplayName("Should persist extended segmented progression stats")
+        void segmentedStatsRoundTrip() {
+            UUID uuid = UUID.randomUUID();
+            PlayerState player = new PlayerState(uuid, "SegmentStats");
+
+            player.getStats().setRunCount(12);
+            player.getStats().setFailedRunCount(5);
+            player.getStats().setTotalBatteriesCompleted(27);
+            player.getStats().setTotalStageClears(9);
+            player.getStats().setHighestStageCleared(5);
+            player.getStats().setCampaignCompletions(2);
+            player.getStats().setTotalStageRewardCoins(4321);
+            player.getStats().setTotalStageRewardPermaScore(321);
+
+            PlayerStateData data = PlayerStateData.fromPlayerState(player);
+            String json = gson.toJson(data);
+            PlayerStateData restoredData = gson.fromJson(json, PlayerStateData.class);
+            PlayerState restored = restoredData.toPlayerState();
+
+            assertEquals(12, restored.getStats().getRunCount());
+            assertEquals(5, restored.getStats().getFailedRunCount());
+            assertEquals(27, restored.getStats().getTotalBatteriesCompleted());
+            assertEquals(9, restored.getStats().getTotalStageClears());
+            assertEquals(5, restored.getStats().getHighestStageCleared());
+            assertEquals(2, restored.getStats().getCampaignCompletions());
+            assertEquals(4321, restored.getStats().getTotalStageRewardCoins());
+            assertEquals(321, restored.getStats().getTotalStageRewardPermaScore());
+        }
     }
 
     @Nested

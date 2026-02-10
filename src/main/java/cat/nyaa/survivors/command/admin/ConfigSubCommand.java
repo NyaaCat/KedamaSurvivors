@@ -4,11 +4,18 @@ import cat.nyaa.survivors.KedamaSurvivorsPlugin;
 import cat.nyaa.survivors.command.SubCommand;
 import cat.nyaa.survivors.config.ConfigService;
 import cat.nyaa.survivors.i18n.I18nService;
+import cat.nyaa.survivors.service.BatteryService;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -17,12 +24,22 @@ import java.util.function.Supplier;
  */
 public class ConfigSubCommand implements SubCommand {
 
+    private static final List<String> STAGE_DYNAMIC_FIELDS = List.of(
+            "displayName",
+            "worlds",
+            "startEnemyLevel",
+            "requiredBatteries",
+            "clearRewardCoins",
+            "clearRewardPermaScore"
+    );
+
     private final KedamaSurvivorsPlugin plugin;
     private final I18nService i18n;
     private final ConfigService config;
 
     // Config property definitions
     private final Map<String, ConfigProperty<?>> properties;
+    private final Map<String, List<String>> categories;
 
     public ConfigSubCommand(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -70,6 +87,29 @@ public class ConfigSubCommand implements SubCommand {
                 entry("scoreMultiplier", new IntProperty(config::getScoreMultiplier, config::setScoreMultiplier)),
                 entry("scoreMultiplierEnabled", new BooleanProperty(config::isScoreMultiplierEnabled, config::setScoreMultiplierEnabled)),
                 entry("scoreMultiplierAffectsPerma", new BooleanProperty(config::isScoreMultiplierAffectsPerma, config::setScoreMultiplierAffectsPerma)),
+
+                // Stage progression
+                entry("finalStageBonusCoins", new IntProperty(config::getFinalStageBonusCoins, config::setFinalStageBonusCoins)),
+                entry("finalStageBonusPermaScore", new IntProperty(config::getFinalStageBonusPermaScore, config::setFinalStageBonusPermaScore)),
+
+                // Battery objective
+                entry("batteryEnabled", new BooleanProperty(config::isBatteryEnabled, config::setBatteryEnabled)),
+                entry("batterySpawnIntervalSeconds", new IntProperty(config::getBatterySpawnIntervalSeconds, config::setBatterySpawnIntervalSeconds)),
+                entry("batterySpawnChance", new DoubleProperty(config::getBatterySpawnChance, config::setBatterySpawnChance)),
+                entry("batteryMinDistanceFromPlayers", new DoubleProperty(config::getBatteryMinDistanceFromPlayers, config::setBatteryMinDistanceFromPlayers)),
+                entry("batteryMaxDistanceFromPlayers", new DoubleProperty(config::getBatteryMaxDistanceFromPlayers, config::setBatteryMaxDistanceFromPlayers)),
+                entry("batteryVerticalRange", new IntProperty(config::getBatteryVerticalRange, config::setBatteryVerticalRange)),
+                entry("batteryChargeRadius", new DoubleProperty(config::getBatteryChargeRadius, config::setBatteryChargeRadius)),
+                entry("batteryBaseChargePercentPerSecond", new DoubleProperty(config::getBatteryBaseChargePercentPerSecond, config::setBatteryBaseChargePercentPerSecond)),
+                entry("batteryExtraPlayerChargePercentPerSecond", new DoubleProperty(config::getBatteryExtraPlayerChargePercentPerSecond, config::setBatteryExtraPlayerChargePercentPerSecond)),
+                entry("batteryProgressUpdateTicks", new IntProperty(config::getBatteryProgressUpdateTicks, config::setBatteryProgressUpdateTicks)),
+                entry("batteryDisplayMaterial", new StringProperty(config::getBatteryDisplayMaterialName, config::setBatteryDisplayMaterial)),
+                entry("batteryDisplayCustomModelData", new IntProperty(config::getBatteryDisplayCustomModelData, config::setBatteryDisplayCustomModelData)),
+                entry("batteryDisplayName", new StringProperty(config::getBatteryDisplayName, config::setBatteryDisplayName)),
+                entry("batteryShowRangeParticles", new BooleanProperty(config::isBatteryShowRangeParticles, config::setBatteryShowRangeParticles)),
+                entry("batterySurgeEnabled", new BooleanProperty(config::isBatterySurgeEnabled, config::setBatterySurgeEnabled)),
+                entry("batterySurgeIntervalSeconds", new IntProperty(config::getBatterySurgeIntervalSeconds, config::setBatterySurgeIntervalSeconds)),
+                entry("batterySurgeMobCount", new IntProperty(config::getBatterySurgeMobCount, config::setBatterySurgeMobCount)),
 
                 // Progression
                 entry("baseXpRequired", new IntProperty(config::getBaseXpRequired, config::setBaseXpRequired)),
@@ -143,6 +183,47 @@ public class ConfigSubCommand implements SubCommand {
                 entry("soundDeath", new StringProperty(config::getSoundDeathStr, config::setSoundDeath)),
                 entry("soundRunStart", new StringProperty(config::getSoundRunStartStr, config::setSoundRunStart))
         );
+
+        this.categories = createCategories();
+    }
+
+    private Map<String, List<String>> createCategories() {
+        Map<String, List<String>> map = new LinkedHashMap<>();
+        map.put("teleport", List.of("lobbyWorld", "lobbyX", "lobbyY", "lobbyZ", "prepCommand", "enterCommand", "respawnCommand"));
+        map.put("timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"));
+        map.put("spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "targetMobsPerPlayerIncreasePerLevel", "targetMobsPerPlayerMax", "maxSpawnsPerTick"));
+        map.put("rewards", List.of("xpShareEnabled", "xpShareRadius", "xpSharePercent",
+                "damageContributionEnabled", "damageContributionPercent",
+                "overflowEnabled", "overflowXpPerPermaScore", "overflowNotifyPlayer",
+                "maxLevelPermaScoreReward", "permaScoreDisplayName",
+                "scoreMultiplier", "scoreMultiplierEnabled", "scoreMultiplierAffectsPerma"));
+        map.put("stage", List.of("finalStageBonusCoins", "finalStageBonusPermaScore"));
+        map.put("battery", List.of("batteryEnabled", "batterySpawnIntervalSeconds", "batterySpawnChance",
+                "batteryMinDistanceFromPlayers", "batteryMaxDistanceFromPlayers", "batteryVerticalRange",
+                "batteryChargeRadius", "batteryBaseChargePercentPerSecond", "batteryExtraPlayerChargePercentPerSecond",
+                "batteryProgressUpdateTicks", "batteryDisplayMaterial", "batteryDisplayCustomModelData",
+                "batteryDisplayName", "batteryShowRangeParticles", "batterySurgeEnabled",
+                "batterySurgeIntervalSeconds", "batterySurgeMobCount"));
+        map.put("progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"));
+        map.put("teams", List.of("maxTeamSize", "inviteExpirySeconds"));
+        map.put("merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime",
+                "merchantMinDistance", "merchantMaxDistance", "merchantSpawnChance",
+                "merchantLimited", "merchantMinStaySeconds", "merchantMaxStaySeconds",
+                "merchantSpawnParticles", "merchantDespawnParticles",
+                "merchantMinItems", "merchantMaxItems", "merchantShowAllItems",
+                "merchantRotationSpeed", "merchantBobHeight", "merchantBobSpeed",
+                "merchantHeadItemCycleInterval",
+                "wanderingMerchantPoolId", "wanderingMerchantType", "wanderingMerchantMaxCount"));
+        map.put("upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"));
+        map.put("scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval"));
+        map.put("worldSelection", List.of("worldSelectionEnabled", "autoOpenWorldGui", "defaultTrackingRadius"));
+        map.put("overheadDisplay", List.of("overheadDisplayEnabled", "overheadDisplayYOffset", "overheadDisplayUpdateTicks"));
+        map.put("feedback", List.of("rewardDisplayMode", "rewardStackingEnabled", "rewardStackingTimeoutSeconds",
+                "upgradeReminderDisplayMode", "upgradeReminderFlashIntervalTicks",
+                "soundXpGained", "soundCoinGained", "soundPermaScoreGained",
+                "soundUpgradeAvailable", "soundUpgradeSelected", "soundKillReward",
+                "soundCountdownTick", "soundTeleport", "soundDeath", "soundRunStart"));
+        return map;
     }
 
     private static <K, V> Map.Entry<K, V> entry(K key, V value) {
@@ -156,7 +237,7 @@ public class ConfigSubCommand implements SubCommand {
             return;
         }
 
-        String action = args[0].toLowerCase();
+        String action = args[0].toLowerCase(Locale.ROOT);
 
         switch (action) {
             case "get" -> handleGet(sender, args);
@@ -180,6 +261,11 @@ public class ConfigSubCommand implements SubCommand {
         }
 
         String propertyName = args[1];
+        if (isStageDynamicProperty(propertyName)) {
+            handleGetStageProperty(sender, propertyName);
+            return;
+        }
+
         ConfigProperty<?> property = properties.get(propertyName);
 
         if (property == null) {
@@ -201,6 +287,12 @@ public class ConfigSubCommand implements SubCommand {
         }
 
         String propertyName = args[1];
+
+        if (isStageDynamicProperty(propertyName)) {
+            handleSetStageProperty(sender, propertyName, Arrays.copyOfRange(args, 2, args.length));
+            return;
+        }
+
         ConfigProperty<?> property = properties.get(propertyName);
 
         if (property == null) {
@@ -211,21 +303,18 @@ public class ConfigSubCommand implements SubCommand {
         // For string properties, join all remaining args
         String valueStr;
         if (property instanceof StringProperty) {
-            valueStr = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
+            valueStr = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
         } else {
             valueStr = args[2];
         }
 
         try {
             property.setFromString(valueStr);
-            config.saveConfig();  // Persist to file immediately
+            config.saveConfig(); // Persist to file immediately
+            applyHotUpdate(propertyName);
             i18n.send(sender, "admin.config.property_set",
                     "property", propertyName,
                     "value", valueStr);
-        } catch (NumberFormatException e) {
-            i18n.send(sender, "admin.config.invalid_value",
-                    "value", valueStr,
-                    "type", property.getTypeName());
         } catch (IllegalArgumentException e) {
             i18n.send(sender, "admin.config.invalid_value",
                     "value", valueStr,
@@ -233,56 +322,279 @@ public class ConfigSubCommand implements SubCommand {
         }
     }
 
-    private void handleList(CommandSender sender, String[] args) {
-        String category = args.length > 1 ? args[1].toLowerCase() : null;
+    private void handleGetStageProperty(CommandSender sender, String propertyName) {
+        Optional<StagePropertyRef> refOpt = parseStagePropertyRef(propertyName);
+        if (refOpt.isEmpty()) {
+            i18n.send(sender, "admin.config.property_not_found", "property", propertyName);
+            return;
+        }
 
+        StagePropertyRef ref = refOpt.get();
+        Optional<ConfigService.StageGroupConfig> groupOpt = config.getStageGroupById(ref.groupId());
+        if (groupOpt.isEmpty()) {
+            i18n.send(sender, "admin.config.property_not_found", "property", propertyName);
+            return;
+        }
+
+        ConfigService.StageGroupConfig group = groupOpt.get();
+        Object value;
+        String type;
+
+        switch (ref.field()) {
+            case "displayname" -> {
+                value = group.displayName;
+                type = "string";
+            }
+            case "worlds" -> {
+                value = group.worldNames == null ? "" : String.join(", ", group.worldNames);
+                type = "list";
+            }
+            case "startenemylevel" -> {
+                value = group.startEnemyLevel;
+                type = "int";
+            }
+            case "requiredbatteries" -> {
+                value = group.requiredBatteries;
+                type = "int";
+            }
+            case "clearrewardcoins" -> {
+                value = group.clearRewardCoins;
+                type = "int";
+            }
+            case "clearrewardpermascore" -> {
+                value = group.clearRewardPermaScore;
+                type = "int";
+            }
+            default -> {
+                i18n.send(sender, "admin.config.property_not_found", "property", propertyName);
+                return;
+            }
+        }
+
+        i18n.send(sender, "admin.config.property_value",
+                "property", propertyName,
+                "value", String.valueOf(value),
+                "type", type);
+    }
+
+    private void handleSetStageProperty(CommandSender sender, String propertyName, String[] valueArgs) {
+        Optional<StagePropertyRef> refOpt = parseStagePropertyRef(propertyName);
+        if (refOpt.isEmpty()) {
+            i18n.send(sender, "admin.config.property_not_found", "property", propertyName);
+            return;
+        }
+        if (valueArgs.length == 0) {
+            i18n.send(sender, "admin.config.help.set");
+            return;
+        }
+
+        StagePropertyRef ref = refOpt.get();
+        String valueDisplay;
+
+        try {
+            boolean updated;
+            switch (ref.field()) {
+                case "displayname" -> {
+                    valueDisplay = String.join(" ", valueArgs);
+                    updated = config.setStageGroupDisplayName(ref.groupId(), valueDisplay);
+                }
+                case "worlds" -> {
+                    List<String> worlds = parseWorldList(valueArgs);
+                    valueDisplay = worlds.isEmpty() ? "any" : String.join(", ", worlds);
+                    updated = config.setStageGroupWorldNames(ref.groupId(), worlds);
+                }
+                case "startenemylevel" -> {
+                    int value = parsePositiveInt(valueArgs[0]);
+                    valueDisplay = String.valueOf(value);
+                    updated = config.setStageGroupStartEnemyLevel(ref.groupId(), value);
+                }
+                case "requiredbatteries" -> {
+                    int value = parsePositiveInt(valueArgs[0]);
+                    valueDisplay = String.valueOf(value);
+                    updated = config.setStageGroupRequiredBatteries(ref.groupId(), value);
+                }
+                case "clearrewardcoins" -> {
+                    int value = parseNonNegativeInt(valueArgs[0]);
+                    valueDisplay = String.valueOf(value);
+                    updated = config.setStageGroupClearRewardCoins(ref.groupId(), value);
+                }
+                case "clearrewardpermascore" -> {
+                    int value = parseNonNegativeInt(valueArgs[0]);
+                    valueDisplay = String.valueOf(value);
+                    updated = config.setStageGroupClearRewardPermaScore(ref.groupId(), value);
+                }
+                default -> {
+                    i18n.send(sender, "admin.config.property_not_found", "property", propertyName);
+                    return;
+                }
+            }
+
+            if (!updated) {
+                i18n.send(sender, "admin.config.property_not_found", "property", propertyName);
+                return;
+            }
+
+            config.saveConfig();
+            applyHotUpdate(propertyName);
+            i18n.send(sender, "admin.config.property_set",
+                    "property", propertyName,
+                    "value", valueDisplay);
+        } catch (IllegalArgumentException e) {
+            i18n.send(sender, "admin.config.invalid_value",
+                    "value", String.join(" ", valueArgs),
+                    "type", "stage value");
+            if (e.getMessage() != null && !e.getMessage().isBlank()) {
+                sender.sendMessage("§c" + e.getMessage());
+            }
+        } catch (RuntimeException e) {
+            i18n.send(sender, "admin.config.invalid_value",
+                    "value", String.join(" ", valueArgs),
+                    "type", "stage value");
+            if (e.getMessage() != null && !e.getMessage().isBlank()) {
+                sender.sendMessage("§c" + e.getMessage());
+            }
+        }
+    }
+
+    private void applyHotUpdate(String propertyName) {
+        String lower = propertyName.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("battery")) {
+            BatteryService batteryService = plugin.getBatteryService();
+            if (batteryService != null) {
+                batteryService.reloadRuntimeConfig();
+            }
+        }
+    }
+
+    private int parsePositiveInt(String value) {
+        int parsed = Integer.parseInt(value);
+        if (parsed < 1) {
+            throw new IllegalArgumentException("Value must be >= 1");
+        }
+        return parsed;
+    }
+
+    private int parseNonNegativeInt(String value) {
+        int parsed = Integer.parseInt(value);
+        if (parsed < 0) {
+            throw new IllegalArgumentException("Value must be >= 0");
+        }
+        return parsed;
+    }
+
+    private List<String> parseWorldList(String[] valueArgs) {
+        List<String> worlds = new ArrayList<>();
+        for (String arg : valueArgs) {
+            for (String token : arg.split(",")) {
+                String world = token.trim();
+                if (world.isEmpty()) continue;
+
+                if ("any".equalsIgnoreCase(world)
+                        || "none".equalsIgnoreCase(world)
+                        || "empty".equalsIgnoreCase(world)
+                        || "[]".equals(world)) {
+                    return new ArrayList<>();
+                }
+
+                worlds.add(world);
+            }
+        }
+        return worlds;
+    }
+
+    private void handleList(CommandSender sender, String[] args) {
         i18n.send(sender, "admin.config.list_header");
 
-        // Group properties by category
-        Map<String, List<String>> categories = new java.util.HashMap<>();
-        categories.put("teleport", List.of("lobbyWorld", "lobbyX", "lobbyY", "lobbyZ", "prepCommand", "enterCommand", "respawnCommand"));
-        categories.put("timing", List.of("deathCooldownSeconds", "respawnInvulnerabilitySeconds", "disconnectGraceSeconds", "countdownSeconds"));
-        categories.put("spawning", List.of("minSpawnDistance", "maxSpawnDistance", "maxSampleAttempts", "spawnTickInterval", "targetMobsPerPlayer", "targetMobsPerPlayerIncreasePerLevel", "targetMobsPerPlayerMax", "maxSpawnsPerTick"));
-        categories.put("rewards", List.of("xpShareEnabled", "xpShareRadius", "xpSharePercent",
-                "damageContributionEnabled", "damageContributionPercent",
-                "overflowEnabled", "overflowXpPerPermaScore", "overflowNotifyPlayer",
-                "maxLevelPermaScoreReward", "permaScoreDisplayName",
-                "scoreMultiplier", "scoreMultiplierEnabled", "scoreMultiplierAffectsPerma"));
-        categories.put("progression", List.of("baseXpRequired", "xpPerLevelIncrease", "xpMultiplierPerLevel", "weaponLevelWeight", "helmetLevelWeight"));
-        categories.put("teams", List.of("maxTeamSize", "inviteExpirySeconds"));
-        categories.put("merchants", List.of("merchantsEnabled", "merchantSpawnInterval", "merchantLifetime",
-                "merchantMinDistance", "merchantMaxDistance", "merchantSpawnChance",
-                "merchantLimited", "merchantMinStaySeconds", "merchantMaxStaySeconds",
-                "merchantSpawnParticles", "merchantDespawnParticles",
-                "merchantMinItems", "merchantMaxItems", "merchantShowAllItems",
-                "merchantRotationSpeed", "merchantBobHeight", "merchantBobSpeed",
-                "merchantHeadItemCycleInterval",
-                "wanderingMerchantPoolId", "wanderingMerchantType", "wanderingMerchantMaxCount"));
-        categories.put("upgrade", List.of("upgradeTimeoutSeconds", "upgradeReminderIntervalSeconds"));
-        categories.put("scoreboard", List.of("scoreboardEnabled", "scoreboardTitle", "scoreboardUpdateInterval"));
-        categories.put("worldSelection", List.of("worldSelectionEnabled", "autoOpenWorldGui", "defaultTrackingRadius"));
-        categories.put("overheadDisplay", List.of("overheadDisplayEnabled", "overheadDisplayYOffset", "overheadDisplayUpdateTicks"));
-        categories.put("feedback", List.of("rewardDisplayMode", "rewardStackingEnabled", "rewardStackingTimeoutSeconds",
-                "upgradeReminderDisplayMode", "upgradeReminderFlashIntervalTicks",
-                "soundXpGained", "soundCoinGained", "soundPermaScoreGained",
-                "soundUpgradeAvailable", "soundUpgradeSelected", "soundKillReward",
-                "soundCountdownTick", "soundTeleport", "soundDeath", "soundRunStart"));
+        if (args.length <= 1) {
+            i18n.send(sender, "admin.config.categories",
+                    "categories", String.join(", ", getListCategories()));
+            return;
+        }
 
-        if (category != null && categories.containsKey(category)) {
-            // Show specific category
-            for (String propName : categories.get(category)) {
-                ConfigProperty<?> prop = properties.get(propName);
-                if (prop != null) {
-                    i18n.send(sender, "admin.config.list_entry",
-                            "property", propName,
-                            "value", String.valueOf(prop.get()),
-                            "type", prop.getTypeName());
+        Set<String> requested = new LinkedHashSet<>();
+        for (int i = 1; i < args.length; i++) {
+            requested.add(args[i].toLowerCase(Locale.ROOT));
+        }
+
+        boolean displayed = false;
+        if (requested.contains("all")) {
+            for (String category : categories.keySet()) {
+                if (displayCategory(sender, category)) {
+                    displayed = true;
                 }
             }
         } else {
-            // Show categories
+            for (String category : requested) {
+                if (displayCategory(sender, category)) {
+                    displayed = true;
+                }
+            }
+        }
+
+        if (!displayed) {
             i18n.send(sender, "admin.config.categories",
-                    "categories", String.join(", ", categories.keySet()));
+                    "categories", String.join(", ", getListCategories()));
+        }
+    }
+
+    private boolean displayCategory(CommandSender sender, String category) {
+        List<String> categoryProps = categories.get(category);
+        if (categoryProps == null) {
+            return false;
+        }
+
+        for (String propName : categoryProps) {
+            ConfigProperty<?> prop = properties.get(propName);
+            if (prop != null) {
+                i18n.send(sender, "admin.config.list_entry",
+                        "property", propName,
+                        "value", String.valueOf(prop.get()),
+                        "type", prop.getTypeName());
+            }
+        }
+
+        if ("stage".equals(category)) {
+            listStageGroups(sender);
+        }
+        return true;
+    }
+
+    private void listStageGroups(CommandSender sender) {
+        List<ConfigService.StageGroupConfig> groups = config.getStageGroups();
+        if (groups == null || groups.isEmpty()) {
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", "stage.groups",
+                    "value", "(empty)",
+                    "type", "list");
+            return;
+        }
+
+        for (ConfigService.StageGroupConfig group : groups) {
+            String prefix = "stage." + group.groupId;
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".displayName",
+                    "value", String.valueOf(group.displayName),
+                    "type", "string");
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".worlds",
+                    "value", group.worldNames == null ? "" : String.join(", ", group.worldNames),
+                    "type", "list");
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".startEnemyLevel",
+                    "value", String.valueOf(group.startEnemyLevel),
+                    "type", "int");
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".requiredBatteries",
+                    "value", String.valueOf(group.requiredBatteries),
+                    "type", "int");
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".clearRewardCoins",
+                    "value", String.valueOf(group.clearRewardCoins),
+                    "type", "int");
+            i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".clearRewardPermaScore",
+                    "value", String.valueOf(group.clearRewardPermaScore),
+                    "type", "int");
         }
     }
 
@@ -291,37 +603,68 @@ public class ConfigSubCommand implements SubCommand {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            String partial = args[0].toLowerCase();
+            String partial = args[0].toLowerCase(Locale.ROOT);
             for (String action : List.of("get", "set", "list")) {
                 if (action.startsWith(partial)) {
                     completions.add(action);
                 }
             }
         } else if (args.length == 2) {
-            String action = args[0].toLowerCase();
-            String partial = args[1].toLowerCase();
+            String action = args[0].toLowerCase(Locale.ROOT);
+            String partial = args[1].toLowerCase(Locale.ROOT);
 
             if (action.equals("get") || action.equals("set")) {
                 for (String propName : properties.keySet()) {
-                    if (propName.toLowerCase().startsWith(partial)) {
+                    if (propName.toLowerCase(Locale.ROOT).startsWith(partial)) {
                         completions.add(propName);
                     }
                 }
+                for (String stagePropName : getStageDynamicPropertyNames()) {
+                    if (stagePropName.toLowerCase(Locale.ROOT).startsWith(partial)) {
+                        completions.add(stagePropName);
+                    }
+                }
             } else if (action.equals("list")) {
-                for (String cat : List.of("teleport", "timing", "spawning", "rewards", "progression", "teams", "merchants", "upgrade", "scoreboard", "worldSelection", "overheadDisplay", "feedback")) {
-                    if (cat.startsWith(partial)) {
-                        completions.add(cat);
+                for (String category : getListCategories()) {
+                    if (category.startsWith(partial)) {
+                        completions.add(category);
                     }
                 }
             }
-        } else if (args.length == 3) {
-            String action = args[0].toLowerCase();
-            String propName = args[1];
+        } else {
+            String action = args[0].toLowerCase(Locale.ROOT);
 
             if (action.equals("set")) {
-                ConfigProperty<?> prop = properties.get(propName);
-                if (prop instanceof BooleanProperty) {
-                    completions.addAll(List.of("true", "false"));
+                String propName = args[1];
+                if (isStageDynamicProperty(propName)) {
+                    String partial = args[args.length - 1].toLowerCase(Locale.ROOT);
+                    if (propName.toLowerCase(Locale.ROOT).endsWith(".worlds")) {
+                        if ("any".startsWith(partial)) {
+                            completions.add("any");
+                        }
+                        for (var worldConfig : plugin.getConfigService().getCombatWorlds()) {
+                            if (worldConfig.name.toLowerCase(Locale.ROOT).startsWith(partial)) {
+                                completions.add(worldConfig.name);
+                            }
+                        }
+                    }
+                } else if (args.length == 3) {
+                    ConfigProperty<?> prop = properties.get(propName);
+                    if (prop instanceof BooleanProperty) {
+                        completions.addAll(List.of("true", "false"));
+                    }
+                }
+            } else if (action.equals("list")) {
+                String partial = args[args.length - 1].toLowerCase(Locale.ROOT);
+                Set<String> used = new LinkedHashSet<>();
+                for (int i = 1; i < args.length - 1; i++) {
+                    used.add(args[i].toLowerCase(Locale.ROOT));
+                }
+
+                for (String category : getListCategories()) {
+                    if (!used.contains(category) && category.startsWith(partial)) {
+                        completions.add(category);
+                    }
                 }
             }
         }
@@ -329,10 +672,53 @@ public class ConfigSubCommand implements SubCommand {
         return completions;
     }
 
+    private List<String> getListCategories() {
+        List<String> result = new ArrayList<>(categories.keySet());
+        result.add("all");
+        return result;
+    }
+
+    private List<String> getStageDynamicPropertyNames() {
+        List<String> props = new ArrayList<>();
+        List<ConfigService.StageGroupConfig> groups = config.getStageGroups();
+        if (groups == null) {
+            return props;
+        }
+        for (ConfigService.StageGroupConfig group : groups) {
+            String prefix = "stage." + group.groupId + ".";
+            for (String field : STAGE_DYNAMIC_FIELDS) {
+                props.add(prefix + field);
+            }
+        }
+        return props;
+    }
+
+    private boolean isStageDynamicProperty(String propertyName) {
+        return propertyName != null && propertyName.toLowerCase(Locale.ROOT).startsWith("stage.");
+    }
+
+    private Optional<StagePropertyRef> parseStagePropertyRef(String propertyName) {
+        if (!isStageDynamicProperty(propertyName)) {
+            return Optional.empty();
+        }
+
+        String remaining = propertyName.substring("stage.".length());
+        int lastDot = remaining.lastIndexOf('.');
+        if (lastDot <= 0 || lastDot >= remaining.length() - 1) {
+            return Optional.empty();
+        }
+
+        String groupId = remaining.substring(0, lastDot);
+        String field = remaining.substring(lastDot + 1).toLowerCase(Locale.ROOT);
+        return Optional.of(new StagePropertyRef(groupId, field));
+    }
+
     @Override
     public String getPermission() {
         return "vrs.admin.config";
     }
+
+    private record StagePropertyRef(String groupId, String field) {}
 
     // ==================== Property Type Classes ====================
 

@@ -19,6 +19,7 @@ public record SpawnContext(
         int nearbyPlayerCount,
         int nearbyMobCount,
         long runDurationSeconds,
+        int minEnemyLevel,
         LineOfSightChecker losChecker
 ) {
     /**

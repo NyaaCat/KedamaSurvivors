@@ -113,6 +113,54 @@ worldSelection:
   autoOpenAfterHelmet: true  # Automatically open world selection GUI after helmet selection
 
 # ============================================================
+# Stage Progression (Segmented combat)
+# ============================================================
+# The team enters maps by stage order. Each stage:
+# - Uses a random map from "worlds"
+# - Applies a minimum enemy level
+# - Requires charging N batteries before extraction
+# - Grants fixed clear rewards to each team member
+# - A world name can only appear in one stage group
+stageProgression:
+  groups:
+    - id: "stage_1"
+      displayName: "第一阶段"
+      worlds: []               # Empty = any enabled combat world
+      startEnemyLevel: 1
+      requiredBatteries: 1
+      clearRewardCoins: 100
+      clearRewardPermaScore: 10
+  finalBonus:
+    coins: 300
+    permaScore: 30
+
+# ============================================================
+# Battery Objective
+# ============================================================
+battery:
+  enabled: true
+  spawn:
+    intervalSeconds: 20
+    chance: 0.05
+    minDistance: 35.0
+    maxDistance: 90.0
+    verticalRange: 10
+  charge:
+    radius: 8.0
+    basePercentPerSecond: 1.0
+    extraPlayerPercentPerSecond: 0.1
+    updateTicks: 10
+  display:
+    material: BEACON
+    customModelData: 0
+    name: "§b能量电池"
+    showRangeParticles: true
+  surge:
+    enabled: true
+    intervalSeconds: 5
+    mobCount: 6
+
+# ============================================================
 # Spawn Point Tracking
 # ============================================================
 # Tracks player/mob density at spawn points for intelligent spawn distribution

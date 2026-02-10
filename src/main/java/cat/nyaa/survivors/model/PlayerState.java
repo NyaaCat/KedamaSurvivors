@@ -162,10 +162,15 @@ public class PlayerState {
         runLevel = 1;  // Reset to 1 at start of each run
         coinsEarned = 0;  // Reset coins earned
         runId = null;
-        // Reset starter selections so player can re-select after death
+        ready = false;
+    }
+
+    /**
+     * Clears starter selections explicitly.
+     */
+    public void clearStarterSelections() {
         starterWeaponOptionId = null;
         starterHelmetOptionId = null;
-        ready = false;
     }
 
     /**
@@ -175,8 +180,7 @@ public class PlayerState {
         resetRunState();
         mode = PlayerMode.LOBBY;
         ready = false;
-        starterWeaponOptionId = null;
-        starterHelmetOptionId = null;
+        clearStarterSelections();
         cooldownUntilMillis = 0;
         disconnectedAtMillis = 0;
         invulnerableUntilMillis = 0;

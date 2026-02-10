@@ -143,39 +143,53 @@ public class StatsService {
 
     /**
      * Records the end of a run for a player. Finalizes run stats.
-     *
-     * @param playerId The player ending the run
+     * Returns false if there is no active tracked run for this player.
      */
-    public void recordRunEnd(UUID playerId) {
+    public boolean recordRunEnd(UUID playerId) {
+        return finalizeRun(playerId, false);
+    }
+
+    /**
+     * Finalizes a tracked run as failed (quit/disconnect wipe/failure cases).
+     * Returns false if there is no active tracked run for this player.
+     */
+    public boolean recordRunFailure(UUID playerId) {
+        return finalizeRun(playerId, true);
+    }
+
+    private boolean finalizeRun(UUID playerId, boolean failed) {
+        Long startTime = runStartTimes.get(playerId);
+        if (startTime == null) {
+            // Already finalized (or never started) - avoid double counting.
+            return false;
+        }
+
         Optional<PlayerState> stateOpt = state.getPlayer(playerId);
-        if (stateOpt.isEmpty()) return;
+        if (stateOpt.isEmpty()) {
+            clearTransientData(playerId);
+            return false;
+        }
 
         PlayerStats stats = stateOpt.get().getStats();
 
-        // Calculate run duration
-        Long startTime = runStartTimes.get(playerId);
-        if (startTime != null) {
-            long durationSeconds = (System.currentTimeMillis() - startTime) / 1000;
+        long durationSeconds = Math.max(0L, (System.currentTimeMillis() - startTime) / 1000L);
+        stats.addRunTime(durationSeconds);
+        stats.updateLongestRunTime(durationSeconds);
+        stats.updateShortestRunTime(durationSeconds);
 
-            // Update time stats
-            stats.addRunTime(durationSeconds);
-            stats.updateLongestRunTime(durationSeconds);
-            stats.updateShortestRunTime(durationSeconds);
-        }
-
-        // Update highest kills in run
         int killsThisRun = runKillCounts.getOrDefault(playerId, 0);
         stats.updateHighestKillsInRun(killsThisRun);
 
-        // Update most deaths in run
         int deathsThisRun = runDeathCounts.getOrDefault(playerId, 0);
         stats.updateMostDeathsInRun(deathsThisRun);
 
-        // Increment run count
         stats.incrementRunCount();
+        if (failed) {
+            stats.incrementFailedRunCount();
+        }
 
-        // Clear transient data
         clearTransientData(playerId);
+        return true;
     }
 
     // ==================== Level Tracking ====================
@@ -206,6 +220,54 @@ public class StatsService {
 
         PlayerStats stats = stateOpt.get().getStats();
         stats.updateHighestTeamLevel(teamLevel);
+    }
+
+    // ==================== Segmented Progression Tracking ====================
+
+    /**
+     * Records completion of one battery objective by a player.
+     */
+    public void recordBatteryCompleted(UUID playerId) {
+        Optional<PlayerState> stateOpt = state.getPlayer(playerId);
+        if (stateOpt.isEmpty()) return;
+        stateOpt.get().getStats().incrementTotalBatteriesCompleted();
+    }
+
+    /**
+     * Records stage clear stats and stage-clear reward totals.
+     *
+     * @param stageIndexOneBased 1-based stage index for user-facing progression
+     */
+    public void recordStageClear(UUID playerId, int stageIndexOneBased, int rewardCoins, int rewardPermaScore) {
+        Optional<PlayerState> stateOpt = state.getPlayer(playerId);
+        if (stateOpt.isEmpty()) return;
+
+        PlayerStats stats = stateOpt.get().getStats();
+        stats.incrementTotalStageClears();
+        stats.updateHighestStageCleared(stageIndexOneBased);
+        stats.addStageRewardCoins(rewardCoins);
+        stats.addStageRewardPermaScore(rewardPermaScore);
+    }
+
+    /**
+     * Records reward totals granted by progression systems (e.g. final bonus).
+     */
+    public void recordStageReward(UUID playerId, int rewardCoins, int rewardPermaScore) {
+        Optional<PlayerState> stateOpt = state.getPlayer(playerId);
+        if (stateOpt.isEmpty()) return;
+
+        PlayerStats stats = stateOpt.get().getStats();
+        stats.addStageRewardCoins(rewardCoins);
+        stats.addStageRewardPermaScore(rewardPermaScore);
+    }
+
+    /**
+     * Records one full campaign completion (final stage clear).
+     */
+    public void recordCampaignCompletion(UUID playerId) {
+        Optional<PlayerState> stateOpt = state.getPlayer(playerId);
+        if (stateOpt.isEmpty()) return;
+        stateOpt.get().getStats().incrementCampaignCompletions();
     }
 
     // ==================== Utility ====================

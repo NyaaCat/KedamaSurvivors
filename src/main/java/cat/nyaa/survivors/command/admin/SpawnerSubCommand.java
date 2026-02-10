@@ -8,7 +8,6 @@ import cat.nyaa.survivors.service.AdminConfigService;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -131,20 +130,8 @@ public class SpawnerSubCommand implements SubCommand {
                 }
             }
             case "worlds" -> {
-                // Parse comma-separated world list or "any"
-                String worldsArg = args[4];
-                List<String> worlds;
-                if ("any".equalsIgnoreCase(worldsArg)) {
-                    worlds = List.of("any");
-                } else {
-                    worlds = Arrays.stream(worldsArg.split(","))
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .toList();
-                    if (worlds.isEmpty()) {
-                        worlds = List.of("any");
-                    }
-                }
+                // Parse comma-separated and/or space-separated world list or "any"
+                List<String> worlds = parseWorldArguments(args, 4);
                 boolean success = adminConfig.setArchetypeAllowedWorlds(id, worlds);
                 if (success) {
                     i18n.send(sender, "admin.spawner.worlds_set", "id", id, "worlds", String.join(", ", worlds));
@@ -391,10 +378,10 @@ public class SpawnerSubCommand implements SubCommand {
                     }
                 }
             }
-        } else if (args.length == 5) {
+        } else if (args.length >= 5) {
             String subAction = args[1].toLowerCase();
             String property = args[2].toLowerCase();
-            String partial = args[4].toLowerCase();
+            String partial = args[args.length - 1].toLowerCase();
 
             if (subAction.equals("set") && property.equals("entitytype")) {
                 // Suggest common entity types
@@ -428,5 +415,26 @@ public class SpawnerSubCommand implements SubCommand {
 
     private boolean isValidId(String id) {
         return id != null && id.matches("[a-zA-Z0-9_]+");
+    }
+
+    private List<String> parseWorldArguments(String[] args, int startIndex) {
+        List<String> worlds = new ArrayList<>();
+
+        for (int i = startIndex; i < args.length; i++) {
+            String part = args[i];
+            for (String token : part.split(",")) {
+                String world = token.trim();
+                if (world.isEmpty()) continue;
+                if ("any".equalsIgnoreCase(world)) {
+                    return List.of("any");
+                }
+                worlds.add(world);
+            }
+        }
+
+        if (worlds.isEmpty()) {
+            return List.of("any");
+        }
+        return worlds;
     }
 }
