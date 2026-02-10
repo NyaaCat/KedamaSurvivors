@@ -1,18 +1,25 @@
 package cat.nyaa.survivors.service;
 
 import cat.nyaa.survivors.KedamaSurvivorsPlugin;
+import cat.nyaa.survivors.config.ConfigService;
+import cat.nyaa.survivors.merchant.MerchantItemPool;
+import cat.nyaa.survivors.merchant.WeightedShopItem;
 import cat.nyaa.survivors.model.PlayerMode;
 import cat.nyaa.survivors.model.PlayerState;
 import cat.nyaa.survivors.model.RunState;
 import cat.nyaa.survivors.model.TeamState;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
@@ -154,6 +161,7 @@ public class BatteryService {
         }
 
         battery.interactedPlayers.add(player.getUniqueId());
+        applyChargeCompletePlayerSuppression(run, battery, player.getUniqueId());
         plugin.getI18nService().send(player, "info.battery_interacted");
 
         int requiredCount = getRequiredInteractCount(run);
@@ -270,7 +278,9 @@ public class BatteryService {
         if (!battery.charged && battery.progress >= 100.0) {
             battery.progress = 100.0;
             battery.charged = true;
+            battery.chargedAtMillis = System.currentTimeMillis();
             notifyRunPlayers(run, "info.battery_charged");
+            onBatteryCharged(run, battery);
         }
 
         int requiredCount = getRequiredInteractCount(run);
@@ -402,6 +412,217 @@ public class BatteryService {
         return Math.max(1, count);
     }
 
+    private List<UUID> getOnlineRunParticipants(RunState run) {
+        List<UUID> participants = new ArrayList<>();
+        for (UUID participantId : run.getParticipants()) {
+            Optional<PlayerState> psOpt = state.getPlayer(participantId);
+            if (psOpt.isEmpty() || psOpt.get().getMode() != PlayerMode.IN_RUN) continue;
+
+            Player p = Bukkit.getPlayer(participantId);
+            if (p == null || !p.isOnline()) continue;
+            if (!p.getWorld().getName().equalsIgnoreCase(run.getWorldName())) continue;
+            participants.add(participantId);
+        }
+        return participants;
+    }
+
+    private void onBatteryCharged(RunState run, BatteryInstance battery) {
+        applyChargeCompleteSpawnSuppression(run, battery.location);
+        triggerChargeCompleteRewardBurst(run, battery.location);
+        triggerChargeCompleteEffects(run, battery.location);
+    }
+
+    private void applyChargeCompleteSpawnSuppression(RunState run, Location center) {
+        ConfigService cfg = plugin.getConfigService();
+        if (!cfg.isBatteryChargeCompleteSpawnSuppressionEnabled()) {
+            return;
+        }
+
+        long durationMs = Math.max(0, cfg.getBatteryChargeCompleteSpawnSuppressionSeconds()) * 1000L;
+        if (durationMs <= 0L) {
+            return;
+        }
+
+        SpawnerService spawner = plugin.getSpawnerService();
+        if (spawner == null) {
+            return;
+        }
+
+        double radius = Math.max(0.1, cfg.getBatteryChargeCompleteSpawnSuppressionRadius());
+        spawner.addSuppressionZone(run.getRunId(), center, radius, durationMs);
+    }
+
+    private void applyChargeCompletePlayerSuppression(RunState run, BatteryInstance battery, UUID playerId) {
+        if (playerId == null || battery == null || !battery.charged) {
+            return;
+        }
+
+        ConfigService cfg = plugin.getConfigService();
+        if (!cfg.isBatteryChargeCompleteSpawnSuppressionEnabled() || !cfg.isBatteryChargeCompleteSuppressParticipants()) {
+            return;
+        }
+
+        long durationMs = Math.max(0, cfg.getBatteryChargeCompleteSpawnSuppressionSeconds()) * 1000L;
+        if (durationMs <= 0L) {
+            return;
+        }
+
+        SpawnerService spawner = plugin.getSpawnerService();
+        if (spawner == null) {
+            return;
+        }
+
+        long chargedAt = battery.chargedAtMillis > 0L ? battery.chargedAtMillis : System.currentTimeMillis();
+        long elapsed = Math.max(0L, System.currentTimeMillis() - chargedAt);
+        long remaining = durationMs - elapsed;
+        if (remaining <= 0L) {
+            return;
+        }
+
+        spawner.suppressPlayersForRun(run.getRunId(), List.of(playerId), remaining);
+    }
+
+    private void triggerChargeCompleteRewardBurst(RunState run, Location center) {
+        ConfigService cfg = plugin.getConfigService();
+        if (!cfg.isBatteryChargeCompleteRewardBurstEnabled()) {
+            return;
+        }
+
+        MerchantService merchantService = plugin.getMerchantService();
+        if (merchantService == null) {
+            return;
+        }
+
+        Optional<MerchantItemPool> poolOpt = resolveRewardPool();
+        if (poolOpt.isEmpty()) {
+            return;
+        }
+        MerchantItemPool pool = poolOpt.get();
+        if (pool.isEmpty()) {
+            return;
+        }
+
+        int participants = getOnlineRunParticipants(run).size();
+        if (participants <= 0) {
+            return;
+        }
+        int totalDrops = Math.max(0, cfg.getBatteryChargeCompleteRewardBaseCount()) * participants;
+        if (totalDrops <= 0) {
+            return;
+        }
+
+        int burstTicks = Math.max(1, cfg.getBatteryChargeCompleteRewardBurstTicks());
+        int lifetimeSeconds = cfg.getBatteryChargeCompleteRewardLifetimeSeconds();
+        double scatterRadius = Math.max(0.5,
+                Math.min(cfg.getBatteryChargeRadius(), cfg.getBatteryChargeCompleteRewardScatterRadius()));
+
+        int perTick = totalDrops / burstTicks;
+        int remainder = totalDrops % burstTicks;
+
+        for (int tick = 0; tick < burstTicks; tick++) {
+            int count = perTick + (tick < remainder ? 1 : 0);
+            if (count <= 0) continue;
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!run.isActive()) return;
+                spawnRewardDropBatch(run, center, pool, count, scatterRadius, lifetimeSeconds, merchantService);
+            }, tick);
+        }
+    }
+
+    private Optional<MerchantItemPool> resolveRewardPool() {
+        AdminConfigService adminConfig = plugin.getAdminConfigService();
+        if (adminConfig == null) {
+            return Optional.empty();
+        }
+
+        String poolId = plugin.getConfigService().getBatteryChargeCompleteRewardPoolId();
+        if (poolId == null || poolId.isBlank()) {
+            poolId = plugin.getConfigService().getWanderingMerchantPoolId();
+        }
+
+        if (poolId != null && !poolId.isBlank()) {
+            Optional<MerchantItemPool> poolOpt = adminConfig.getMerchantPool(poolId.trim());
+            if (poolOpt.isPresent()) {
+                return poolOpt;
+            }
+        }
+
+        return adminConfig.getRandomMerchantPool();
+    }
+
+    private void spawnRewardDropBatch(RunState run, Location center, MerchantItemPool pool, int count,
+                                      double scatterRadius, int lifetimeSeconds, MerchantService merchantService) {
+        for (int i = 0; i < count; i++) {
+            WeightedShopItem selected = pool.selectSingle();
+            if (selected == null) continue;
+
+            Location spawnLoc = sampleRewardDropLocation(center, scatterRadius);
+            if (spawnLoc == null || spawnLoc.getWorld() == null) continue;
+
+            if (merchantService.spawnFreePickupForRun(
+                    run.getRunId(),
+                    spawnLoc,
+                    selected.getItemTemplateId(),
+                    lifetimeSeconds
+            ) != null) {
+                spawnLoc.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING,
+                        spawnLoc.clone().add(0, 1.0, 0), 8, 0.2, 0.3, 0.2, 0.01);
+            }
+        }
+    }
+
+    private Location sampleRewardDropLocation(Location center, double radius) {
+        Location sampled = plugin.getWorldService().sampleSpawnNear(center, 0.5, Math.max(0.5, radius));
+        if (sampled != null) {
+            return sampled.clone().add(0, 0.05, 0);
+        }
+        return center.clone().add(0, 0.05, 0);
+    }
+
+    private void triggerChargeCompleteEffects(RunState run, Location center) {
+        if (center.getWorld() == null) return;
+
+        ConfigService cfg = plugin.getConfigService();
+        if (cfg.isBatteryChargeCompleteFireworkEnabled()) {
+            spawnChargeCompleteFirework(center);
+        }
+
+        ConfigService.SoundConfig sound = cfg.getBatteryChargeCompleteSound();
+        if (sound != null && sound.sound() != null && !sound.sound().isEmpty()) {
+            for (UUID participantId : run.getParticipants()) {
+                Player p = Bukkit.getPlayer(participantId);
+                if (p == null || !p.isOnline()) continue;
+                if (!p.getWorld().equals(center.getWorld())) continue;
+                p.playSound(center, sound.sound(), sound.volume(), sound.pitch());
+            }
+        }
+    }
+
+    private void spawnChargeCompleteFirework(Location center) {
+        World world = center.getWorld();
+        if (world == null) return;
+
+        Firework firework = world.spawn(center.clone().add(0, 0.5, 0), Firework.class, fw -> {
+            FireworkMeta meta = fw.getFireworkMeta();
+            meta.setPower(0);
+            meta.addEffect(FireworkEffect.builder()
+                    .with(FireworkEffect.Type.BURST)
+                    .withColor(Color.AQUA, Color.LIME)
+                    .withFade(Color.WHITE)
+                    .flicker(true)
+                    .trail(true)
+                    .build());
+            fw.setFireworkMeta(meta);
+        });
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (firework.isValid()) {
+                firework.detonate();
+            }
+        }, 1L);
+    }
+
     private void updateBatteryName(BatteryInstance battery, boolean charging, int players, int enemies,
                                    int interacted, int requiredInteract) {
         if (battery.stand == null || !battery.stand.isValid()) return;
@@ -511,6 +732,7 @@ public class BatteryService {
 
         private double progress;
         private boolean charged;
+        private long chargedAtMillis;
         private long lastUpdateMillis;
 
         private BatteryInstance(UUID batteryId, UUID runId, ArmorStand stand, Location location) {

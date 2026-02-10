@@ -886,6 +886,11 @@ public class RunService {
             batteryService.stopForRun(run.getRunId());
         }
 
+        // Clear temporary spawn suppression windows bound to this run
+        if (plugin.getSpawnerService() != null) {
+            plugin.getSpawnerService().clearSuppressionForRun(run.getRunId());
+        }
+
         // Progression reset on failures
         if (reason == EndReason.WIPE || reason == EndReason.DEATH || reason == EndReason.DISCONNECT || reason == EndReason.FORCED) {
             teamOpt.ifPresent(TeamState::resetProgression);

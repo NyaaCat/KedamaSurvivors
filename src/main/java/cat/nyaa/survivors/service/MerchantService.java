@@ -355,6 +355,60 @@ public class MerchantService {
         return merchant;
     }
 
+    /**
+     * Spawns a temporary free pickup merchant for a run.
+     * The spawned merchant is SINGLE type, costs 0 coins, and despawns after one purchase
+     * or after lifetime expires.
+     *
+     * @param runId run association for cleanup on run end
+     * @param location spawn location
+     * @param itemTemplateId item template ID to grant
+     * @param lifetimeSeconds auto-despawn lifetime in seconds (<=0 means no timed despawn)
+     * @return spawned merchant instance, or null if template not found/spawn failed
+     */
+    public MerchantInstance spawnFreePickupForRun(UUID runId, Location location, String itemTemplateId, int lifetimeSeconds) {
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+        if (itemTemplateId == null || itemTemplateId.isBlank()) {
+            return null;
+        }
+        if (adminConfig.getItemTemplate(itemTemplateId).isEmpty()) {
+            return null;
+        }
+
+        MerchantItemPool tempPool = new MerchantItemPool("battery_drop");
+        tempPool.addItem(new WeightedShopItem(itemTemplateId, 1.0, 0));
+
+        MerchantInstance merchant = spawnMerchant(
+                location,
+                MerchantType.SINGLE,
+                MerchantBehavior.WANDERING,
+                tempPool,
+                true,
+                false,
+                i18n.get("merchant.shop_nametag")
+        );
+
+        if (merchant == null) {
+            return null;
+        }
+
+        merchant.setRunId(runId);
+        if (lifetimeSeconds > 0) {
+            merchant.setDespawnTimeMillis(System.currentTimeMillis() + lifetimeSeconds * 1000L);
+        } else {
+            merchant.setDespawnTimeMillis(0L);
+        }
+
+        if (runId != null) {
+            runMerchants.computeIfAbsent(runId, id -> ConcurrentHashMap.newKeySet())
+                    .add(merchant.getInstanceId());
+        }
+
+        return merchant;
+    }
+
     // ==================== Merchant Interaction ====================
 
     /**

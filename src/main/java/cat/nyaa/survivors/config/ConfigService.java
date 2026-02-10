@@ -254,6 +254,18 @@ public class ConfigService {
     private boolean batterySurgeEnabled;
     private int batterySurgeIntervalSeconds;
     private int batterySurgeMobCount;
+    private boolean batteryChargeCompleteRewardBurstEnabled;
+    private String batteryChargeCompleteRewardPoolId;
+    private int batteryChargeCompleteRewardBaseCount;
+    private int batteryChargeCompleteRewardBurstTicks;
+    private double batteryChargeCompleteRewardScatterRadius;
+    private int batteryChargeCompleteRewardLifetimeSeconds;
+    private boolean batteryChargeCompleteSpawnSuppressionEnabled;
+    private int batteryChargeCompleteSpawnSuppressionSeconds;
+    private double batteryChargeCompleteSpawnSuppressionRadius;
+    private boolean batteryChargeCompleteSuppressParticipants;
+    private boolean batteryChargeCompleteFireworkEnabled;
+    private SoundConfig batteryChargeCompleteSound;
 
     public ConfigService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -767,6 +779,22 @@ public class ConfigService {
         batterySurgeEnabled = config.getBoolean("battery.surge.enabled", true);
         batterySurgeIntervalSeconds = config.getInt("battery.surge.intervalSeconds", 5);
         batterySurgeMobCount = config.getInt("battery.surge.mobCount", 6);
+
+        batteryChargeCompleteRewardBurstEnabled = config.getBoolean("battery.chargeComplete.rewardBurst.enabled", true);
+        batteryChargeCompleteRewardPoolId = config.getString("battery.chargeComplete.rewardBurst.poolId", "");
+        batteryChargeCompleteRewardBaseCount = config.getInt("battery.chargeComplete.rewardBurst.baseCount", 2);
+        batteryChargeCompleteRewardBurstTicks = config.getInt("battery.chargeComplete.rewardBurst.burstTicks", 8);
+        batteryChargeCompleteRewardScatterRadius = config.getDouble("battery.chargeComplete.rewardBurst.scatterRadius", 8.0);
+        batteryChargeCompleteRewardLifetimeSeconds = config.getInt("battery.chargeComplete.rewardBurst.lifetimeSeconds", 45);
+
+        batteryChargeCompleteSpawnSuppressionEnabled = config.getBoolean("battery.chargeComplete.spawnSuppression.enabled", true);
+        batteryChargeCompleteSpawnSuppressionSeconds = config.getInt("battery.chargeComplete.spawnSuppression.durationSeconds", 30);
+        batteryChargeCompleteSpawnSuppressionRadius = config.getDouble("battery.chargeComplete.spawnSuppression.radius", 32.0);
+        batteryChargeCompleteSuppressParticipants = config.getBoolean("battery.chargeComplete.spawnSuppression.affectParticipants", true);
+
+        batteryChargeCompleteFireworkEnabled = config.getBoolean("battery.chargeComplete.effects.fireworkEnabled", true);
+        batteryChargeCompleteSound = parseSoundConfig(
+                config.getString("battery.chargeComplete.effects.sound", "minecraft:entity.player.levelup 1.0 1.2"));
     }
 
     // ==================== Utility Methods ====================
@@ -1042,6 +1070,18 @@ public class ConfigService {
     public boolean isBatterySurgeEnabled() { return batterySurgeEnabled; }
     public int getBatterySurgeIntervalSeconds() { return batterySurgeIntervalSeconds; }
     public int getBatterySurgeMobCount() { return batterySurgeMobCount; }
+    public boolean isBatteryChargeCompleteRewardBurstEnabled() { return batteryChargeCompleteRewardBurstEnabled; }
+    public String getBatteryChargeCompleteRewardPoolId() { return batteryChargeCompleteRewardPoolId; }
+    public int getBatteryChargeCompleteRewardBaseCount() { return batteryChargeCompleteRewardBaseCount; }
+    public int getBatteryChargeCompleteRewardBurstTicks() { return batteryChargeCompleteRewardBurstTicks; }
+    public double getBatteryChargeCompleteRewardScatterRadius() { return batteryChargeCompleteRewardScatterRadius; }
+    public int getBatteryChargeCompleteRewardLifetimeSeconds() { return batteryChargeCompleteRewardLifetimeSeconds; }
+    public boolean isBatteryChargeCompleteSpawnSuppressionEnabled() { return batteryChargeCompleteSpawnSuppressionEnabled; }
+    public int getBatteryChargeCompleteSpawnSuppressionSeconds() { return batteryChargeCompleteSpawnSuppressionSeconds; }
+    public double getBatteryChargeCompleteSpawnSuppressionRadius() { return batteryChargeCompleteSpawnSuppressionRadius; }
+    public boolean isBatteryChargeCompleteSuppressParticipants() { return batteryChargeCompleteSuppressParticipants; }
+    public boolean isBatteryChargeCompleteFireworkEnabled() { return batteryChargeCompleteFireworkEnabled; }
+    public SoundConfig getBatteryChargeCompleteSound() { return batteryChargeCompleteSound; }
 
     // Feedback getters
     public String getRewardDisplayMode() { return rewardDisplayMode; }
@@ -1075,6 +1115,7 @@ public class ConfigService {
     public String getSoundTeleportStr() { return formatSoundConfig(soundTeleport); }
     public String getSoundDeathStr() { return formatSoundConfig(soundDeath); }
     public String getSoundRunStartStr() { return formatSoundConfig(soundRunStart); }
+    public String getBatteryChargeCompleteSoundStr() { return formatSoundConfig(batteryChargeCompleteSound); }
 
     /**
      * Formats a SoundConfig back to string format "sound volume pitch".
@@ -1285,6 +1326,40 @@ public class ConfigService {
     public void setBatterySurgeEnabled(boolean enabled) { this.batterySurgeEnabled = enabled; }
     public void setBatterySurgeIntervalSeconds(int seconds) { this.batterySurgeIntervalSeconds = Math.max(1, seconds); }
     public void setBatterySurgeMobCount(int mobCount) { this.batterySurgeMobCount = Math.max(0, mobCount); }
+    public void setBatteryChargeCompleteRewardBurstEnabled(boolean enabled) { this.batteryChargeCompleteRewardBurstEnabled = enabled; }
+    public void setBatteryChargeCompleteRewardPoolId(String poolId) {
+        this.batteryChargeCompleteRewardPoolId = poolId != null ? poolId.trim() : "";
+    }
+    public void setBatteryChargeCompleteRewardBaseCount(int baseCount) {
+        this.batteryChargeCompleteRewardBaseCount = Math.max(0, baseCount);
+    }
+    public void setBatteryChargeCompleteRewardBurstTicks(int burstTicks) {
+        this.batteryChargeCompleteRewardBurstTicks = Math.max(1, burstTicks);
+    }
+    public void setBatteryChargeCompleteRewardScatterRadius(double radius) {
+        this.batteryChargeCompleteRewardScatterRadius = Math.max(0.5, radius);
+    }
+    public void setBatteryChargeCompleteRewardLifetimeSeconds(int seconds) {
+        this.batteryChargeCompleteRewardLifetimeSeconds = Math.max(1, seconds);
+    }
+    public void setBatteryChargeCompleteSpawnSuppressionEnabled(boolean enabled) {
+        this.batteryChargeCompleteSpawnSuppressionEnabled = enabled;
+    }
+    public void setBatteryChargeCompleteSpawnSuppressionSeconds(int seconds) {
+        this.batteryChargeCompleteSpawnSuppressionSeconds = Math.max(0, seconds);
+    }
+    public void setBatteryChargeCompleteSpawnSuppressionRadius(double radius) {
+        this.batteryChargeCompleteSpawnSuppressionRadius = Math.max(0.0, radius);
+    }
+    public void setBatteryChargeCompleteSuppressParticipants(boolean suppressParticipants) {
+        this.batteryChargeCompleteSuppressParticipants = suppressParticipants;
+    }
+    public void setBatteryChargeCompleteFireworkEnabled(boolean enabled) {
+        this.batteryChargeCompleteFireworkEnabled = enabled;
+    }
+    public void setBatteryChargeCompleteSound(String sound) {
+        this.batteryChargeCompleteSound = parseSoundConfig(sound);
+    }
 
     // Upgrade
     public void setUpgradeTimeoutSeconds(int seconds) { this.upgradeTimeoutSeconds = seconds; }
@@ -1473,6 +1548,18 @@ public class ConfigService {
         config.set("battery.surge.enabled", batterySurgeEnabled);
         config.set("battery.surge.intervalSeconds", batterySurgeIntervalSeconds);
         config.set("battery.surge.mobCount", batterySurgeMobCount);
+        config.set("battery.chargeComplete.rewardBurst.enabled", batteryChargeCompleteRewardBurstEnabled);
+        config.set("battery.chargeComplete.rewardBurst.poolId", batteryChargeCompleteRewardPoolId);
+        config.set("battery.chargeComplete.rewardBurst.baseCount", batteryChargeCompleteRewardBaseCount);
+        config.set("battery.chargeComplete.rewardBurst.burstTicks", batteryChargeCompleteRewardBurstTicks);
+        config.set("battery.chargeComplete.rewardBurst.scatterRadius", batteryChargeCompleteRewardScatterRadius);
+        config.set("battery.chargeComplete.rewardBurst.lifetimeSeconds", batteryChargeCompleteRewardLifetimeSeconds);
+        config.set("battery.chargeComplete.spawnSuppression.enabled", batteryChargeCompleteSpawnSuppressionEnabled);
+        config.set("battery.chargeComplete.spawnSuppression.durationSeconds", batteryChargeCompleteSpawnSuppressionSeconds);
+        config.set("battery.chargeComplete.spawnSuppression.radius", batteryChargeCompleteSpawnSuppressionRadius);
+        config.set("battery.chargeComplete.spawnSuppression.affectParticipants", batteryChargeCompleteSuppressParticipants);
+        config.set("battery.chargeComplete.effects.fireworkEnabled", batteryChargeCompleteFireworkEnabled);
+        config.set("battery.chargeComplete.effects.sound", formatSoundConfig(batteryChargeCompleteSound));
 
         // Overhead Display
         config.set("overheadDisplay.enabled", overheadDisplayEnabled);

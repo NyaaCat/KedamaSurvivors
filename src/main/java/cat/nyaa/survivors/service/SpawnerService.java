@@ -54,6 +54,16 @@ public class SpawnerService {
      */
     private record MobCountCacheKey(String worldName, int chunkX, int chunkZ) {}
 
+    /**
+     * Temporary per-player spawn suppression state.
+     */
+    private record PlayerSuppression(UUID runId, long expiresAtMillis) {}
+
+    /**
+     * Temporary area-based spawn suppression state.
+     */
+    private record SpawnSuppressionZone(UUID runId, String worldName, Location center, double radius, long expiresAtMillis) {}
+
     // Main loop task ID
     private int taskId = -1;
 
@@ -62,6 +72,10 @@ public class SpawnerService {
 
     // Pending spawn plans that couldn't be executed due to per-tick limits
     private final List<SpawnPlan> pendingPlans = new ArrayList<>();
+
+    // Temporary spawn suppression (battery charge complete safe window)
+    private final Map<UUID, PlayerSuppression> suppressedPlayers = new ConcurrentHashMap<>();
+    private final List<SpawnSuppressionZone> suppressionZones = Collections.synchronizedList(new ArrayList<>());
 
     public SpawnerService(KedamaSurvivorsPlugin plugin) {
         this.plugin = plugin;
@@ -114,6 +128,11 @@ public class SpawnerService {
             Thread.currentThread().interrupt();
         }
 
+        suppressedPlayers.clear();
+        synchronized (suppressionZones) {
+            suppressionZones.clear();
+        }
+
         plugin.getLogger().info("Spawner service stopped");
     }
 
@@ -137,6 +156,55 @@ public class SpawnerService {
     public boolean isPaused(String worldName) {
         WorldSpawnerState worldState = worldStates.get(worldName);
         return worldState != null && worldState.isPaused();
+    }
+
+    /**
+     * Temporarily suppresses spawning for specific players in a run.
+     */
+    public void suppressPlayersForRun(UUID runId, Collection<UUID> playerIds, long durationMs) {
+        if (runId == null || playerIds == null || playerIds.isEmpty() || durationMs <= 0L) {
+            return;
+        }
+
+        long expiresAt = System.currentTimeMillis() + durationMs;
+        for (UUID playerId : playerIds) {
+            if (playerId == null) continue;
+            suppressedPlayers.merge(playerId, new PlayerSuppression(runId, expiresAt), (oldValue, newValue) -> {
+                if (!Objects.equals(oldValue.runId(), runId)) {
+                    return newValue;
+                }
+                return oldValue.expiresAtMillis() >= newValue.expiresAtMillis() ? oldValue : newValue;
+            });
+        }
+    }
+
+    /**
+     * Temporarily suppresses spawning inside a circular area in the run world.
+     */
+    public void addSuppressionZone(UUID runId, Location center, double radius, long durationMs) {
+        if (runId == null || center == null || center.getWorld() == null || durationMs <= 0L || radius <= 0.0) {
+            return;
+        }
+
+        long expiresAt = System.currentTimeMillis() + durationMs;
+        suppressionZones.add(new SpawnSuppressionZone(
+                runId,
+                center.getWorld().getName(),
+                center.clone(),
+                radius,
+                expiresAt
+        ));
+    }
+
+    /**
+     * Clears all temporary suppression entries for a run.
+     */
+    public void clearSuppressionForRun(UUID runId) {
+        if (runId == null) return;
+        suppressedPlayers.entrySet().removeIf(entry -> Objects.equals(entry.getValue().runId(), runId));
+        synchronized (suppressionZones) {
+            suppressionZones.removeIf(zone -> Objects.equals(zone.runId(), runId));
+        }
     }
 
     /**
@@ -187,6 +255,7 @@ public class SpawnerService {
      */
     private void executeSpawnTick() {
         if (!config.isSpawningEnabled()) return;
+        cleanupSuppressionState(System.currentTimeMillis());
 
         // First, execute any pending plans from previous tick
         if (!pendingPlans.isEmpty()) {
@@ -229,6 +298,7 @@ public class SpawnerService {
      */
     private List<SpawnPlan> filterValidPlans(List<SpawnPlan> plans) {
         double maxDistance = config.getMaxSpawnDistance() * 2; // Allow some buffer for player movement
+        long now = System.currentTimeMillis();
 
         return plans.stream().filter(plan -> {
             Player player = Bukkit.getPlayer(plan.targetPlayerId());
@@ -240,6 +310,9 @@ public class SpawnerService {
             // Check player is still in a run
             Optional<PlayerState> playerStateOpt = state.getPlayer(plan.targetPlayerId());
             if (playerStateOpt.isEmpty() || playerStateOpt.get().getMode() != PlayerMode.IN_RUN) return false;
+            UUID runId = playerStateOpt.get().getRunId();
+            if (runId != null && isPlayerSuppressed(runId, plan.targetPlayerId(), now)) return false;
+            if (runId != null && isLocationSuppressed(runId, plan.spawnLocation(), now)) return false;
 
             // Check player hasn't moved too far from the planned spawn location
             if (player.getLocation().distance(plan.spawnLocation()) > maxDistance) return false;
@@ -257,6 +330,7 @@ public class SpawnerService {
         mobCountCache.clear();
 
         List<SpawnContext> contexts = new ArrayList<>();
+        long now = System.currentTimeMillis();
 
         for (RunState run : state.getActiveRuns()) {
             String worldName = run.getWorldName();
@@ -278,6 +352,7 @@ public class SpawnerService {
 
                 PlayerState playerState = playerStateOpt.get();
                 if (playerState.getMode() != PlayerMode.IN_RUN) continue;
+                if (isPlayerSuppressed(run.getRunId(), playerId, now)) continue;
 
                 // Calculate nearby mob count
                 int nearbyMobs = getMobCountNear(player.getLocation(), config.getMobCountRadius());
@@ -361,7 +436,7 @@ public class SpawnerService {
                 }
 
                 // Sample spawn location with LOS validation
-                Location spawnLoc = sampleSpawnLocation(ctx.playerLocation(), ctx.losChecker());
+                Location spawnLoc = sampleSpawnLocation(ctx.runId(), ctx.playerLocation(), ctx.losChecker());
                 if (spawnLoc == null) continue;
 
                 playerPlans.add(new SpawnPlan(
@@ -554,7 +629,7 @@ public class SpawnerService {
      * @param losChecker LOS checker for validating spawn positions (may be null if disabled)
      * @return A valid spawn location, or null if none found
      */
-    private Location sampleSpawnLocation(Location playerLoc, LineOfSightChecker losChecker) {
+    private Location sampleSpawnLocation(UUID runId, Location playerLoc, LineOfSightChecker losChecker) {
         World world = playerLoc.getWorld();
         if (world == null) return null;
 
@@ -578,6 +653,9 @@ public class SpawnerService {
                 // Check line-of-sight to player if LOS validation is enabled
                 if (losChecker != null && !losChecker.hasLineOfSight(candidate, playerLoc)) {
                     continue; // Blocked, try another location
+                }
+                if (runId != null && isLocationSuppressed(runId, candidate, System.currentTimeMillis())) {
+                    continue; // Suppressed zone, try another location
                 }
                 return candidate;
             }
@@ -749,6 +827,57 @@ public class SpawnerService {
         }
 
         return null;
+    }
+
+    private void cleanupSuppressionState(long now) {
+        suppressedPlayers.entrySet().removeIf(entry -> entry.getValue().expiresAtMillis() <= now);
+        synchronized (suppressionZones) {
+            suppressionZones.removeIf(zone -> zone.expiresAtMillis() <= now);
+        }
+    }
+
+    private boolean isPlayerSuppressed(UUID runId, UUID playerId, long now) {
+        PlayerSuppression suppression = suppressedPlayers.get(playerId);
+        if (suppression == null) {
+            return false;
+        }
+        if (suppression.expiresAtMillis() <= now) {
+            suppressedPlayers.remove(playerId, suppression);
+            return false;
+        }
+        return Objects.equals(suppression.runId(), runId);
+    }
+
+    private boolean isLocationSuppressed(UUID runId, Location location, long now) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+
+        String worldName = location.getWorld().getName();
+        double x = location.getX();
+        double z = location.getZ();
+
+        synchronized (suppressionZones) {
+            Iterator<SpawnSuppressionZone> it = suppressionZones.iterator();
+            while (it.hasNext()) {
+                SpawnSuppressionZone zone = it.next();
+                if (zone.expiresAtMillis() <= now) {
+                    it.remove();
+                    continue;
+                }
+                if (!Objects.equals(zone.runId(), runId)) continue;
+                if (!zone.worldName().equalsIgnoreCase(worldName)) continue;
+
+                double dx = x - zone.center().getX();
+                double dz = z - zone.center().getZ();
+                double radius = zone.radius();
+                if ((dx * dx + dz * dz) <= radius * radius) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

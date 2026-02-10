@@ -159,6 +159,22 @@ battery:
     enabled: true
     intervalSeconds: 5
     mobCount: 6
+  chargeComplete:
+    rewardBurst:
+      enabled: true
+      poolId: "pool_run"          # Empty = fallback to merchants.wandering.poolId, then random pool
+      baseCount: 2                # Final count = baseCount * online in-run player count
+      burstTicks: 8               # Spawn reward pickups across N ticks for rapid burst feel
+      scatterRadius: 8.0          # Scatter radius around the battery center
+      lifetimeSeconds: 45         # Auto-despawn time for unclaimed pickups
+    spawnSuppression:
+      enabled: true
+      durationSeconds: 30         # Suppress spawn window after battery reaches 100%
+      radius: 32.0                # Suppression radius around the charged battery
+      affectParticipants: true    # Also suppress spawning targeted at in-run participants
+    effects:
+      fireworkEnabled: true
+      sound: "minecraft:entity.player.levelup 1.0 1.2"
 
 # ============================================================
 # Spawn Point Tracking
