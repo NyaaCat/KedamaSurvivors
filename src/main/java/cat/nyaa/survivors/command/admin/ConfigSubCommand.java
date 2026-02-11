@@ -27,6 +27,7 @@ public class ConfigSubCommand implements SubCommand {
     private static final List<String> STAGE_DYNAMIC_FIELDS = List.of(
             "displayName",
             "worlds",
+            "batteryActivationBossArchetypes",
             "startEnemyLevel",
             "requiredBatteries",
             "clearRewardCoins",
@@ -379,6 +380,11 @@ public class ConfigSubCommand implements SubCommand {
                 value = group.worldNames == null ? "" : String.join(", ", group.worldNames);
                 type = "list";
             }
+            case "batteryactivationbossarchetypes" -> {
+                value = group.batteryActivationBossArchetypes == null
+                        ? "" : String.join(", ", group.batteryActivationBossArchetypes);
+                type = "list";
+            }
             case "startenemylevel" -> {
                 value = group.startEnemyLevel;
                 type = "int";
@@ -432,6 +438,11 @@ public class ConfigSubCommand implements SubCommand {
                     List<String> worlds = parseWorldList(valueArgs);
                     valueDisplay = worlds.isEmpty() ? "any" : String.join(", ", worlds);
                     updated = config.setStageGroupWorldNames(ref.groupId(), worlds);
+                }
+                case "batteryactivationbossarchetypes" -> {
+                    List<String> archetypeIds = parseArchetypeList(valueArgs);
+                    valueDisplay = archetypeIds.isEmpty() ? "(empty)" : String.join(", ", archetypeIds);
+                    updated = config.setStageGroupBatteryActivationBossArchetypes(ref.groupId(), archetypeIds);
                 }
                 case "startenemylevel" -> {
                     int value = parsePositiveInt(valueArgs[0]);
@@ -513,13 +524,21 @@ public class ConfigSubCommand implements SubCommand {
     }
 
     private List<String> parseWorldList(String[] valueArgs) {
+        return parseSimpleList(valueArgs, true);
+    }
+
+    private List<String> parseArchetypeList(String[] valueArgs) {
+        return parseSimpleList(valueArgs, false);
+    }
+
+    private List<String> parseSimpleList(String[] valueArgs, boolean allowAnyKeyword) {
         List<String> worlds = new ArrayList<>();
         for (String arg : valueArgs) {
             for (String token : arg.split(",")) {
                 String world = token.trim();
                 if (world.isEmpty()) continue;
 
-                if ("any".equalsIgnoreCase(world)
+                if ((allowAnyKeyword && "any".equalsIgnoreCase(world))
                         || "none".equalsIgnoreCase(world)
                         || "empty".equalsIgnoreCase(world)
                         || "[]".equals(world)) {
@@ -610,6 +629,11 @@ public class ConfigSubCommand implements SubCommand {
                     "value", group.worldNames == null ? "" : String.join(", ", group.worldNames),
                     "type", "list");
             i18n.send(sender, "admin.config.list_entry",
+                    "property", prefix + ".batteryActivationBossArchetypes",
+                    "value", group.batteryActivationBossArchetypes == null
+                            ? "" : String.join(", ", group.batteryActivationBossArchetypes),
+                    "type", "list");
+            i18n.send(sender, "admin.config.list_entry",
                     "property", prefix + ".startEnemyLevel",
                     "value", String.valueOf(group.startEnemyLevel),
                     "type", "int");
@@ -675,6 +699,15 @@ public class ConfigSubCommand implements SubCommand {
                         for (var worldConfig : plugin.getConfigService().getCombatWorlds()) {
                             if (worldConfig.name.toLowerCase(Locale.ROOT).startsWith(partial)) {
                                 completions.add(worldConfig.name);
+                            }
+                        }
+                    } else if (propName.toLowerCase(Locale.ROOT).endsWith(".batteryactivationbossarchetypes")) {
+                        if ("none".startsWith(partial)) {
+                            completions.add("none");
+                        }
+                        for (String archetypeId : plugin.getConfigService().getEnemyArchetypes().keySet()) {
+                            if (archetypeId.toLowerCase(Locale.ROOT).startsWith(partial)) {
+                                completions.add(archetypeId);
                             }
                         }
                     }

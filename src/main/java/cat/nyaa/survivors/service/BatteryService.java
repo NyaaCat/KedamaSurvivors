@@ -257,6 +257,10 @@ public class BatteryService {
         boolean charging = false;
         if (!battery.charged && enemiesInRange == 0 && playersInRange > 0) {
             charging = true;
+            if (!battery.activationBossSpawned) {
+                battery.activationBossSpawned = true;
+                triggerStageActivationBossSpawn(run, battery);
+            }
 
             double speed = plugin.getConfigService().getBatteryBaseChargePercentPerSecond();
             if (playersInRange > 1) {
@@ -423,6 +427,45 @@ public class BatteryService {
             participants.add(participantId);
         }
         return participants;
+    }
+
+    private void triggerStageActivationBossSpawn(RunState run, BatteryInstance battery) {
+        if (run == null || battery == null || battery.location == null) {
+            return;
+        }
+
+        SpawnerService spawner = plugin.getSpawnerService();
+        if (spawner == null) {
+            return;
+        }
+
+        List<String> archetypeIds = resolveStageActivationBossArchetypeIds(run);
+        if (archetypeIds.isEmpty()) {
+            return;
+        }
+
+        spawner.spawnStageBatteryActivationBoss(run, battery.location, archetypeIds);
+    }
+
+    private List<String> resolveStageActivationBossArchetypeIds(RunState run) {
+        if (run == null) {
+            return Collections.emptyList();
+        }
+
+        Optional<ConfigService.StageGroupConfig> stageGroupOpt = Optional.empty();
+        String groupId = run.getStageGroupId();
+        if (groupId != null && !groupId.isBlank()) {
+            stageGroupOpt = plugin.getConfigService().getStageGroupById(groupId);
+        }
+        if (stageGroupOpt.isEmpty()) {
+            stageGroupOpt = plugin.getConfigService().getStageGroup(run.getStageIndex());
+        }
+        if (stageGroupOpt.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> list = stageGroupOpt.get().batteryActivationBossArchetypes;
+        return list != null ? list : Collections.emptyList();
     }
 
     private void onBatteryCharged(RunState run, BatteryInstance battery) {
@@ -751,6 +794,7 @@ public class BatteryService {
 
         private double progress;
         private boolean charged;
+        private boolean activationBossSpawned;
         private long lastUpdateMillis;
 
         private BatteryInstance(UUID batteryId, UUID runId, ArmorStand stand, Location location) {

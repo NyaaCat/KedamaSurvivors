@@ -546,6 +546,9 @@ public class ConfigService {
             Object permaReward = groupMap.get("clearRewardPermaScore");
             group.clearRewardPermaScore = permaReward instanceof Number ? ((Number) permaReward).intValue() : 0;
 
+            Object batteryBossArchetypes = groupMap.get("batteryActivationBossArchetypes");
+            group.batteryActivationBossArchetypes = normalizeStageArchetypeIds(batteryBossArchetypes);
+
             stageGroups.add(group);
             index++;
         }
@@ -1287,6 +1290,13 @@ public class ConfigService {
         return true;
     }
 
+    public boolean setStageGroupBatteryActivationBossArchetypes(String groupId, List<String> archetypeIds) {
+        Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
+        if (groupOpt.isEmpty()) return false;
+        groupOpt.get().batteryActivationBossArchetypes = normalizeStageArchetypeIds(archetypeIds);
+        return true;
+    }
+
     public boolean setStageGroupWorldNames(String groupId, List<String> worldNames) {
         Optional<StageGroupConfig> groupOpt = getStageGroupById(groupId);
         if (groupOpt.isEmpty()) return false;
@@ -1398,6 +1408,8 @@ public class ConfigService {
         copy.requiredBatteries = source.requiredBatteries;
         copy.clearRewardCoins = source.clearRewardCoins;
         copy.clearRewardPermaScore = source.clearRewardPermaScore;
+        copy.batteryActivationBossArchetypes = source.batteryActivationBossArchetypes != null
+                ? new ArrayList<>(source.batteryActivationBossArchetypes) : new ArrayList<>();
         return copy;
     }
 
@@ -1411,6 +1423,21 @@ public class ConfigService {
             if (!worldName.isEmpty()) {
                 normalized.add(worldName);
             }
+        }
+        return normalized;
+    }
+
+    private static List<String> normalizeStageArchetypeIds(Object rawValues) {
+        List<String> normalized = new ArrayList<>();
+        if (!(rawValues instanceof Iterable<?> iterable)) {
+            return normalized;
+        }
+
+        for (Object raw : iterable) {
+            if (raw == null) continue;
+            String archetypeId = raw.toString().trim();
+            if (archetypeId.isEmpty()) continue;
+            normalized.add(archetypeId);
         }
         return normalized;
     }
@@ -1606,6 +1633,10 @@ public class ConfigService {
             map.put("requiredBatteries", group.requiredBatteries);
             map.put("clearRewardCoins", group.clearRewardCoins);
             map.put("clearRewardPermaScore", group.clearRewardPermaScore);
+            map.put("batteryActivationBossArchetypes",
+                    group.batteryActivationBossArchetypes != null
+                            ? new ArrayList<>(group.batteryActivationBossArchetypes)
+                            : new ArrayList<>());
             groups.add(map);
         }
         return groups;
@@ -1679,6 +1710,8 @@ public class ConfigService {
         public int requiredBatteries = 1;
         public int clearRewardCoins = 0;
         public int clearRewardPermaScore = 0;
+        // Archetype IDs to pick from when battery charging is activated in this stage.
+        public List<String> batteryActivationBossArchetypes = new ArrayList<>();
 
         public boolean hasWorld(String worldName) {
             return worldNames != null && worldNames.stream().anyMatch(w -> w.equalsIgnoreCase(worldName));

@@ -126,6 +126,7 @@ stageProgression:
     - id: "stage_1"
       displayName: "第一阶段"
       worlds: []               # Empty = any enabled combat world
+      batteryActivationBossArchetypes: []  # Battery charge activation boss pool (archetype IDs). Empty = disabled
       startEnemyLevel: 1
       requiredBatteries: 1
       clearRewardCoins: 100

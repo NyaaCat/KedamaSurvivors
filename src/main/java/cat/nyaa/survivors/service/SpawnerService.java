@@ -792,27 +792,103 @@ public class SpawnerService {
             Location spawnLoc = sampleSurgeLocation(center, 12.0, 26.0);
             if (spawnLoc == null) continue;
 
-            for (String cmdTemplate : archetype.spawnCommands) {
-                if (commandsExecuted >= maxCommands) break;
+            commandsExecuted += executeArchetypeSpawnCommands(
+                    run, archetype, spawnLoc, level, maxCommands - commandsExecuted, "surge"
+            );
+        }
+    }
 
-                Map<String, Object> context = new HashMap<>();
-                context.put("sx", spawnLoc.getBlockX());
-                context.put("sy", spawnLoc.getBlockY());
-                context.put("sz", spawnLoc.getBlockZ());
-                context.put("runWorld", run.getWorldName());
-                context.put("enemyLevel", level);
-                context.put("enemyType", archetype.enemyType);
-                context.put("archetypeId", archetype.archetypeId);
+    /**
+     * Spawns one stage-configured battery activation boss around the battery center.
+     * Uses a random archetype from the provided stage list.
+     *
+     * @return true if at least one spawn command was executed
+     */
+    public boolean spawnStageBatteryActivationBoss(RunState run, Location center, List<String> stageArchetypeIds) {
+        if (run == null || center == null || center.getWorld() == null) return false;
+        if (!run.isActive()) return false;
+        if (stageArchetypeIds == null || stageArchetypeIds.isEmpty()) return false;
 
-                String cmd = templateEngine.expand(cmdTemplate, context);
-                try {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-                    commandsExecuted++;
-                } catch (Exception e) {
-                    plugin.getLogger().log(Level.WARNING, "Failed to execute surge spawn command: " + cmd, e);
-                }
+        List<EnemyArchetypeConfig> candidates = resolveStageBossCandidates(stageArchetypeIds, run.getWorldName());
+        if (candidates.isEmpty()) {
+            if (config.isVerbose()) {
+                plugin.getLogger().info("[SpawnDebug] No valid stage battery boss archetypes for stage="
+                        + run.getStageGroupId() + ", world=" + run.getWorldName()
+                        + ", configured=" + stageArchetypeIds);
+            }
+            return false;
+        }
+
+        EnemyArchetypeConfig selected = candidates.get(random.nextInt(candidates.size()));
+        int level = Math.max(config.getMinEnemyLevel(), run.getStageStartEnemyLevel());
+        level = Math.max(level, selected.minSpawnLevel);
+
+        double minDist = Math.max(2.5, config.getBatteryChargeRadius() * 0.6);
+        double maxDist = Math.max(minDist + 1.5, config.getBatteryChargeRadius() * 1.35);
+        Location spawnLoc = sampleSurgeLocation(center, minDist, maxDist);
+        if (spawnLoc == null) {
+            spawnLoc = center.clone();
+        }
+
+        int maxCommands = Math.max(1, config.getMaxCommandsPerTick());
+        int commands = executeArchetypeSpawnCommands(run, selected, spawnLoc, level, maxCommands, "battery_activation_boss");
+        return commands > 0;
+    }
+
+    private List<EnemyArchetypeConfig> resolveStageBossCandidates(List<String> stageArchetypeIds, String worldName) {
+        Map<String, EnemyArchetypeConfig> all = config.getEnemyArchetypes();
+        if (all.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<EnemyArchetypeConfig> candidates = new ArrayList<>();
+        Set<String> dedupe = new HashSet<>();
+        for (String rawId : stageArchetypeIds) {
+            if (rawId == null) continue;
+            String archetypeId = rawId.trim();
+            if (archetypeId.isEmpty()) continue;
+
+            String normalized = archetypeId.toLowerCase(Locale.ROOT);
+            if (!dedupe.add(normalized)) continue;
+
+            EnemyArchetypeConfig archetype = all.get(archetypeId);
+            if (archetype == null) continue;
+            if (!archetype.isAllowedInWorld(worldName)) continue;
+            candidates.add(archetype);
+        }
+        return candidates;
+    }
+
+    private int executeArchetypeSpawnCommands(RunState run, EnemyArchetypeConfig archetype, Location spawnLoc,
+                                              int level, int maxCommands, String source) {
+        if (run == null || archetype == null || spawnLoc == null || maxCommands <= 0) {
+            return 0;
+        }
+
+        int executed = 0;
+        for (String cmdTemplate : archetype.spawnCommands) {
+            if (executed >= maxCommands) break;
+
+            Map<String, Object> context = new HashMap<>();
+            context.put("sx", spawnLoc.getBlockX());
+            context.put("sy", spawnLoc.getBlockY());
+            context.put("sz", spawnLoc.getBlockZ());
+            context.put("runWorld", run.getWorldName());
+            context.put("enemyLevel", level);
+            context.put("enemyType", archetype.enemyType);
+            context.put("archetypeId", archetype.archetypeId);
+
+            String cmd = templateEngine.expand(cmdTemplate, context);
+            try {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                executed++;
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to execute " + source + " spawn command: " + cmd, e);
             }
         }
+
+        return executed;
     }
 
     private Location sampleSurgeLocation(Location center, double minDist, double maxDist) {
