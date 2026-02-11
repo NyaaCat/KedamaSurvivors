@@ -15,7 +15,10 @@ import cat.nyaa.survivors.service.AdminConfigService;
 import cat.nyaa.survivors.service.MerchantService;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ProxiedCommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -23,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Handles /vrs admin merchant subcommands for managing merchant templates and trades.
@@ -566,9 +570,10 @@ public class MerchantSubCommand implements SubCommand {
     // ==================== Spawn Commands ====================
 
     private void handleSpawn(CommandSender sender, String[] args) {
-        // /vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random] [free|paid]
-        if (!(sender instanceof Player player)) {
-            i18n.send(sender, "error.player_only");
+        // /vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random] [free|paid] [spread=<radius>]
+        Location baseLocation = resolveCommandLocation(sender);
+        if (baseLocation == null) {
+            i18n.send(sender, "error.invalid_argument", "arg", "location");
             return;
         }
 
@@ -610,6 +615,8 @@ public class MerchantSubCommand implements SubCommand {
         boolean showAllItems = false;
         // Parse force-free pricing flag (optional, defaults to false)
         boolean forceFree = false;
+        // Parse spread radius (optional, defaults to 0 = exact location)
+        double spreadRadius = 0.0;
 
         // Parse optional flags (can appear in any order after type)
         for (int i = 3; i < args.length; i++) {
@@ -621,11 +628,30 @@ public class MerchantSubCommand implements SubCommand {
                 case "random" -> showAllItems = false;
                 case "free" -> forceFree = true;
                 case "paid" -> forceFree = false;
+                default -> {
+                    String spreadRaw = null;
+                    if (arg.startsWith("spread=")) {
+                        spreadRaw = args[i].substring("spread=".length());
+                    } else if (arg.startsWith("radius=")) {
+                        spreadRaw = args[i].substring("radius=".length());
+                    } else if (isLikelyNumber(args[i])) {
+                        spreadRaw = args[i];
+                    }
+
+                    if (spreadRaw != null) {
+                        try {
+                            spreadRadius = Math.max(0.0, Double.parseDouble(spreadRaw));
+                        } catch (NumberFormatException e) {
+                            i18n.send(sender, "error.invalid_number", "value", spreadRaw);
+                            return;
+                        }
+                    }
+                }
             }
         }
 
-        // Get spawn location (player's location)
-        Location location = player.getLocation();
+        // Get spawn location (current command location, optionally with nearby spread)
+        Location location = sampleNearbyLocation(baseLocation, spreadRadius);
 
         // Generate display name
         String displayName = type == MerchantType.MULTI ? "§6商人" : pool.getItems().get(0).getItemTemplateId();
@@ -842,7 +868,7 @@ public class MerchantSubCommand implements SubCommand {
             }
             // Limited/unlimited and all/random completion for spawn command
             if (action.equals("spawn")) {
-                for (String opt : List.of("limited", "unlimited", "all", "random", "free", "paid")) {
+                for (String opt : List.of("limited", "unlimited", "all", "random", "free", "paid", "spread=3")) {
                     if (opt.startsWith(partial)) {
                         completions.add(opt);
                     }
@@ -863,7 +889,7 @@ public class MerchantSubCommand implements SubCommand {
             }
             // Additional limited/unlimited and all/random completion for spawn command
             if (action.equals("spawn")) {
-                for (String opt : List.of("limited", "unlimited", "all", "random", "free", "paid")) {
+                for (String opt : List.of("limited", "unlimited", "all", "random", "free", "paid", "spread=3")) {
                     if (opt.startsWith(partial)) {
                         completions.add(opt);
                     }
@@ -873,7 +899,8 @@ public class MerchantSubCommand implements SubCommand {
             String action = args[0].toLowerCase();
             String partial = args[5].toLowerCase();
             if (action.equals("spawn")) {
-                for (String opt : List.of("limited", "unlimited", "all", "random", "free", "paid")) {
+                for (String opt : List.of("limited", "unlimited", "all", "random", "free", "paid",
+                        "spread=3", "spread=5", "radius=3")) {
                     if (opt.startsWith(partial)) {
                         completions.add(opt);
                     }
@@ -893,5 +920,49 @@ public class MerchantSubCommand implements SubCommand {
 
     private boolean isValidId(String id) {
         return id != null && id.matches("[a-zA-Z0-9_]+");
+    }
+
+    private static boolean isLikelyNumber(String value) {
+        if (value == null || value.isBlank()) return false;
+        char c = value.charAt(0);
+        return (c >= '0' && c <= '9') || c == '-' || c == '+';
+    }
+
+    private Location sampleNearbyLocation(Location baseLocation, double spreadRadius) {
+        if (baseLocation == null || spreadRadius <= 0.0) {
+            return baseLocation;
+        }
+
+        Location sampled = plugin.getWorldService().sampleSpawnNear(baseLocation, 0.0, spreadRadius);
+        if (sampled != null) {
+            sampled.setYaw(baseLocation.getYaw());
+            sampled.setPitch(baseLocation.getPitch());
+            return sampled;
+        }
+
+        // Fallback when safe sampler fails (e.g. world not configured in combat bounds)
+        double angle = ThreadLocalRandom.current().nextDouble() * Math.PI * 2.0;
+        double distance = ThreadLocalRandom.current().nextDouble(0.0, spreadRadius);
+        return baseLocation.clone().add(Math.cos(angle) * distance, 0.0, Math.sin(angle) * distance);
+    }
+
+    private Location resolveCommandLocation(CommandSender sender) {
+        if (sender instanceof Player player) {
+            return player.getLocation();
+        }
+        if (sender instanceof Entity entity) {
+            return entity.getLocation();
+        }
+        if (sender instanceof BlockCommandSender blockSender) {
+            return blockSender.getBlock().getLocation().add(0.5, 1.0, 0.5);
+        }
+        if (sender instanceof ProxiedCommandSender proxied) {
+            Location calleeLoc = resolveCommandLocation(proxied.getCallee());
+            if (calleeLoc != null) {
+                return calleeLoc;
+            }
+            return resolveCommandLocation(proxied.getCaller());
+        }
+        return null;
     }
 }

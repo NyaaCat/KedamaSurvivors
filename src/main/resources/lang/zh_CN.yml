@@ -702,7 +702,7 @@ admin:
       pool_additem: "§f/vrs admin merchant pool additem <poolId> <price> [weight] §8- §7添加手持物品到池"
       pool_removeitem: "§f/vrs admin merchant pool removeitem <poolId> <index> §8- §7移除物品"
       pool_list: "§f/vrs admin merchant pool list [poolId] §8- §7列出物品池"
-      spawn: "§f/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random] [free|paid] §8- §7在当前位置生成商店"
+      spawn: "§f/vrs admin merchant spawn <poolId> <multi|single> [limited|unlimited] [all|random] [free|paid] [spread=<radius>] §8- §7在当前位置附近生成商店"
       despawn: "§f/vrs admin merchant despawn [radius] §8- §7移除附近商店"
       active: "§f/vrs admin merchant active §8- §7列出活动商店"
     template_created: "§a商店模板 §f{templateId} §a创建成功 (显示名: §f{displayName}§a)"
