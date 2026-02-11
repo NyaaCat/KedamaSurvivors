@@ -339,13 +339,36 @@ public class MerchantService {
      */
     public MerchantInstance spawnFixedMerchant(Location location, MerchantType type, String poolId,
                                                 boolean limited, boolean showAllItems, String displayName) {
+        return spawnFixedMerchant(location, type, poolId, limited, showAllItems, displayName, false);
+    }
+
+    /**
+     * Spawns a fixed merchant at the given location.
+     *
+     * @param location     the spawn location
+     * @param type         the merchant type (SINGLE or MULTI)
+     * @param poolId       the item pool ID
+     * @param limited      whether stock is limited
+     * @param showAllItems whether to show all items (MULTI only), false = random selection
+     * @param displayName  the display name
+     * @param forceFree    whether to force all spawned stock prices to 0
+     * @return the spawned merchant instance, or null if pool not found
+     */
+    public MerchantInstance spawnFixedMerchant(Location location, MerchantType type, String poolId,
+                                               boolean limited, boolean showAllItems, String displayName,
+                                               boolean forceFree) {
         Optional<MerchantItemPool> poolOpt = adminConfig.getMerchantPool(poolId);
         if (poolOpt.isEmpty()) {
             return null;
         }
 
+        MerchantItemPool pool = poolOpt.get();
+        if (forceFree) {
+            pool = createFreePricedPool(pool);
+        }
+
         MerchantInstance merchant = spawnMerchant(location, type, MerchantBehavior.FIXED,
-                poolOpt.get(), limited, showAllItems, displayName);
+                pool, limited, showAllItems, displayName);
 
         // Fixed merchants don't despawn on time
         if (merchant != null) {
@@ -353,6 +376,14 @@ public class MerchantService {
         }
 
         return merchant;
+    }
+
+    private MerchantItemPool createFreePricedPool(MerchantItemPool sourcePool) {
+        MerchantItemPool freePool = new MerchantItemPool(sourcePool.getPoolId());
+        for (WeightedShopItem item : sourcePool.getItems()) {
+            freePool.addItem(new WeightedShopItem(item.getItemTemplateId(), item.getWeight(), 0));
+        }
+        return freePool;
     }
 
     /**
